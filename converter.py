@@ -130,7 +130,7 @@ class Preferences:
     eqn_comment_mode: str = ''  # how comments in equations should be handled.
     remove_spaces_from_eqns: bool = True  # whether long spaces should be removed from equations.
 
-    no_secnum: bool = True  # omit section numbering
+    no_secnum: bool = True  # omit section numbering. This may affect how environments are numbered.
 
 
 DEFAULT_PREF = Preferences('preamble_0.txt', False, False, False, False, False)

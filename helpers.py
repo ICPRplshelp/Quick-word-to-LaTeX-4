@@ -947,7 +947,9 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
             n += 1
             continue
         # otherwise
-        end = find_nth(text, '}', 1, start_after)  # find_endbrace(text, start_after)
+
+        end = local_env_end(text, start)  # find_nth(text, '}', 1, start_after)
+        # find_endbrace(text, start_after)
         term = text[start_after + 2:end]
         if term[-1] == ':':
             term = term[:-1]
@@ -2174,18 +2176,18 @@ def quote_to_environment(text: str, env: LatexEnvironment, has_extra_args: bool 
         env_starter_contents = bold_str.split(':')
         if has_extra_args:
             if len(env_starter_contents) == 2:
-                env_title = env_starter_contents[1]
+                env_title = env_starter_contents[1].strip().replace('\n', ' ')
             elif len(env_starter_contents) == 1:
                 env_title = ''
             else:
                 assert False  # who decided to put more than one colon?
             br = ('[', ']') if env.extra_args_type == 'bracket' else ('{', '}')
             text = text[:start_pos_1] + env.env_prefix + k_begin + br[0] + \
-                env_title.strip().replace('\n', ' ') + br[1] + \
+                env_title + br[1] + \
                 env.env_suffix + '\n' + \
                 during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
         else:
             text = text[:start_pos_1] + env.env_prefix + k_begin + \
                    env.env_suffix + '\n' + \
-                   during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
+                   during[declare_end + 1:end_pos_1].strip() + k_end + text[end_pos_1 + len(end):]
     return text
