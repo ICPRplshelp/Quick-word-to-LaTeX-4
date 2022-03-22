@@ -1,4 +1,4 @@
-import w2l_rewrite
+import converter
 
 if __name__ == '__main__':
-    w2l_rewrite.main()
+    converter.main()

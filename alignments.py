@@ -1,17 +1,16 @@
-"""Dislike latex? Use this. REQUIREMENTS: Pandoc.
-
+"""This module helps align equations.
 """
 import logging
 from typing import Optional, Union
 
-import os
+# import os
 import re
 # import sys
-import double_processor as dbl
+import helpers as dbl
 
 # (   ]
 # 'aaa(aa]aa' to 'aaa[removed]aa[removed]aa'
-import time
+# import time
 
 
 # def work_with_file(file: str, output: str, citation_path: str):
@@ -280,7 +279,7 @@ def replace_align_region(text: str, proofs: bool = False,
     if temp_al is not None:
         isolated, start_replace, end_replace = temp_al
     else:
-        logging.warning('returning back.')
+        # logging.warning('returning back.')
         return text, True
     replace_with = process_align_region(isolated, auto_align, max_line_length, extra_info=extra_info)
     proof_line = ''
@@ -375,7 +374,7 @@ def detect_align_region(text: str) -> Optional[tuple[str, int, int]]:
         captured_region = text[finished_region[0]:finished_region[1]]
         return captured_region, finished_region[0], finished_region[1]
     else:
-        logging.warning('Ran out of align regions to check')
+        # logging.warning('Ran out of align regions to check')
         return None
 
 
@@ -508,7 +507,7 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
     else:
         temp_text, temp_comment = check_start_matrix(text)
         if temp_text is not None:
-            logging.warning('looks like we have a comment')
+            logging.info('looks like we have a comment')
             text = temp_text
             si_text = r'\shortintertext{' + temp_comment + '}' + '\n'
 

@@ -1,0 +1,4 @@
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern,iftex}
+\usepackage[fontsize=11pt]{scrextend}
+\usepackage{array}

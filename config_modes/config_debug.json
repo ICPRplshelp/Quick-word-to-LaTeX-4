@@ -1,8 +1,8 @@
 {
-  "preamble_path": "preamble_4.txt",
+  "preamble_path": "config_modes/preamble.txt",
   "allow_proofs": true,
-  "allow_citations": false,
-  "allow_no_longtable": false,
+  "allow_citations": true,
+  "allow_no_longtable": true,
   "allow_alignments": true,
   "exclude_preamble": false,
   "citation_mode": "apa2",
@@ -14,7 +14,7 @@
   "dollar_sign_equations": true,
   "center_images": false,
   "fix_prime_symbols": true,
-  "allow_environments": true,
+  "allow_environments": false,
   "prevent_pdf_exports": false,
   "fix_derivatives": true,
   "replace_font": true,
@@ -27,6 +27,7 @@
   "combine_aligns": true,
   "table_of_contents": true,
   "special_proofs": false,
+  "erase_pandoc_preamble": true,
   "environments": {
     "Theorem": {
       "env_name": "Theorem",

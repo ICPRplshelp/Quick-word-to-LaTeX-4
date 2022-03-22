@@ -1,1 +1,1 @@
-config_lightweight.json
+config_modes/config_stricter.json

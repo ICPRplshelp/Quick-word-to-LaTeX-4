@@ -1,5 +1,5 @@
 {
-  "preamble_path": "preamble_4.txt",
+  "preamble_path": "config_modes/preamble.txt",
   "allow_proofs": true,
   "allow_citations": false,
   "allow_no_longtable": true,

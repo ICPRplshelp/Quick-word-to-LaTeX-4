@@ -1,12 +1,12 @@
 {
-  "preamble_path": "preamble_4.txt",
-  "allow_proofs": true,
+  "preamble_path": "config_modes/preamble.txt",
+  "allow_proofs": false,
   "allow_citations": false,
-  "allow_no_longtable": false,
+  "allow_no_longtable": true,
   "allow_alignments": true,
   "exclude_preamble": false,
   "citation_mode": "apa2",
-  "replacement_mode": false,
+  "replacement_mode": true,
   "disallow_figures": false,
   "disable_repair": false,
   "hypertarget_remover": true,
@@ -20,16 +20,13 @@
   "replace_font": true,
   "fix_unicode": true,
   "autodetect_align_symbols": true,
-  "pdf_engine": "pdflatex",
+  "pdf_engine": "xelatex",
   "max_line_length": 110,
   "max_line_align": true,
-  "fix_texttt": false,
+  "fix_texttt": true,
   "combine_aligns": true,
   "table_of_contents": false,
   "special_proofs": false,
-  "forbid_images": false,
-  "code_lang": "",
-  "start_of_doc_text": "\\renewcommand{\\arraystretch}{2}",
   "environments": {
     "Theorem": {
       "env_name": "Theorem",
@@ -38,8 +35,8 @@
       "encapsulation": "textbf",
       "initial_newline": true,
       "priority": 3,
-      "has_extra_args": true,
-      "extra_args_type": "bracket",
+      "has_extra_args": false,
+      "extra_args_type": "brace",
       "env_suffix": "{}"
     },
     "Corollary": {
@@ -50,7 +47,7 @@
       "initial_newline": true,
       "priority": 3,
       "has_extra_args": false,
-      "extra_args_type": "bracket"
+      "extra_args_type": "brace"
     },
     "Lemma": {
       "env_name": "Lemma",
@@ -60,7 +57,7 @@
       "initial_newline": true,
       "priority": 3,
       "has_extra_args": false,
-      "extra_args_type": "bracket"
+      "extra_args_type": "brace"
     },
     "Remark": {
       "env_name": "Remark",
@@ -70,7 +67,7 @@
       "initial_newline": false,
       "priority": 3,
       "has_extra_args": false,
-      "extra_args_type": "bracket"
+      "extra_args_type": "brace"
     },
     "Definition": {
       "env_name": "Definition",
@@ -79,8 +76,8 @@
       "encapsulation": "textbf",
       "initial_newline": false,
       "priority": 1,
-      "has_extra_args": true,
-      "extra_args_type": "bracket",
+      "has_extra_args": false,
+      "extra_args_type": "brace",
       "env_suffix": "{}"
     },
     "Example": {
@@ -90,8 +87,8 @@
       "encapsulation": "textbf",
       "initial_newline": false,
       "priority": 2,
-      "has_extra_args": true,
-      "extra_args_type": "bracket",
+      "has_extra_args": false,
+      "extra_args_type": "brace",
       "env_suffix": "{}"
     },
     "mytheorem": {

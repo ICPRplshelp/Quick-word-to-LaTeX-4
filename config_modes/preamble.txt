@@ -1,0 +1,16 @@
+\usepackage[fontsize=11pt]{scrextend}
+% \usepackage[margin=0.75in]{geometry}
+\usepackage{amsthm}
+\theoremstyle{theorem}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}
+\theoremstyle{lemma}
+\newtheorem{lemma}{Lemma}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]  % remove this to prevent sections from appearing
+\renewcommand\qedsymbol{$\blacksquare$}
+\usepackage[style=apa]{biblatex}
+% \usepackage{mathptmx}
+\usepackage{mathtools}

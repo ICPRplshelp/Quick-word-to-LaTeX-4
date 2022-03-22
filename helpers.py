@@ -1,4 +1,4 @@
-"""Most of the helper functions to w2l_rewrite.py and any other modules
+"""Most of the helper functions to converter.py and any other modules
 """
 import json
 import logging
@@ -8,7 +8,7 @@ from typing import Optional, Iterable, Callable
 
 # ch = logging.StreamHandler()
 # ch.setLevel(logging.DEBUG)
-PREAMBLE_PATH = ('preamble.txt', 'preamble_2.txt', 'preamble_3.txt')
+PREAMBLE_PATH = ('preamble.txt', 'preamble_LTable.txt', 'preamble_light.txt')
 
 APA_MODE = True
 ALPHABET = 'abcdefghijklmnopqrstuvwxyz'
@@ -261,6 +261,9 @@ def qed(text: str, special: bool = False) -> str:
     text = text.replace('\\blacksquare\\]', '\\] \\end{proof}')
     text = text.replace('\\(\\blacksquare\\)', '\\end{proof}')
     text = text.replace('\\blacksquare\\)', '\\) \\end{proof}')
+    text = text.replace(r'~◻', '\\end{proof}')
+    text = text.replace(r'□', '\\end{proof}')
+    text = text.replace(r'◻', '\\end{proof}')
     # text = '\\renewcommand\\qedsymbol{$\\blacksquare$}\n' + text
     return text
 
@@ -602,27 +605,6 @@ def multi_cite_handler(text: str, cur_src: str, srcs: list[str]) -> str:
     return text
 
 
-@dataclass
-class _RawLatexEnvironment:
-    """Before
-    """
-    env_name: str  # the literal name of the environment. First letter should be
-    # in caps. This is the starter keyword for automatic breaks.
-    start: str  # Environment starter keyword. Not supported for automatic breaks.
-    end: str  # Environment end keyword. Not supported for automatic breaks.
-    encapsulation: str = ''  # any modifiers to the environment call.
-    initial_newline: bool = False  # if the environment must start on a newline.
-    priority: int = 3  # the priority of the env
-    has_extra_args: bool = False  # whether you want extra arguments in the envs.
-    # for example: \begin{definition}[the definition]. Set to false
-    # if you want to have a plain environment.
-    extra_args_type: str = 'brace'  # bracket or brace which determines what the extra
-    # args should be surrounded by. Must be ON if you want automatic breaks.
-    env_prefix: str = ''  # text to append before environment declaration: \begin{env}
-    env_suffix: str = ''  # text to append after environment declaration: \begin{env}
-    name_alt: str = ''  # Replaces the env name for automatic breaks
-
-
 class LatexEnvironment:
     """A class representing an environment.
     Instance Attributes:
@@ -667,6 +649,30 @@ class LatexEnvironment:
         self.extra_args_type = extra_args_type
         self.env_prefix = env_prefix
         self.env_suffix = env_suffix
+
+
+@dataclass
+class _RawLatexEnvironment:
+    """Before
+    """
+    env_name: str  # the literal name of the environment. First letter should be
+    # in caps. This is the starter keyword for automatic breaks.
+    start: str  # Environment starter keyword. Not supported for automatic breaks.
+    end: str  # Environment end keyword. Not supported for automatic breaks.
+    encapsulation: str = ''  # any modifiers to the environment call.
+    initial_newline: bool = False  # if the environment must start on a newline.
+    priority: int = 3  # the priority of the env
+    has_extra_args: bool = False  # whether you want extra arguments in the envs.
+    # for example: \begin{definition}[the definition]. Set to false
+    # if you want to have a plain environment.
+    extra_args_type: str = 'brace'  # bracket or brace which determines what the extra
+    # args should be surrounded by. Must be ON if you want automatic breaks.
+    env_prefix: str = ''  # text to append before environment declaration: \begin{env}
+    env_suffix: str = ''  # text to append after environment declaration: \begin{env}
+    name_alt: str = ''  # Replaces the env name for automatic breaks
+
+    # def create_latex_env(self) -> LatexEnvironment:
+    #     pass
 
 
 def work_with_environments(text, envs: dict) -> str:
@@ -738,6 +744,8 @@ def bulk_environment_wrapper(text: str, envs: list[LatexEnvironment]) -> str:
 
     # env_basic = [en for en in envs if not en.has_extra_args]
     env_complex = [en for en in envs if en.has_extra_args]
+    for env in envs:
+        text = quote_to_environment(text, env, env.has_extra_args)
     for env in env_complex:
         text = environment_wrapper_2(text, env)
     for env in envs:
@@ -1507,7 +1515,9 @@ def strip_string(text: str) -> str:
 
 def modify_text_in_environment(text: str, env: str, modification: Callable[[str], str]) -> str:
     """Modify text in all instances of the environment env.
-    Preconditions: you didn't put anything latex like in a verbatim environment
+    Preconditions:
+        - No LaTeX code in verbatim environments
+        - Target environment doesn't nest any additional environments
     this will not work for things that are not defined as environments
     """
     envs_traversed = 1
@@ -1765,7 +1775,7 @@ def local_env_layer(text: str, index: int, local_env: str) -> bool:
 
 
 def local_env_end(text: str, index: int) -> int:
-    """Return the position where the local environment ends.
+    """Return the position of the closing brace where the local environment ends.
 
     It is strongly recommended that text[index] == '\\' and
     is the start of a local environment declaration.
@@ -1823,16 +1833,40 @@ def check_in_environment(text: str, env: str, index: int) -> bool:
     return not (v1_cie < v2_cie or v4_cie > v3_cie)
 
 
-
-def do_something_to_local_env(text: str, env: str, func: Callable) -> str:
+def do_something_to_local_env(text: str, env: str, func: Callable[[str], str]) -> str:
     """Do something to everything in a local environment.
     Such as texttt{modify stuff here}.
 
     Preconditions:
-        -
+        - No LaTeX-like code in verbatim environments
     """
+    env_str = '\\' + env + '{'
     skip = 1
-    env_start = 1
+    while True:
+        # locate where the next environment is
+        ind = find_nth(text, env_str, skip)
+        if ind == -1:
+            break
+        # locate where the local environment ends
+        local_skip = 1
+        while True:
+            ind_2 = find_nth(text, '}', local_skip, ind)
+            if text[ind_2 - 1] == '\\':
+                local_skip += 1
+                continue
+            assert ind_2 != -1
+            bracket_layer = bracket_layers(text, ind_2)
+            if bracket_layer == 0:
+                break
+            else:
+                local_skip += 1
+                # continue
+        # Do stuff in the text. TODO: Enable ignore nested envs; enable ignore commands
+        env_text = text[ind + len(env_str):ind_2]
+        new_env_text = func(env_text)
+        text = text[:ind + len(env_str)] + new_env_text + text[ind_2:]
+        skip += 1
+    return text
 
 
 RRR = r"""
@@ -2090,3 +2124,68 @@ def find_next_section(text: str, min_index: int, max_depth: int = 6) -> int:
         if lowest_start > s_start:
             lowest_start = s_start
     return lowest_start
+
+
+def quote_to_environment(text: str, env: LatexEnvironment, has_extra_args: bool = True) -> str:
+    """Turns quotes to environments. env is the name of the env to convert to.
+    env_kw is the keyword for this region to be formatted like this (syntax in MD):
+    **Definition: Extra args.** Definition text.
+    Text boldface must be used here.
+
+    has_extra_args: you know what this is.
+
+    Syntax: Env call: <Env tag>. <Text afterwards>
+    We assume Env call is bolded before being passed to this function.
+
+    Preconditions:
+        - No LaTeX code in verbatim environments
+        - Target environment doesn't nest any additional environments
+    this will not work for things that are not defined as environments
+    """
+    envs_traversed = 1
+    begin = r'\begin{quote}' + '\n'
+    end = '\n' + r'\end{quote}'
+    while True:
+        # print(envs_traversed)
+        start_pos_1 = find_nth(text, begin, envs_traversed)  # the index at the backslash of begin
+        start_pos_2 = start_pos_1 + len(begin)  # the index on the char after begin env
+
+        end_pos_1 = find_nth(text, end, envs_traversed)
+        # end_pos_2 = end_pos_1 + len(end)
+
+        if -1 in {start_pos_1, end_pos_1}:
+            break
+
+        # before = text[:start_pos_2]
+        during = text[start_pos_2:end_pos_1]
+
+        tbf = r'\textbf{'
+
+        if not during.startswith(tbf):
+            envs_traversed += 1
+            continue
+        declare_end = local_env_end(during, 0)
+        bold_str = during[len(tbf):declare_end]
+        if not bold_str.startswith(env.env_name):  # is something like "Definition" or an alias to that
+            envs_traversed += 1
+            continue
+        k_begin = r'\begin{' + env.env_name.lower() + '}'
+        k_end = r'\end{' + env.env_name.lower() + '}'
+        env_starter_contents = bold_str.split(':')
+        if has_extra_args:
+            if len(env_starter_contents) == 2:
+                env_title = env_starter_contents[1]
+            elif len(env_starter_contents) == 1:
+                env_title = ''
+            else:
+                assert False  # who decided to put more than one colon?
+            br = ('[', ']') if env.extra_args_type == 'bracket' else ('{', '}')
+            text = text[:start_pos_1] + env.env_prefix + k_begin + br[0] + \
+                env_title.strip().replace('\n', ' ') + br[1] + \
+                env.env_suffix + '\n' + \
+                during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
+        else:
+            text = text[:start_pos_1] + env.env_prefix + k_begin + \
+                   env.env_suffix + '\n' + \
+                   during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
+    return text

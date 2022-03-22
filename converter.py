@@ -1,4 +1,4 @@
-"""A rewrite of the primary w2l processor.
+"""This file chooses which modules to include when converting files.
 """
 import logging
 import time
@@ -10,8 +10,8 @@ import os
 # import easygui
 from tkinter.filedialog import askopenfile
 
-import w2l_primary as w2l
-import double_processor as dbl
+import alignments as w2l
+import helpers as dbl
 
 TEMP_TEX_FILENAME = 'temp.tex'
 REPLAC = {'α': r'\alpha', 'β': r'\beta', 'γ': r'\gamma', 'δ': r'\delta', 'ϵ': r'\epsilon',

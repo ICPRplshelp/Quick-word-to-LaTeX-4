@@ -1,0 +1,12 @@
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern,iftex}
+\usepackage[fontsize=11pt]{scrextend} % my eyes will NOT bleed with this
+\usepackage{longtable,booktabs,array,calc,etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\usepackage{array}
