@@ -657,8 +657,8 @@ class _RawLatexEnvironment:
     """
     env_name: str  # the literal name of the environment. First letter should be
     # in caps. This is the starter keyword for automatic breaks.
-    start: str  # Environment starter keyword. Not supported for automatic breaks.
-    end: str  # Environment end keyword. Not supported for automatic breaks.
+    start: str = 'ȚHE#$$$$$$@%@$#VER!!!ASTA#!!!ȚTT'  # Environment starter keyword. Not supported for automatic breaks.
+    end: str = 'TH!!!ERȚ!!WAȚ@#ȚSNE*(VEȚAN*@##END'  # Environment end keyword. Not supported for automatic breaks.
     encapsulation: str = ''  # any modifiers to the environment call.
     initial_newline: bool = False  # if the environment must start on a newline.
     priority: int = 3  # the priority of the env

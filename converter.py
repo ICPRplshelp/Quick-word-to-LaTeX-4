@@ -329,6 +329,8 @@ class WordFile:
             text = dbl.combine_environments(text, 'align*')
         if self.preferences.verbatim_lang != '':
             text = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang)
+            # I might have to change this if I ever decide to use auto
+            # language detection
         # text = text.replace('…', '...')  # only occurs in verbatim envs
         has_bib_file = False
         if self.preferences.allow_citations:  # if citations are allowed
