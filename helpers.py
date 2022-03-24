@@ -2183,11 +2183,111 @@ def quote_to_environment(text: str, env: LatexEnvironment, has_extra_args: bool 
                 assert False  # who decided to put more than one colon?
             br = ('[', ']') if env.extra_args_type == 'bracket' else ('{', '}')
             text = text[:start_pos_1] + env.env_prefix + k_begin + br[0] + \
-                env_title + br[1] + \
-                env.env_suffix + '\n' + \
-                during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
+                   env_title + br[1] + \
+                   env.env_suffix + '\n' + \
+                   during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
         else:
             text = text[:start_pos_1] + env.env_prefix + k_begin + \
                    env.env_suffix + '\n' + \
                    during[declare_end + 1:end_pos_1].strip() + k_end + text[end_pos_1 + len(end):]
+    return text
+
+
+def detect_if_bib_exists(text: str) -> tuple[bool, str, int]:
+    """Return True if there is an upper section named this:
+
+    Bibliography
+
+    This is case-sensitive, but no trailing whitespaces or newlines.
+
+    If True is returned, it will also return text with the bib section removed.
+    It will also return the index where the original bibliography was.
+    Otherwise, it will return text with no modifications.
+
+    No works cited or references - we want Chicago style only.
+    """
+    bib_section: str = '\\section{Bibliography}'
+    r_location = text.rfind(bib_section)
+    if r_location == -1:
+        return False, text, -1
+    # else
+    next_section = find_next_section(text, r_location + len(bib_section), max_depth=0)
+    text = text[:r_location] + '\n\n\n' + text[next_section:]
+    return True, text, r_location + 1
+
+
+def verb_encryptor(count: int) -> str:
+    """This was a list of verb encryptors, but
+    we wouldn't list everything
+
+    Preconditions:
+        - count >= 0
+    """
+    return f'🬟{count}⚋⚌⚍⚎⚏🬯'
+
+
+# def check_verbatims() -> str:
+#     """I just want to see if this works
+#
+#     """
+#     txt = r"""
+#     no longer encrypted
+#     \begin{verbatim}
+#         encrypted
+#     \end{verbatim}
+#     not encrypted yet
+#     \begin{verbatim}
+#         encrypted
+#     \end{verbatim}
+#     not encrypted yet
+#     """
+#     txt, d_info = hide_verbatims(txt)
+#     pass
+#     tx = show_verbatims(txt, d_info)
+#     print(tx)
+#     return tx
+
+def hide_verbatims(text: str) -> tuple[str, dict[str, str]]:
+    """Hide all verbatim stuff.
+    Put them in a dictionary.
+
+    Note: the begin and end verbatim calls will still be present in the document. It is merely
+    the text contents that are being concealed.
+    """
+    env = 'verbatim'
+    envs_traversed = 1
+    begin = r'\begin{' + env + '}'
+    end = r'\end{' + env + '}'
+    dict_so_far = {}
+    i = 0
+    while True:
+        # print(envs_traversed)
+        start_pos_1 = find_nth(text, begin, envs_traversed)  # the index at the backslash of begin
+        start_pos_2 = start_pos_1 + len(begin)  # the index on the char after begin env
+
+        end_pos_1 = find_nth(text, end, envs_traversed)
+        # end_pos_2 = end_pos_1 + len(end)
+
+        if -1 in {start_pos_1, end_pos_1}:
+            break
+
+        before = text[:start_pos_2]
+        during = text[start_pos_2:end_pos_1]
+        after = text[end_pos_1:]
+
+        ve_value = verb_encryptor(i)
+        dict_so_far[ve_value] = during
+        during = ve_value
+
+        text = before + during + after
+        envs_traversed += 1
+        i += 1
+    return text, dict_so_far
+
+
+def show_verbatims(text: str, verb_info: dict[str, str]) -> str:
+    """Unhide all verbatim environments.
+    """
+    for key, value in verb_info.items():
+        text = text.replace(key, value)
     return text

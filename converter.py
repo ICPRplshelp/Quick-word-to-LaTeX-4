@@ -3,7 +3,7 @@
 import logging
 import time
 from dataclasses import dataclass, fields
-from typing import Optional, Any, Union
+from typing import Optional, Union
 import json
 import os
 
@@ -81,7 +81,7 @@ class Preferences:
         - exclude_preamble
         - citation_mode: the citation mode.
     """
-    preamble_path: Union[str, list[str]] = 'preamble_0.txt'  # path of the preamble.
+    preamble_path: Union[str, list[str]] = 'preamble.txt'  # path of the preamble.
     allow_proofs: bool = False  # Enable the proofs module.
     allow_citations: bool = False  # Enable the citation module.
     allow_no_longtable: bool = False  # convert all long tables to regular tables. Tables must be plain to work
@@ -131,6 +131,8 @@ class Preferences:
     remove_spaces_from_eqns: bool = True  # whether long spaces should be removed from equations.
 
     no_secnum: bool = True  # omit section numbering. This may affect how environments are numbered.
+    conceal_verbatims: bool = True  # prevent verbatim environments from being affected,
+    # unless a module specifically affects verbatim environments.
 
 
 DEFAULT_PREF = Preferences('preamble_0.txt', False, False, False, False, False)
@@ -200,18 +202,27 @@ class WordFile:
         self.citation_path = 'placeholder'
         self.bib_path = ''
         self._recalculate_erase_preamble()
-        if preferences.allow_citations:
-            # self.citation_path = easygui.fileopenbox(
-            #     msg='Select the *.txt citation file you want to open:',
-            #     filetypes=["*.txt"])
-            print('Opening the bib document file open box. If noting opens, consider re-running this program.')
-            file_info = askopenfile(mode='r', title='Open the bib file you want to combine',
-                                    filetypes=[('Bib Files', '*.bib')])
-            self.bib_path = file_info.name.replace("/", "\\") if file_info is not None else None
-            if self.bib_path is None:
-                print('You did not specify a bib path, so we\'re assuming you\'re not citing anything')
+        # if preferences.allow_citations:
+        #     print('Opening the bib document file open box. If noting opens, consider re-running this program.')
+        #     file_info = askopenfile(mode='r', title='Open the bib file you want to combine',
+        #                             filetypes=[('Bib Files', '*.bib')])
+        #     self.bib_path = file_info.name.replace("/", "\\") if file_info is not None else None
+        #     if self.bib_path is None:
+        #         print('You did not specify a bib path, so we\'re assuming you\'re not citing anything')
         if self.preferences.prevent_pdf_exports:
             self._disallow_pdf = True
+
+    def _demand_citations(self) -> None:
+        """Ask for citations. Should only be called if we want citations.
+        """
+        pass
+
+        print('Opening the bib document file open box. If noting opens, consider re-running this program.')
+        file_info = askopenfile(mode='r', title='Open the bib file you want to combine',
+                                filetypes=[('Bib Files', '*.bib')])
+        self.bib_path = file_info.name.replace("/", "\\") if file_info is not None else None
+        if self.bib_path is None:
+            print('You did not specify a bib path, so we\'re assuming you\'re not citing anything')
 
     def _recalculate_erase_preamble(self) -> None:
         """Determine whether the pandoc preamble should be removed based on preferences."""
@@ -259,6 +270,9 @@ class WordFile:
         start = '\\begin{document}'
         end = '\\end{document}'
         text, start, end = w2l.find_between(text, start, end)
+        dict_info_hide_verb = {}
+        if self.preferences.conceal_verbatims:
+            text, dict_info_hide_verb = dbl.hide_verbatims(text)
         if self.preferences.hypertarget_remover:
             text = w2l.hypertarget_eliminator(text)
         if self.preferences.fix_vectors:
@@ -316,13 +330,43 @@ class WordFile:
         if self.preferences.verbatim_lang != '':
             text = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang)
         # text = text.replace('…', '...')  # only occurs in verbatim envs
-        if self.preferences.allow_citations and self.citation_path \
-                is not None and self.bib_path is not None:
-            bib_data = open_file(self.bib_path)
-            text = dbl.do_citations(text, bib_data, self.preferences.citation_mode)
-            text = text + '\\medskip\n\\printbibliography'
+        has_bib_file = False
+        if self.preferences.allow_citations:  # if citations are allowed
+            proceed_citations, temp_text_here, bib_ind = dbl.detect_if_bib_exists(text)
+            if proceed_citations:
+                self._demand_citations()
+                if self.bib_path is not None:
+                    bib_data = open_file(self.bib_path)
+                    # position the print bibilo first
+                    # bib_style = 'unsrt'
+                    # bib_final = '\\bibliographystyle{' + bib_style + '}\n\\medskip\n\\bibliography{' + \
+                    #     self.bib_path + '}'
+
+                    # temp_text_here = temp_text_here[:bib_ind] + bib_final + \
+                    #     temp_text_here[bib_ind:]
+
+                    temp_text_here = temp_text_here[:bib_ind] + '\\medskip\n\\printbibliography' + \
+                        temp_text_here[bib_ind:]
+                    # then replace the citations
+                    text = dbl.do_citations(temp_text_here, bib_data, self.preferences.citation_mode)
+                    last_dbl_backslash = self.bib_path.rfind('\\')
+                    if last_dbl_backslash == -1:
+                        last_dbl_backslash -= 1
+                    has_bib_file: Union[bool, str] = self.bib_path[last_dbl_backslash + 1:]
+                    # rewrite the bib file in the same directory as this .py file
+                    # ensure that the bib file is written as well in the same location
+                    write_file(bib_data, has_bib_file)
+        # if self.preferences.allow_citations and self.citation_path \
+        #         is not None and self.bib_path is not None:
+        #     bib_data = open_file(self.bib_path)
+        #     text = dbl.do_citations(text, bib_data, self.preferences.citation_mode)
+        #     text = text + '\\medskip\n\\printbibliography'
+        if self.preferences.conceal_verbatims:
+            text = dbl.show_verbatims(text, dict_info_hide_verb)
+
         if not self.preferences.exclude_preamble:  # if preamble is included
             self.text = w2l.deal_with_preamble(self.raw_text[:start],
+                                               has_bib_file=has_bib_file,
                                                remove_default_font=self.preferences.replace_font,
                                                preamble_path=self.preferences.preamble_path,
                                                erase_existing_preamble=self.erase_pandoc_preamble,

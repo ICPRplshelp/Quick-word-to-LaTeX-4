@@ -146,9 +146,9 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
         prestart = '\n'.join(preamble_text_list)
     if isinstance(has_bib_file, bool) and has_bib_file is True:
         bib_file_name = input('What is your .bib file name? (Must include suffix .bib) ')
-        prestart = prestart + '\n\\addbibresource{' + bib_file_name + '}'
+        prestart = prestart + '\n\\addbibresource{' + bib_file_name + '}\n\n'
     elif isinstance(has_bib_file, str):  # type(has_bib_file) == type('string'):
-        prestart = prestart + '\n\\addbibresource{' + has_bib_file + '}'
+        prestart = prestart + '\n\\addbibresource{' + has_bib_file + '}\n\n'
     section_num_text = '\\setcounter{secnumdepth}{-\\maxdimen} % remove section numbering' if not omit_section_numbering else '% remove section numberinging'
     pack_import_indicator = '\\usepackage{iftex}\n'
     if not erase_existing_preamble:
