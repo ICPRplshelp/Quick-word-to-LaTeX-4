@@ -8,6 +8,8 @@ import re
 # import sys
 import helpers as dbl
 
+import sys
+sys.setrecursionlimit(20000)
 # (   ]
 # 'aaa(aa]aa' to 'aaa[removed]aa[removed]aa'
 # import time
@@ -296,6 +298,34 @@ def replace_align_region(text: str, proofs: bool = False,
     return end_result, False
 
 
+TEST_EQN = r"""
+This is the text before
+
+\[{\begin{matrix}
+9 + 10 = 21\ \#(4) \\
+\end{matrix}
+}{\begin{matrix}
+420 + 69\#(4) \\
+\end{matrix}
+}{\begin{matrix}
+71 + 22\#(3) \\
+\end{matrix}
+}{\begin{matrix}
+83 + 42\#(9) \\
+\end{matrix}
+}\begin{matrix}
+42 + 534r\#(67) \\
+\end{matrix}\]
+
+This is the text after
+"""
+
+
+TEST_EQN_AGAIN = r"""
+you are not \\[{9 + 10 = 21}{420 + 69 = 222}\\] real
+"""
+
+
 def detect_align_region(text: str) -> Optional[tuple[str, int, int]]:
     """Return isolate string, start index, end index + 1 for the first align region found in text.
     Return nothing if no align region found.
@@ -321,6 +351,7 @@ def detect_align_region(text: str) -> Optional[tuple[str, int, int]]:
     prev_is_opening_bracket = False  # if the prev is \[ - the [
     finished_region = [-1, -1]
     found = False
+    special_region_info = None
     for i, c in enumerate(text):  # the massive for loop
         assert not (prev_is_opening_bracket and prev_is_backslash), '[ and \\ at the same time'
 
@@ -347,12 +378,26 @@ def detect_align_region(text: str) -> Optional[tuple[str, int, int]]:
                 else:
                     assert False  # we will NEVER reach there
             elif prev_is_backslash and (c in {'[', ']'}):  # bare \[ or \]
-                pass
+                pass  # prevents the branch below from happening. We would've ended stuff here.
             elif c == '\n':
                 pass
             else:
-                if brace_layer <= 0:
-                    inside = False
+                if brace_layer <= 0:  # this is a very special case.
+                    # if that is the case, skip to the next \\]
+                    # then check everything between c and before \\], stripped
+                    ti_c = text.find('\\]', i)
+                    assert ti_c != -1
+                    last_part = text[i - 1:ti_c].strip()
+                    state = dbl.valid_matrix(last_part)
+                    if not state:  # this happens the most often
+                        inside = False  # this is rarer.
+                    else:
+                        finished_region[0] = last_opening_region
+                        finished_region[1] = ti_c + 2
+                        found = True
+                        special_region_info = [i - 1, ti_c]  # positions to add { and }, similar to list.insert()
+                        break
+
         if prev_is_backslash:
             if c == '[':
                 inside = True
@@ -364,17 +409,24 @@ def detect_align_region(text: str) -> Optional[tuple[str, int, int]]:
                 finished_region[1] = i + 1
                 assert finished_region[0] <= finished_region[1], 'future sight'
                 found = True
-
                 break
         prev_is_backslash = (c == '\\')  # if c is \\
         # if prev_is_backslash:
         #    print(prev_is_backslash)
     # if we ever find one
     if found:
-        captured_region = text[finished_region[0]:finished_region[1]]
+        if special_region_info is None:
+            captured_region = text[finished_region[0]:finished_region[1]]
+            print(captured_region)
+        else:
+            captured_region = text[finished_region[0]:special_region_info[0]] + '{' + \
+                              text[special_region_info[0]:special_region_info[1]] + '}' + \
+                              text[special_region_info[1]:finished_region[1]]
+            print(captured_region)
+
         return captured_region, finished_region[0], finished_region[1]
     else:
-        # logging.warning('Ran out of align regions to check')
+        print('ran out of alignment regions to check')
         return None
 
 
@@ -439,6 +491,8 @@ TEST_MATRIX = r"""
 
 def check_start_matrix(text: str) -> tuple[Optional[str], Optional[str]]:
     """Check if text starts and ends with matrix declarations.
+
+    This works perfectly; however, if we use alignment environments, typically the last one will be a bit broken.
     """
     # logging.warning(text)
     text = text.strip()  # strip the text first
@@ -454,8 +508,8 @@ def check_start_matrix(text: str) -> tuple[Optional[str], Optional[str]]:
     if ending_matrix_location != required_ending_location:
         return None, None
     # Matrix conditions should be met by this point.
-    hashtag = r'\# '
-    if r'\# ' not in text:
+    hashtag = r'\#'
+    if r'\#' not in text:
         return None, None
     # intl passing location. For now, let's assume that this is only where # appears.
     ti_temp = text.rfind(hashtag)  # the index of the last hashtag, starting at the backslash
@@ -495,11 +549,12 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
     'y {>} &< x + 2'
     """
     if extra_info is None:
-        extra_info = {}
+        # extra_info = {}
+        raise ValueError  # THIS NEVER RUNS!!!
 
     # extra_info = {'comment_type': 'shortintertext'}
     cur_mode = extra_info.get('comment_type', '')
-    # assert cur_mode in {'', 'align', 'shortintertext'}
+    assert cur_mode in {'', 'align', 'shortintertext'}
     si_text = ''
     temp_comment = ''
     if cur_mode not in {'align', 'shortintertext'}:
@@ -507,9 +562,12 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
     else:
         temp_text, temp_comment = check_start_matrix(text)
         if temp_text is not None:
+            # temp_comment = dbl.equation_to_regular_text(temp_comment)  # nope, won't work.
             logging.info('looks like we have a comment')
             text = temp_text
             si_text = r'\shortintertext{' + temp_comment + '}' + '\n'
+        else:
+            temp_comment = ''
 
     if not auto_align:
         return '& ' + text

@@ -17,7 +17,7 @@
   "allow_environments": true,
   "prevent_pdf_exports": false,
   "fix_derivatives": true,
-  "replace_font": true,
+  "replace_font": false,
   "fix_unicode": true,
   "autodetect_align_symbols": true,
   "pdf_engine": "pdflatex",

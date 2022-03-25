@@ -127,7 +127,7 @@ class Preferences:
     replacement_mode: bool = False  # whether replacement mode is on or off.
     environments: Optional[dict] = None  # information relating to environments.
 
-    eqn_comment_mode: str = ''  # how comments in equations should be handled.
+    eqn_comment_mode: str = 'align'  # how comments in equations should be handled.
     remove_spaces_from_eqns: bool = True  # whether long spaces should be removed from equations.
 
     no_secnum: bool = True  # omit section numbering. This may affect how environments are numbered.
@@ -367,7 +367,7 @@ class WordFile:
             text = dbl.show_verbatims(text, dict_info_hide_verb)
 
         if not self.preferences.exclude_preamble:  # if preamble is included
-            self.text = w2l.deal_with_preamble(self.raw_text[:start],
+            self.text = w2l.deal_with_preamble(text=self.raw_text[:start],
                                                has_bib_file=has_bib_file,
                                                remove_default_font=self.preferences.replace_font,
                                                preamble_path=self.preferences.preamble_path,

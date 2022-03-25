@@ -2291,3 +2291,169 @@ def show_verbatims(text: str, verb_info: dict[str, str]) -> str:
     for key, value in verb_info.items():
         text = text.replace(key, value)
     return text
+
+
+def count_outer(text: str, key: str, avoid_escape_char: bool = True) -> int:
+    """Like in, but only checks outside matrices and text.
+    Meant for equations.
+    """
+    all_matrices = ['matrix', 'bmatrix', 'pmatrix']
+    for m_mode in all_matrices:
+        text = modify_text_in_environment(text, m_mode, lambda s: '')
+    text = do_something_to_local_env(text, 'text', lambda s: '')
+    if len(key) == 1 and avoid_escape_char:
+        text = text.replace(f'\\{key}', '')
+    return text.count(key)
+
+
+def count_matrix_size(matrix: str) -> tuple[int, int]:
+    """Count the size of the matrix. Do not count the size
+    of any matrices inside.
+
+    Return in the format of n - 1, m - 1.
+    """
+    a_cms = count_outer(matrix, '&')
+    b_cms = count_outer(matrix, '\\\\')
+    return b_cms, a_cms
+
+
+TEST_STR_2 = r"""
+\begin{matrix}
+ccc
+\begin{matrix}
+&&&&&&&\\\\\\\&&|&|&|
+\end{matrix}
+\#(no. 1)
+\end{matrix}
+""".strip()
+
+TEST_STR_3 = """
+\\begin{matrix}
+42 + 534r\\#(67) \\\\
+\\end{matrix}
+""".strip()
+
+
+def valid_matrix(matrix: str) -> bool:
+    """Check if the matrix happens to be one used for
+    the hashtag.
+
+    The matrix must have its begin and end keywords.
+
+    A matrix is valid if:
+        - not a bracket or para matrix
+        - it's 1x1
+        - has only one visible # inside it, that isn't nested
+
+    >>> valid_matrix(TEST_STR_2)
+    True
+    """
+    matrix = matrix.strip()
+    all_matrices = ['\\begin{matrix}']  # I know, only one loop iteration
+    started_with = ''
+    for am in all_matrices:
+        if matrix.startswith(am):
+            started_with = am
+    if started_with == '':
+        return False
+    matrix = matrix[len(started_with):len(matrix) - len(started_with) + 2]
+    cms = count_matrix_size(matrix)
+    if cms != (1, 0):  # not all(ti == 0 for ti in cms):
+        return False
+    hashtag = '\\#'
+    cms2 = count_outer(matrix, hashtag, False)
+    return cms2 == 1
+
+
+FI = r'\text{because }x+4=9 \text{, this is true.} 9 + 10 = 21'
+FI2 = r'(4.3)'
+
+
+def equation_to_regular_text_unused(text: str) -> str:
+    """Input: text seen in an equation.
+    Output: text seen NOT in an equation.
+
+    >>> equation_to_regular_text(FI)
+    'because \\(x+4=9\\) , this is true.'
+    """
+    # special case: string only has (, ), ., whitespaces, and any number
+    set_string = {st for st in text}
+    temp_allowed_chars = {st for st in '[]().0123456789'}
+    if set_string.issubset(temp_allowed_chars):
+        print('fast time')
+        return text
+    # approach: like an AST, but using lists
+    # [text, True], where True means equation and False means regular text
+    # we will use bracket layering here:
+    # \text regions can only be marked if for all characters
+    # in \text, the bracket layer of the declaration is zero
+    tx_env = '\\text{'
+    list_so_far = []
+    while True:
+        clv = find_closest_local_env(text, 'text')
+        if clv != -1:
+            before = text[:clv]
+            end = local_env_end(text, clv)
+            after = text[clv + len(tx_env):end]
+            text = text[end + 1:]
+            if len(before) == 0 or all(bf == ' ' for bf in before):
+                list_so_far.append([after, False])
+            else:
+                list_so_far.extend([[before, True], [after, False]])
+        else:
+            if not (len(text) == 0 or all(bf == ' ' for bf in text)):
+                list_so_far.append([text, True])
+            break
+    # assuming this works:
+    new_str = ''
+    for i, item in enumerate(list_so_far):
+        if item[1]:  # equation
+            new_str += f'\\({item[0].strip()}\\)'
+        else:  # regular text
+            stripped = item[0].strip()
+            if stripped[0] not in {',', '.', '?', ')'} and i != 0:
+                stripped = ' ' + stripped
+            if stripped[-1] != '(':
+                stripped = stripped + ' '
+            new_str += stripped
+    return new_str.strip()
+
+
+
+def find_closest_local_env(text: str, env: str) -> int:
+    """Return the index of the closest local environment,
+    that isn't nested with any other local environment.
+
+    Return -1 on failure.
+    """
+    env_str = '\\' + env + '{'
+    n = 1
+    while True:
+        ind = find_nth(text, env_str, n)
+        if ind == -1:
+            return -1
+        if environment_layer(text, ind):
+            n += 1
+            continue
+        else:
+            return ind
+
+
+def environment_layer(text: str, index: int) -> bool:
+    """Return whether text at index is inside an environment.
+
+    Using find and rfind at index.
+    """
+    bg = r'\begin{'
+    en = r'\end{'
+    next_end = text.find(en, index)  # -1 if fail
+    next_begin = text.find(bg, index)  # big if fail
+    # previous_begin = text.rfind(bg, index)  # big if fail
+    # previous_end = text.rfind(en, index)  # -1 if fail
+
+    if next_end == -1:
+        return False
+    elif next_end > next_begin:
+        return False
+    else:  # only the case where the next end is before the next begin
+        return True
