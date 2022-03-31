@@ -29,6 +29,8 @@
   "special_proofs": false,
   "forbid_images": false,
   "code_lang": "",
+  "citation_brackets": true,
+  "no_secnum": false,
   "start_of_doc_text": "\\renewcommand{\\arraystretch}{2}",
   "environments": {
     "Theorem": {

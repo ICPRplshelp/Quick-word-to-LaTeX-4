@@ -1,5 +1,5 @@
 {
-  "preamble_path": "config_modes/preamble.txt",
+  "preamble_path": "config_modes/preamble_light.txt",
   "allow_proofs": false,
   "allow_citations": false,
   "allow_no_longtable": true,
@@ -27,6 +27,8 @@
   "combine_aligns": true,
   "table_of_contents": false,
   "special_proofs": false,
+  "citation_brackets": false,
+  "no_secnum": false,
   "environments": {
     "Theorem": {
       "env_name": "Theorem",

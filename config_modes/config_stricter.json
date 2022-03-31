@@ -20,7 +20,7 @@
   "replace_font": false,
   "fix_unicode": true,
   "autodetect_align_symbols": true,
-  "pdf_engine": "pdflatex",
+  "pdf_engine": "xelatex",
   "max_line_length": 110,
   "max_line_align": true,
   "fix_texttt": false,
@@ -31,6 +31,8 @@
   "erase_pandoc_preamble": false,
   "code_lang": "",
   "start_of_doc_text": "",
+  "citation_brackets": true,
+  "no_secnum": false,
   "environments": {
     "Theorem": {
       "env_name": "Theorem",

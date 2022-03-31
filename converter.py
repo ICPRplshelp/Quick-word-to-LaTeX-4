@@ -21,13 +21,20 @@ REPLAC = {'α': r'\alpha', 'β': r'\beta', 'γ': r'\gamma', 'δ': r'\delta', 'ϵ
 ALLOWED_LATEX_COMPILERS = {'pdflatex', 'xelatex'}
 
 
-def open_file(file: str) -> str:
+def open_file(file: str, allow_exceptions: bool = False) -> str:
     """Return file contents of any plain text file in the directory file.
     """
-    with open(file, encoding='UTF-8') as f:
-        file_text = f.read()
-    return file_text
-
+    if not allow_exceptions:
+        with open(file, encoding='UTF-8') as f:
+            file_text = f.read()
+        return file_text
+    else:
+        try:
+            with open(file, encoding='UTF-8') as f:
+                file_text = f.read()
+            return file_text
+        except FileNotFoundError:
+            return ''
 
 def write_file(text: str, filename: str) -> None:
     """Write file with given name.
@@ -133,7 +140,7 @@ class Preferences:
     no_secnum: bool = False  # omit section numbering. This may affect how environments are numbered.
     conceal_verbatims: bool = True  # prevent verbatim environments from being affected,
     # unless a module specifically affects verbatim environments.
-    citation_brackets: bool = True  # whether brackets should wrap citations. Default for APA citations.
+    citation_brackets: bool = False  # whether brackets should wrap citations. Default for APA citations.
 
 
 DEFAULT_PREF = Preferences('preamble_0.txt', False, False, False, False, False)
@@ -372,11 +379,14 @@ class WordFile:
             text = dbl.show_verbatims(text, dict_info_hide_verb)
         # always on
         text = dbl.verbatim_regular_quotes(text)
+
+        p_start = open_multiple_files(self.preferences.preamble_path)
+
         if not self.preferences.exclude_preamble:  # if preamble is included
             self.text = w2l.deal_with_preamble(text=self.raw_text[:start],
                                                has_bib_file=has_bib_file,
                                                remove_default_font=self.preferences.replace_font,
-                                               preamble_path=self.preferences.preamble_path,
+                                               preamble_path=p_start,
                                                erase_existing_preamble=self.erase_pandoc_preamble,
                                                omit_section_numbering=self.preferences.no_secnum) \
                         + '\n' + self.preferences.start_of_doc_text + '\n' + text + '\n' + \
@@ -459,8 +469,9 @@ class WordFileCombo(WordFile):
         self.latex_repair()
         # self.text = dbl.strip_regular_sections(self.text)
         new_file_text_2, new_file_start, new_file_end = w2l.document_extract(self.alt_text)
-        preamble_mode = dbl.deduce_preamble_mode(new_file_text_2)
-        new_file_start = dbl.insert_in_preamble(new_file_start, preamble_mode)
+        # preamble_mode = dbl.deduce_preamble_mode(new_file_text_2)
+        file_text = open_multiple_files(self.preferences.preamble_path)
+        new_file_start = dbl.insert_in_preamble(new_file_start, file_text)
         new_file_text_3 = dbl.many_instances(self.text, new_file_text_2, self.preferences.replacement_marker)
         new_file_text_4 = new_file_start + new_file_text_3 + new_file_end
         if self.preferences.override_author and isinstance(self.author, str):
@@ -470,6 +481,30 @@ class WordFileCombo(WordFile):
         self.text = new_file_text_4
         print(new_file_text_4)
         self.export()
+
+
+def open_multiple_files(files: Union[list[str], str]) -> str:
+    """Open multiple files in order. If an error occurs opening
+    a file, don't open anything.
+    """
+    if isinstance(files, str):
+        try:
+            with open(files) as f:
+                prestart = f.read()
+        except FileNotFoundError:
+            print('you specified a file that did not exist')
+            prestart = ''
+    else:
+        preamble_text_list = []
+        for pr_path in files:
+            try:
+                with open(pr_path) as f:
+                    preamble_text_list.append(f.read())
+            except FileNotFoundError:
+                print('you specified a preamble that did not exist')
+                pass
+        prestart = '\n'.join(preamble_text_list)
+    return prestart
 
 
 def check_config(json_path: str) -> tuple[Preferences, bool]:

@@ -27,13 +27,11 @@ def deduce_preamble_mode(tex_file: str) -> int:
         return 2
 
 
-def insert_in_preamble(tex_file: str, mode: int = 0) -> str:
+def insert_in_preamble(tex_file: str, file_text: str) -> str:
     """Insert in preamble
     """
-    with open(PREAMBLE_PATH[mode]) as f:
-        file_text = f.read()
-    # have it insert right before \title
-    title_index = find_nth(tex_file, '\\title', 1)
+    # have it insert right before the document starts
+    title_index = find_nth(tex_file, '\\begin{document}', 1)
     newest_text = tex_file[:title_index] + '\n' + file_text + '\n' + tex_file[title_index:]
     return newest_text
 

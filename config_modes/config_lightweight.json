@@ -27,6 +27,8 @@
   "combine_aligns": true,
   "table_of_contents": false,
   "special_proofs": false,
+  "citation_brackets": true,
+  "no_secnum": false,
   "environments": {
     "Theorem": {
       "env_name": "Theorem",

@@ -122,30 +122,14 @@ HARDCODED_TEXT = r"""\documentclass[fontsize=11pt]{article}
 
 
 def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
-                       remove_default_font: bool = False, preamble_path: Union[str, list[str]] = 'preamble_0.txt',
+                       remove_default_font: bool = False, preamble_path: str = '',
                        erase_existing_preamble: bool = False, omit_section_numbering: bool = False) -> str:
     """Deal with the preamble
     text is ALL the text within the preamble.
     """
     # prestart = ''
 
-    if isinstance(preamble_path, str):
-        try:
-            with open(preamble_path) as f:
-                prestart = f.read()
-        except FileNotFoundError:
-            print('you specified a file that did not exist')
-            prestart = ''
-    else:
-        preamble_text_list = []
-        for pr_path in preamble_path:
-            try:
-                with open(pr_path) as f:
-                    preamble_text_list.append(f.read())
-            except FileNotFoundError:
-                print('you specified a preamble that did not exist')
-                pass
-        prestart = '\n'.join(preamble_text_list)
+    prestart = preamble_path
     if isinstance(has_bib_file, bool) and has_bib_file is True:
         bib_file_name = input('What is your .bib file name? (Must include suffix .bib) ')
         prestart = prestart + '\n\\addbibresource{' + bib_file_name + '}\n\n'
