@@ -1837,6 +1837,37 @@ def find_not_in_environment(text: str, sub: str, env: Union[str, list[str]],
             return ind
 
 
+def find_not_in_environment_tolerance(text: str, sub: str, env: dict[str, int],
+                                      start: int = 0, skip: int = 1) -> int:
+    """Similar to find, but prevent finding things in the specified environment.
+    env - key is env name, item is the depth where envs will be skipped (any less and
+    it will be a pass)
+
+    For example, a depth overlimit of 1 means at least one layer deep will cause it
+    to be skipped. A depth overlimit of 2 means 2 layers will cause it to be skipped.
+    0 means invisible.
+
+    Return -1 on failure.
+    """
+    # skip = 1
+    if isinstance(env, str):
+        env = [env]
+    while True:
+        ind = find_nth(text, sub, skip, start)
+        if ind == -1:  # always return -1 on failure.
+            return -1
+        failed = False
+        for env_instance, depth_overlimit in env.items():
+            if environment_depth(text, ind, env_instance) >= depth_overlimit:
+                failed = True
+                break
+        if failed:
+            skip += 1
+            continue
+        else:
+            return ind
+
+
 def check_in_environment(text: str, env: str, index: int) -> bool:
     """Return if current index in environment.
 
@@ -2211,9 +2242,9 @@ def quote_to_environment(text: str, env: LatexEnvironment, has_extra_args: bool 
                 assert False  # who decided to put more than one colon?
             br = ('{', '}') if env.extra_args_type == 'brace' else ('[', ']')
             text = text[:start_pos_1] + env.env_prefix + k_begin + br[0] + \
-                env_title + br[1] + \
-                env.env_suffix + '\n' + \
-                during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
+                   env_title + br[1] + \
+                   env.env_suffix + '\n' + \
+                   during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
         else:
             text = text[:start_pos_1] + env.env_prefix + k_begin + \
                    env.env_suffix + '\n' + \
@@ -2486,6 +2517,19 @@ def environment_layer(text: str, index: int) -> bool:
         return True
 
 
+def environment_depth(text: str, index: int, env: str) -> int:
+    """Return how deep text is in an environment at index.
+    If index is in the middle of an environment declaration, assume
+    that declaration does not exist.
+    """
+    be = r'\begin{' + env + '}'
+    en = r'\end{' + env + '}'
+    ti = text[:index]
+    begins = ti.count(be)
+    ends = ti.count(en)
+    return begins - ends
+
+
 def verbatim_regular_quotes(text: str) -> str:
     """Remove weird quotes from verbatim environments.
     """
@@ -2500,25 +2544,28 @@ def longtable_environment(text: str, env: str, env_info: LatexEnvironment) -> st
     The second row is the name of the term, which is case-sensitive.
     The third row is the contents of the environment, which
     one may do anything they want. Even lists are allowed there.
-
-    Preconditions:
-        - no nested tables
     """
+    forbid_envs = ['matrix', 'bmatrix', 'pmatrix', 'minipage', 'align*', 'longtable']
+    # forbid_env_tolerance = {'longtable': 2}
     skip = 1
     while True:
         lt_index = find_nth(text, r'\begin{longtable}', skip)
+        env_d = environment_depth(text, lt_index, 'longtable')
+        forbid_env_tolerance = {'longtable': 2 + env_d}
         if lt_index == -1:
             break  # break if we can't find a starting longtable
-        lt_end_index = find_nth(text, r'\end{longtable}', 1, lt_index)
+        # lt_end_index = find_nth(text, r'\end{longtable}', 1, lt_index)
+        lt_end_index = find_env_end(text, lt_index, 'longtable')
         if lt_end_index == -1:
             break
         # we now have the contents of the longtable, represented by
         # text[lt_index:lt_end_index + len(r'\end{longtable}')]
 
         left_border = '\\begin{minipage}[b]{\\linewidth}\\raggedright\n'
-        right_border = '\\end{minipage}'
+        # right_border = '\\end{minipage}'
         left_index_border = find_nth(text, left_border, 1, lt_index) + len(left_border)
-        right_index_border = find_nth(text, right_border, 1, lt_index)
+        # right_index_border = find_nth(text, right_border, 1, lt_index)
+        right_index_border = find_env_end(text, left_index_border, 'minipage')
         if right_index_border == -1:
             assert False  # never supposed to happen here
         cur_header = text[left_index_border:right_index_border].strip()
@@ -2531,14 +2578,15 @@ def longtable_environment(text: str, env: str, env_info: LatexEnvironment) -> st
             skip += 1
             continue  # if it is not one wide, then this is the wrong table
         # from this point, assume our table is one wide and only has 3 rows
-        table_content_start = text.find(r'\endhead', right_index_border) + len(r'\endhead')
-        table_content_end = text.find(r'\bottomrule', right_index_border)
+        # table_content_start = text.find(r'\endhead', right_index_border) + len(r'\endhead')
+
+        table_content_start = find_not_in_environment_tolerance(text, r'\endhead', forbid_env_tolerance, right_index_border) + len(r'\endhead')
+        table_content_end = find_not_in_environment_tolerance(text, r'\bottomrule', forbid_env_tolerance, right_index_border)
+        # table_content_end = text.find(r'\bottomrule', right_index_border)
         if table_content_start == -1 or table_content_end == -1:
             assert False  # never supposed to happen
         table_contents = text[table_content_start:table_content_end]
-        table_rows = str_split_not_in_env(table_contents, r'\\', ['matrix', 'bmatrix', 'pmatrix',
-                                                                  'minipage', 'align*',
-                                                                  'longtable'])
+        table_rows = str_split_not_in_env(table_contents, r'\\', forbid_envs)
         table_rows = [minipage_remover(trrr) for trrr in table_rows]
         if len(table_rows) == 2:
             brack = '{}' if env_info.extra_args_type == 'brace' else '[]'
@@ -2659,3 +2707,48 @@ def aug_matrix_spacing(text: str) -> str:
     old = r'\end{matrix}\mid\begin{matrix}'
     new = r'\end{matrix}\;\middle|\;\begin{matrix}'
     return text.replace(old, new)
+
+
+T_STR_07 = r"""\begin{matrix}
+\begin{matrix}
+\end{matrix}
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+\end{matrix}
+NO MORE
+"""
+
+
+def find_env_end(text: str, index: int, env: str, skip: int = 1) -> int:
+    """Find where the environment ends. Helps
+    bypass nesting.
+
+    Index should be at the backslash where the start
+    of the env is declared.
+
+    Return where the backslash occurs on the environment end.
+    Return -1 on failure.
+    """
+    index += 1
+    skip_st = 1
+    skip_en = 1
+    env_st = r'\begin{' + env + '}'
+    env_en = r'\end{' + env + '}'
+    while True:
+        t_st = find_nth(text, env_st, skip_st, index)  # big if -1
+        t_en = find_nth(text, env_en, skip_en, index)  # -1 if -1
+        if t_st == -1:
+            t_st = len(text) + 100
+        if t_en == -1:
+            return -1
+        if t_st < t_en:
+            skip_st += 1
+            skip_en += 1
+            continue
+        else:
+            if skip > 1:
+                skip_st += 1
+                skip_en += 1
+                skip -= 1
+                continue
+            else:
+                return t_en
