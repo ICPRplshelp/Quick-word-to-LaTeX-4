@@ -4,7 +4,7 @@ import json
 import logging
 import math
 from dataclasses import dataclass, fields
-from typing import Optional, Iterable, Callable
+from typing import Optional, Iterable, Callable, Union
 
 # ch = logging.StreamHandler()
 # ch.setLevel(logging.DEBUG)
@@ -187,6 +187,8 @@ def fix_texttt(text: str) -> str:
     text = text.replace('🬠', r'\$')
     text = text.replace('🬰', r'\{')
     text = text.replace('🭀', r'\}')
+    w_quote_remove = lambda s: s.replace('‘', "'").replace('’', "'")
+    text = w_quote_remove(text)
 
     # for i, char in enumerate(text):
     #     if prev_char in ALPHABET_ALL and char == '\\':
@@ -318,7 +320,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False) -> str:
 
     figure_text_cap = 'Figure'
     while True:
-        bl = '\n\\begin{figure}[bh]\n\\centering\n'
+        bl = '\n\\begin{figure}[h]\n\\centering\n'
         el = '\\end{figure}\n'
         include_index = find_nth(text, '\\includegraphics', i)
         if include_index == -1:
@@ -465,38 +467,38 @@ def rfind_nth(haystack: str, needle: str, n: int, starter: int = 0,
     return end
 
 
-def do_citations(text: str, bib_contents: str, mode: str = 'mla') -> str:
+def do_citations(text: str, bib_contents: str, mode: str = 'mla', brackets: bool = False) -> str:
     """Return text with converted citations.
     """
     authors = extract_authors_from_bib(bib_contents)
-    text = citation_handler(text, authors)
-    text = bulk_citation_page_handler(text, mode, False, authors)
+    text = citation_handler(text, authors, brackets)
+    text = bulk_citation_page_handler(text, mode, False, authors, brackets)
     text = multi_cite_handler_bulk(text, authors)
     return text
 
 
-def citation_handler(text: str, citation_list: list[str]) -> str:
+def citation_handler(text: str, citation_list: list[str], brackets: bool = False) -> str:
     """Handle all non-page citations.
     """
     # citation_list = bib_path
     for src in citation_list:
         bracket_src = '(' + src + ')'
         cite_src = '\\cite{' + src + '}'
-        if APA_MODE:
+        if brackets:
             cite_src = ' (' + cite_src + ')'
         text.replace(bracket_src, cite_src)
     return text
 
 
 def bulk_citation_page_handler(text: str, mode: str,
-                               p: bool, citation_list: list[str]) -> str:
+                               p: bool, citation_list: list[str], brackets: bool = False) -> str:
     """Page numbers
     mode: apa1, apa2, or mla (default mla)
     if p is true latex page numbers will start with p. otherwise nothing
     """
     # citation_list = extract_authors_from_bib(bib_path)
     for src in citation_list:
-        text = citation_page_handler(text, src, mode, p)
+        text = citation_page_handler(text, src, mode, p, brackets)
     return text
 
 
@@ -510,7 +512,7 @@ def create_citations_list(directory: str) -> list[str]:
     return citation_list
 
 
-def citation_page_handler(text: str, src: str, mode: str = 'apa2', p: bool = False) -> str:
+def citation_page_handler(text: str, src: str, mode: str = 'apa2', p: bool = False, brackets: bool = False) -> str:
     """Handle all page citations.
     The text should never make a fake-out citation ( please)
 
@@ -545,7 +547,7 @@ def citation_page_handler(text: str, src: str, mode: str = 'apa2', p: bool = Fal
         if p:
             page_number = 'p. ' + page_number
         cite_src = '\\cite[' + page_number + ']{' + src + '}'
-        if APA_MODE:
+        if brackets:
             cite_src = ' (' + cite_src + ')'
         text = text[:starter - 1] + cite_src + text[citation_bound_end:]
     return text
@@ -746,6 +748,8 @@ def bulk_environment_wrapper(text: str, envs: list[LatexEnvironment]) -> str:
     env_complex = [en for en in envs if en.has_extra_args]
     for env in envs:
         text = quote_to_environment(text, env, env.has_extra_args)
+    for env in envs:
+        text = longtable_environment(text, env.env_name, env)
     for env in env_complex:
         text = environment_wrapper_2(text, env)
     for env in envs:
@@ -953,6 +957,7 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
         term = text[start_after + 2:end]
         if term[-1] == ':':
             term = term[:-1]
+        term = term.strip()
         next_nl_skip = 1
         while True:  # intent: math regions don't break. Actual: Max of one math region.
             next_newline = find_nth(text, '\n\n', next_nl_skip, end + 1)
@@ -1809,6 +1814,31 @@ CCCCCC
 """
 
 
+def find_not_in_environment(text: str, sub: str, env: Union[str, list[str]],
+                            start: int = 0, skip: int = 1) -> int:
+    """Similar to find, but prevent finding things in the specified environment.
+
+    Return -1 on failure.
+    """
+    # skip = 1
+    if isinstance(env, str):
+        env = [env]
+    while True:
+        ind = find_nth(text, sub, skip, start)
+        if ind == -1:  # always return -1 on failure.
+            return -1
+        failed = False
+        for env_instance in env:
+            if check_in_environment(text, env_instance, ind):
+                failed = True
+                break
+        if failed:
+            skip += 1
+            continue
+        else:
+            return ind
+
+
 def check_in_environment(text: str, env: str, index: int) -> bool:
     """Return if current index in environment.
 
@@ -2176,16 +2206,16 @@ def quote_to_environment(text: str, env: LatexEnvironment, has_extra_args: bool 
         env_starter_contents = bold_str.split(':')
         if has_extra_args:
             if len(env_starter_contents) == 2:
-                env_title = env_starter_contents[1].strip().replace('\n', ' ')
+                env_title = env_starter_contents[1].strip().replace('\n', ' ').replace('.', '')
             elif len(env_starter_contents) == 1:
                 env_title = ''
             else:
                 assert False  # who decided to put more than one colon?
-            br = ('[', ']') if env.extra_args_type == 'bracket' else ('{', '}')
+            br = ('{', '}') if env.extra_args_type == 'brace' else ('[', ']')
             text = text[:start_pos_1] + env.env_prefix + k_begin + br[0] + \
-                   env_title + br[1] + \
-                   env.env_suffix + '\n' + \
-                   during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
+                env_title + br[1] + \
+                env.env_suffix + '\n' + \
+                during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
         else:
             text = text[:start_pos_1] + env.env_prefix + k_begin + \
                    env.env_suffix + '\n' + \
@@ -2373,7 +2403,7 @@ def equation_to_regular_text_unused(text: str) -> str:
     """Input: text seen in an equation.
     Output: text seen NOT in an equation.
 
-    >>> equation_to_regular_text(FI)
+    # >>> equation_to_regular_text(FI)
     'because \\(x+4=9\\) , this is true.'
     """
     # special case: string only has (, ), ., whitespaces, and any number
@@ -2419,7 +2449,6 @@ def equation_to_regular_text_unused(text: str) -> str:
     return new_str.strip()
 
 
-
 def find_closest_local_env(text: str, env: str) -> int:
     """Return the index of the closest local environment,
     that isn't nested with any other local environment.
@@ -2457,3 +2486,178 @@ def environment_layer(text: str, index: int) -> bool:
         return False
     else:  # only the case where the next end is before the next begin
         return True
+
+
+def verbatim_regular_quotes(text: str) -> str:
+    """Remove weird quotes from verbatim environments.
+    """
+    text = modify_text_in_environment(text, 'verbatim', lambda s: s.replace('‘', "'").replace('’', "'"))
+    return text
+
+
+def longtable_environment(text: str, env: str, env_info: LatexEnvironment) -> str:
+    """Looks for all 3x1 long tables for an environment and converts them.
+    All format on these tables must be clear. The first row is the
+    name of the environment, which is not case-sensitive.
+    The second row is the name of the term, which is case-sensitive.
+    The third row is the contents of the environment, which
+    one may do anything they want. Even lists are allowed there.
+
+    Preconditions:
+        - no nested tables
+    """
+    skip = 1
+    while True:
+        lt_index = find_nth(text, r'\begin{longtable}', skip)
+        if lt_index == -1:
+            break  # break if we can't find a starting longtable
+        lt_end_index = find_nth(text, r'\end{longtable}', 1, lt_index)
+        if lt_end_index == -1:
+            break
+        # we now have the contents of the longtable, represented by
+        # text[lt_index:lt_end_index + len(r'\end{longtable}')]
+
+        left_border = '\\begin{minipage}[b]{\\linewidth}\\raggedright\n'
+        right_border = '\\end{minipage}'
+        left_index_border = find_nth(text, left_border, 1, lt_index) + len(left_border)
+        right_index_border = find_nth(text, right_border, 1, lt_index)
+        if right_index_border == -1:
+            assert False  # never supposed to happen here
+        cur_header = text[left_index_border:right_index_border].strip()
+        # This must be in the name of the environment
+        if cur_header.lower() != env.lower():
+            skip += 1  # skip if the header isn't the environment we look for
+            continue
+        # check if this table is only one wide:
+        if not text[right_index_border:].startswith(r'\end{minipage} \\'):
+            skip += 1
+            continue  # if it is not one wide, then this is the wrong table
+        # from this point, assume our table is one wide and only has 3 rows
+        table_content_start = text.find(r'\endhead', right_index_border) + len(r'\endhead')
+        table_content_end = text.find(r'\bottomrule', right_index_border)
+        if table_content_start == -1 or table_content_end == -1:
+            assert False  # never supposed to happen
+        table_contents = text[table_content_start:table_content_end]
+        table_rows = str_split_not_in_env(table_contents, r'\\', ['matrix', 'bmatrix', 'pmatrix',
+                                                                  'minipage', 'align*',
+                                                                  'longtable'])
+        table_rows = [minipage_remover(trrr) for trrr in table_rows]
+        if len(table_rows) == 2:
+            brack = '{}' if env_info.extra_args_type == 'brace' else '[]'
+            env_starter = r'\begin{' + env.lower() + '}' + brack[0] + table_rows[0] + \
+                          brack[1] + env_info.env_suffix + '\n'
+            total_env_contents = env_starter + force_not_inline(table_rows[1]) + r'\end{' + env.lower() + '}'
+            text = text[:lt_index] + total_env_contents + text[lt_end_index + len(r'\end{longtable}'):]
+        # if len(table_rows) == 2
+        elif len(table_rows) == 1:
+            env_starter = r'\begin{' + env.lower() + '}'
+            total_env_contents = env_starter + force_not_inline(table_rows[0]) + '\n' + r'\end{' + env.lower() + '}'
+            text = text[:lt_index] + total_env_contents + text[lt_end_index + len(r'\end{longtable}'):]
+        else:
+            skip += 1
+            continue
+    return text
+
+
+TEST_ENV_STR = r"""
+This is \\
+not again \\
+please \\
+\begin{matrix}
+4 \\
+2 \\
+3 \end{matrix}
+please
+"""
+
+TEST_ENV_STR_2 = r"""
+\begin{minipage}[b]{\linewidth}\raggedright
+Theorem
+\end{minipage}
+"""
+
+
+def minipage_remover(text: str) -> str:
+    """If the text is wrapped with minipages, remove them.
+
+    >>> minipage_remover(TEST_ENV_STR_2)
+    'Theorem'
+    """
+    mp_1 = r'\begin{minipage}[t]{\linewidth}\raggedright'
+    mp_11 = r'\begin{minipage}[b]{\linewidth}\raggedright'
+    mp_2 = r'\end{minipage}'
+    text = text.strip()
+    if (text.startswith(mp_1) or text.startswith(mp_11)) and text.endswith(mp_2):
+        return text[len(mp_1):len(text) - len(mp_2)].strip()
+    else:
+        return text  # just the generic text otherwise.
+
+
+def str_split_not_in_env(text: str, sep: str, env: str | list[str]) -> list[str]:
+    """Similar to str.split(), but prevent splitting things inside
+    the specified environment.
+    """
+    lst_so_far = []
+    curr_index = -1  # index of the last sep.
+    while True:
+        prev_index = curr_index + len(sep)  # the char after sep
+        curr_index = find_not_in_environment(text, sep, env, curr_index + 1)  # char at sep
+        if curr_index == -1:
+            if not lst_so_far:
+                prev_index = 0
+            last_part = text[prev_index:curr_index]
+            if len(last_part) != 0:
+                lst_so_far.append(text[prev_index:curr_index])
+            break
+        lst_so_far.append(text[prev_index:curr_index])
+    return lst_so_far
+
+
+LINELESS_TEST = r"""
+
+Content of theorem
+
+\({9 + 10 = 21
+}{4 + 2 = 48
+}{7 + 33 = 68
+}{8 + 293 = 49
+}\begin{matrix}
+43 & 32 \\
+34 & 54 \\
+\end{matrix}\)
+
+Unfortunat
+
+"""
+
+
+def force_not_inline(text: str) -> str:
+    """Forces inline but not inline equations to no longer be inline.
+    This is often caused by putting equations in tables.
+    """
+    i_start = '\\('
+    i_end = '\\)'
+    p_start = '\\['
+    p_end = '\\]'
+    skip = 1
+    while True:
+        st = find_nth(text, i_start, skip)
+        en = find_nth(text, i_end, skip)
+        if st == -1 or en == -1:
+            break
+        assert st < en
+        if (text[st - 2:st] == '\n\n' or len(text[st - 2:st]) != 2) and (text[en + 2:en + 4] == '\n\n'
+                                                                         or len(
+                    text[en + 2: en + 4]) != 2):  # if both detected () are newline-wrapped
+            text = text[:st] + p_start + text[st + 2:en] + p_end + text[en + 2:]
+        else:
+            skip += 1
+    return text
+
+
+def aug_matrix_spacing(text: str) -> str:
+    """Spaces all augmented matrices.
+    """
+    old = r'\end{matrix}\mid\begin{matrix}'
+    new = r'\end{matrix}\;\middle|\;\begin{matrix}'
+    return text.replace(old, new)

@@ -151,7 +151,8 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
         prestart = prestart + '\n\\addbibresource{' + bib_file_name + '}\n\n'
     elif isinstance(has_bib_file, str):  # type(has_bib_file) == type('string'):
         prestart = prestart + '\n\\addbibresource{' + has_bib_file + '}\n\n'
-    section_num_text = '\\setcounter{secnumdepth}{-\\maxdimen} % remove section numbering' if not omit_section_numbering else '% remove section numberinging'
+    section_num_text = '\\setcounter{secnumdepth}{-\\maxdimen} % remove section numbering' if not \
+        omit_section_numbering else '% remove section numberinging'
     pack_import_indicator = '\\usepackage{iftex}\n'
     if not erase_existing_preamble:
         processed_text = insert_after(text, pack_import_indicator, prestart)
@@ -445,6 +446,7 @@ def process_align_region(txt: str, auto_align: bool = False, max_line_len: int =
     # max_line_len = 40
     # text_so_far = txt
     # uni_seperator = 'Ↄ'
+    txt = txt.replace('\n', '')  # may make equations long.
     separator_points = bracket_region_outer(txt, '{', '}')
     # it is slicing time
     lines_so_far = []
@@ -590,13 +592,13 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
                 final_string = text[:min_ind] + '&' + text[min_ind:]
                 if cur_mode == 'shortintertext':
                     final_string = si_text + final_string
-                elif cur_mode == 'align':
+                elif cur_mode == 'align' and temp_comment != '':
                     final_string = final_string + ' && ' + temp_comment
                 return final_string
         to_return = '&' + text
         if cur_mode == 'shortintertext':
             to_return = si_text + '&' + text
-        elif cur_mode == 'align':
+        elif cur_mode == 'align' and temp_comment != '':
             to_return = to_return + ' && ' + temp_comment
         return to_return
 

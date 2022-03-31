@@ -130,9 +130,10 @@ class Preferences:
     eqn_comment_mode: str = 'align'  # how comments in equations should be handled.
     remove_spaces_from_eqns: bool = True  # whether long spaces should be removed from equations.
 
-    no_secnum: bool = True  # omit section numbering. This may affect how environments are numbered.
+    no_secnum: bool = False  # omit section numbering. This may affect how environments are numbered.
     conceal_verbatims: bool = True  # prevent verbatim environments from being affected,
     # unless a module specifically affects verbatim environments.
+    citation_brackets: bool = True  # whether brackets should wrap citations. Default for APA citations.
 
 
 DEFAULT_PREF = Preferences('preamble_0.txt', False, False, False, False, False)
@@ -278,6 +279,8 @@ class WordFile:
         if self.preferences.fix_vectors:
             text = w2l.fix_vectors(text)
             text = w2l.fix_vectors_again(text)
+        if self.preferences.allow_environments and self.preferences.environments is not None:
+            text = dbl.work_with_environments(text, self.preferences.environments)
         # if True:
         #    text = dbl.longtable_backslash_add_full(text)
 
@@ -285,6 +288,7 @@ class WordFile:
         if self.preferences.remove_spaces_from_eqns:
             text = dbl.bad_backslash_replacer(text)
             text = dbl.bad_backslash_replacer(text, '\\(', '\\)')
+
         if self.preferences.allow_alignments:  # alignments must always run first
             while True:
                 max_line = self.preferences.max_line_length if self.preferences.max_line_align else -1
@@ -314,8 +318,6 @@ class WordFile:
             text = dbl.dy_fixer(text)
         if self.preferences.allow_proofs:
             text = dbl.qed(text, self.preferences.special_proofs)
-        if self.preferences.allow_environments and self.preferences.environments is not None:
-            text = dbl.work_with_environments(text, self.preferences.environments)
         if self.preferences.allow_no_longtable:
             text = dbl.eliminate_all_longtables(text, self.preferences.disallow_figures)  # EPIC FAIL!!!
         if self.preferences.dollar_sign_equations:
@@ -327,6 +329,8 @@ class WordFile:
             text = dbl.fix_all_textt(text)
         if self.preferences.combine_aligns:
             text = dbl.combine_environments(text, 'align*')
+        # combines matrices. This is forced.
+        text = dbl.aug_matrix_spacing(text)
         if self.preferences.verbatim_lang != '':
             text = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang)
             # I might have to change this if I ever decide to use auto
@@ -350,7 +354,8 @@ class WordFile:
                     temp_text_here = temp_text_here[:bib_ind] + '\\medskip\n\\printbibliography' + \
                         temp_text_here[bib_ind:]
                     # then replace the citations
-                    text = dbl.do_citations(temp_text_here, bib_data, self.preferences.citation_mode)
+                    text = dbl.do_citations(temp_text_here, bib_data, self.preferences.citation_mode,
+                                            self.preferences.citation_brackets)
                     last_dbl_backslash = self.bib_path.rfind('\\')
                     if last_dbl_backslash == -1:
                         last_dbl_backslash -= 1
@@ -365,7 +370,8 @@ class WordFile:
         #     text = text + '\\medskip\n\\printbibliography'
         if self.preferences.conceal_verbatims:
             text = dbl.show_verbatims(text, dict_info_hide_verb)
-
+        # always on
+        text = dbl.verbatim_regular_quotes(text)
         if not self.preferences.exclude_preamble:  # if preamble is included
             self.text = w2l.deal_with_preamble(text=self.raw_text[:start],
                                                has_bib_file=has_bib_file,

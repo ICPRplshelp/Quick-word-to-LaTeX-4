@@ -11,7 +11,7 @@
   "disable_repair": false,
   "hypertarget_remover": true,
   "fix_vectors": true,
-  "dollar_sign_equations": true,
+  "dollar_sign_equations": false,
   "center_images": true,
   "fix_prime_symbols": true,
   "allow_environments": true,
@@ -28,8 +28,9 @@
   "table_of_contents": false,
   "special_proofs": false,
   "forbid_images": false,
+  "erase_pandoc_preamble": false,
   "code_lang": "",
-  "start_of_doc_text": "\\renewcommand{\\arraystretch}{2}",
+  "start_of_doc_text": "",
   "environments": {
     "Theorem": {
       "env_name": "Theorem",
