@@ -20,7 +20,7 @@ def new_folder(folder_name: str) -> str:
     return current_directory + '\\' + folder_name
 
 
-def obtain_files_to_move() -> list[str]:
+def __obtain_files_to_move() -> list[str]:
     """Return a list of filenames from a directory, and then
     only include images within the allowed formats.
     """
@@ -58,14 +58,14 @@ def obtain_files_to_move() -> list[str]:
                 '(Type YES in all caps to do so, or anything else to NOT): ')
     if ipt == 'YES':
         suffixes.extend(additional_suffixes)
-    prefixes = ['TEXIMAGEF_', 'TEXIMAGE_']
+    prefixes = ['TEXIMAGEF_', 'TEXIMAGE_', 'latex_images_']
     directory_files = os.listdir(current_directory)
     passing_files = [file for file in directory_files
-                     if filter_suffix(file, suffixes) ^ filter_prefix(file, prefixes)]
+                     if __filter_suffix(file, suffixes) ^ __filter_prefix(file, prefixes)]
     return passing_files
 
 
-def filter_prefix(filename: str, prefixes: Iterable) -> bool:
+def __filter_prefix(filename: str, prefixes: Iterable) -> bool:
     """Return True if filename starts with any prefix listed.
     """
     for pre in prefixes:
@@ -74,7 +74,7 @@ def filter_prefix(filename: str, prefixes: Iterable) -> bool:
     return False
 
 
-def filter_suffix(filename: str, suffixes: Iterable) -> bool:
+def __filter_suffix(filename: str, suffixes: Iterable) -> bool:
     """Return True if filename ends with any suffix listed.
     """
     for suf in suffixes:
@@ -83,17 +83,34 @@ def filter_suffix(filename: str, suffixes: Iterable) -> bool:
     return False
 
 
-def main() -> None:
+def __main() -> None:
     """This is the main branch.
     """
     folder_name = 'TRASH_LATEX_FILES'
     new_folder_path = new_folder(folder_name)
     logging.warning('TARGET FOLDER IS' + new_folder_path)
-    file_move_list = obtain_files_to_move()
+    file_move_list = __obtain_files_to_move()
     print(file_move_list)
     for file in file_move_list:
         logging.warning('REPLACED ' + file)
         os.replace(file, new_folder_path + '\\' + file)
+
+
+def move_useless_files_away(file_name: str) -> None:
+    """Move all temp. tex related files into the trash folder.
+    This does overwrite!!
+    """
+    current_directory = os.getcwd()
+    forbidden_filetypes = ['.aux', '.bcf', '.log', '.run.xml', '.bbl', '.blg', '.fdb_latexmk',
+                           '.fls', '.synctex.gz']
+    folder_name = 'TRASH_LATEX_FILES'
+    directory_files = os.listdir(current_directory)
+    new_folder_path = new_folder(folder_name)
+    # logging.warning('TARGET FOLDER IS' + new_folder_path)
+    files_to_move = [file_name + x for x in forbidden_filetypes if file_name + x in directory_files]
+    for fm in files_to_move:
+        # logging.warning('REPLACED ' + fm)
+        os.replace(fm, new_folder_path + '\\' + fm)
 
 
 WARNING_STR = f"""
@@ -128,4 +145,4 @@ ANYTHING ELSE TO CANCEL.
 if __name__ == '__main__':
     str_input = input(WARNING_STR)
     if str_input == 'YES':
-        main()
+        __main()

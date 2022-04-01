@@ -20,6 +20,10 @@ a PDF in the same directory as `main.py`.
 You should look at the [Wiki](https://github.com/ICPRplshelp/Quick-word-to-LaTeX-4/wiki)
 if you want to make the most use of this program.
 
+## CAUTION!!!
+Everything from this page should be placed in its own folder. This program is able to read and write files without any save-as dialogue.
+A good practice is to never drag anything directly into the folder where this program resides. You only really need to listen to this warning if you plan to drag `.pdf` or `.tex` files from this folder that were not created by this program by itself. 
+
 ## Common reasons of errors
 If the program breaks midway without compiling the ``.tex`` file,
 it means something wrong happened when fixing the ``.tex`` file.

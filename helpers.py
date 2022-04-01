@@ -3,6 +3,7 @@
 import json
 import logging
 import math
+import re
 from dataclasses import dataclass, fields
 from typing import Optional, Iterable, Callable, Union
 
@@ -94,8 +95,8 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '') -> str:
     table_start = '\\begin{table}[h]\n\\centering\n' + label + '\n\\begin{tabular}{' + table_width + '}\n'
     table_end = '\\end{tabular}\n' + '\n' + caption_info + '\\end{table}\n'
     new_table = table_start + tab_data + table_end
-    new_table = new_table.replace(r'\[', r'\(')  # all math in tables are inline math
-    new_table = new_table.replace(r'\]', r'\)')
+    new_table = new_table.replace(R'\[', R'\(')  # all math in tables are inline math
+    new_table = new_table.replace(R'\]', R'\)')
     return new_table
 
 
@@ -129,10 +130,10 @@ def fix_all_textt(text: str) -> str:
     text = text.replace('{]}', ']')
     dealt_with = 1
     while True:
-        t_index = find_nth(text, r'\texttt{', dealt_with)
+        t_index = find_nth(text, R'\texttt{', dealt_with)
         if t_index == -1:
             break
-        t_index += len(r'\texttt{')
+        t_index += len(R'\texttt{')
         end = detect_end_of_bracket_env(text, t_index)
         texttt_bounds = text[t_index:end]
         tb = fix_texttt(texttt_bounds)
@@ -152,14 +153,14 @@ def combine_all_textt(text: str) -> str:
     dealt_with = 1
     min_index = 0
     while True:
-        t_index = find_nth(text, r'\texttt{', dealt_with, min_index)
+        t_index = find_nth(text, R'\texttt{', dealt_with, min_index)
         if t_index == -1:
             break
         end = detect_end_of_bracket_env(text, t_index)
         end += 1
-        new_index = find_nth(text, r'\texttt{', 1, end)
+        new_index = find_nth(text, R'\texttt{', 1, end)
         if new_index == end:
-            text = text[:end - 1] + text[end + len(r'\texttt{'):]
+            text = text[:end - 1] + text[end + len(R'\texttt{'):]
         else:
             dealt_with += 1
     return text
@@ -172,19 +173,19 @@ def fix_texttt(text: str) -> str:
     # slashed_indices = []
     # prev_char = ''
     text = text.replace('–', '-')
-    text = text.replace(r'\_', '🬀')
-    text = text.replace(r'\&', '🬐')
-    text = text.replace(r'\$', '🬠')
-    text = text.replace(r'\{', '🬰')
-    text = text.replace(r'\}', '🭀')
-    text = text.replace(r'{]}', '}')
+    text = text.replace(R'\_', '🬀')
+    text = text.replace(R'\&', '🬐')
+    text = text.replace(R'\$', '🬠')
+    text = text.replace(R'\{', '🬰')
+    text = text.replace(R'\}', '🭀')
+    text = text.replace(R'{]}', '}')
     text = text.replace('r{[}', '[')
     text = text.replace('\\', '')
-    text = text.replace('🬀', r'\_')
-    text = text.replace('🬐', r'\&')
-    text = text.replace('🬠', r'\$')
-    text = text.replace('🬰', r'\{')
-    text = text.replace('🭀', r'\}')
+    text = text.replace('🬀', R'\_')
+    text = text.replace('🬐', R'\&')
+    text = text.replace('🬠', R'\$')
+    text = text.replace('🬰', R'\{')
+    text = text.replace('🭀', R'\}')
     w_quote_remove = lambda s: s.replace('‘', "'").replace('’', "'")
     text = w_quote_remove(text)
 
@@ -257,14 +258,16 @@ def qed(text: str, special: bool = False) -> str:
     """
     sp = '{}{}' if special else ''
     text = text.replace('\\emph{Proof.}', '\\begin{proof}' + sp)
-    text = text.replace('\\[\\blacksquare\\]', '\\end{proof}')
-    text = text.replace('\\blacksquare\\]', '\\] \\end{proof}')
-    text = text.replace('\\(\\blacksquare\\)', '\\end{proof}')
-    text = text.replace('\\blacksquare\\)', '\\) \\end{proof}')
-    text = text.replace(r'~◻', '\\end{proof}')
-    text = text.replace(r'□', '\\end{proof}')
-    text = text.replace(r'◻', '\\end{proof}')
+    # text = text.replace('\\[\\blacksquare\\]', '\\end{proof}')
+    # text = text.replace('\\blacksquare\\]', '\\] \\end{proof}')
+    # text = text.replace('\\(\\blacksquare\\)', '\\end{proof}')
+    # text = text.replace('\\blacksquare\\)', '\\) \\end{proof}')
+    text = text.replace(R'~◻', '\\end{proof}')
+    text = text.replace(R'□', '\\end{proof}')
+    text = text.replace(R'◻', '\\end{proof}')
+    text = text.replace(R'∎', '\\end{proof}')
     # text = '\\renewcommand\\qedsymbol{$\\blacksquare$}\n' + text
+    text = blacksquare_detector(text)
     return text
 
 
@@ -601,7 +604,7 @@ def multi_cite_handler(text: str, cur_src: str, srcs: list[str]) -> str:
                 if ending_author_ind != -1:
                     author_list.append(author)
         # updated text
-        text = text[:cite_ind] + r'\cite{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
+        text = text[:cite_ind] + R'\cite{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
     return text
 
 
@@ -885,7 +888,7 @@ def environment_wrapper_new(text: str, env_instance: EnvironmentInstance) -> str
         #        brc = ('[', ']')
         extra_env_args = (text[start_pos_2:start_pos_3].strip()).replace('\n', '')
         if all(k in extra_env_args for k in {'{[}', '{]}'}) or all(k in extra_env_args for k in {'\\{', '\\}'}):
-            begin_env = begin_env + extra_env_args.replace(r'\{', '{').replace(r'\}', '}'). \
+            begin_env = begin_env + extra_env_args.replace(R'\{', '{').replace(R'\}', '}'). \
                 replace('{[}', '[').replace('{]}', ']')
             spbr = find_nth(text, '\\}', 1, start_pos_2) + 2
             spbc = find_nth(text, '{]}', 1, start_pos_2) + 3
@@ -930,12 +933,12 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
     """
     braces = env_info.extra_args_type != 'bracket'
     dashes = {'-', '–', '—'}
-    k_begin = r'\begin{' + env_info.env_name.lower() + '}'
-    k_end = r'\end{' + env_info.env_name.lower() + '}'
+    k_begin = R'\begin{' + env_info.env_name.lower() + '}'
+    k_end = R'\end{' + env_info.env_name.lower() + '}'
     keyword = env_info.start_alt
     wrapper = 'textbf'
     br = '{}' if braces else '[]'
-    allowed_terms = [r'\begin{enumerate}', r'\begin{itemize}']
+    allowed_terms = [R'\begin{enumerate}', R'\begin{itemize}']
 
     keyword_wrapper = '\\' + wrapper + '{' + keyword + ' '
     # find nth: haystack, needle, n, starter = None
@@ -964,7 +967,7 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
                 return text
                 # break
 
-            elif text[next_newline + 2:next_newline + 4] == r'\[' or text[next_newline + 2] in ALPHABET or any(
+            elif text[next_newline + 2:next_newline + 4] == R'\[' or text[next_newline + 2] in ALPHABET or any(
                     text[next_newline + 2:].startswith(tx) for tx in allowed_terms):
                 next_nl_skip += 1
                 continue
@@ -1037,7 +1040,7 @@ def environment_wrapper(text: str, env: str, start: str, end: str, env_info: Lat
             begin_env = begin_env + env_info.env_prefix + brc[0] + brc[1] + env_info.env_suffix
             # extra_env_args = (text[start_pos_2:start_pos_3].strip()).replace('\n', '')
             # if all(k in extra_env_args for k in {'{[}', '{]}'}) or all(k in extra_env_args for k in {'\\{', '\\}'}):
-            # begin_env = begin_env + extra_env_args.replace(r'\{', '{').replace(r'\}', '}'). \
+            # begin_env = begin_env + extra_env_args.replace(R'\{', '{').replace(R'\}', '}'). \
             #     replace('{[}', '[').replace('{]}', ']')
             # spbr = find_nth(text, '\\}', 1, start_pos_2) + 2
             # spbc = find_nth(text, '{]}', 1, start_pos_2) + 3
@@ -1057,7 +1060,7 @@ def dy_fixer(text: str) -> str:
     """Fix how pandoc deals with dy and dx.
     """
     low_letters = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
-                   'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'}
+                   'p', 'q', 'R', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'}
     cap_letters = {letter.upper() for letter in low_letters}
     extra_letters = {'θ'}
     # I wonder how theta will work with this?
@@ -1070,8 +1073,8 @@ def dy_fixer(text: str) -> str:
 
 
 # αβγδεϵζηθϑικλμνξοπϖρϱσςτυφϕχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ
-REPLAC = {'α': r'\alpha', 'β': r'\beta', 'γ': r'\gamma', 'δ': r'\delta',
-          'θ': r'\theta', 'π': r'\pi', 'Ω': r'\Omega'}
+REPLAC = {'α': R'\alpha', 'β': R'\beta', 'γ': R'\gamma', 'δ': R'\delta',
+          'θ': R'\theta', 'π': R'\pi', 'Ω': R'\Omega'}
 
 
 def text_bound_fixer(text: str, replacement: dict[str, str], n: int = 1) -> str:
@@ -1081,10 +1084,10 @@ def text_bound_fixer(text: str, replacement: dict[str, str], n: int = 1) -> str:
     """
     # logging.warning('text is ' + text)
 
-    # replacement = {'π': r'\pi'}
+    # replacement = {'π': R'\pi'}
     unicode_list = list(replacement.keys())
     # n = 1  # ignored count starting from 1
-    btext = r'\text{'
+    btext = R'\text{'
     text_index = find_nth(text, btext, n)
     if text_index == -1:
         # logging.warning('could not find another text env')
@@ -1093,8 +1096,8 @@ def text_bound_fixer(text: str, replacement: dict[str, str], n: int = 1) -> str:
     layers_in = 0
     min_index = starting_index
     while True:
-        inner_brace = text.find(r'{', min_index)
-        outer_brace = text.find(r'}', min_index)
+        inner_brace = text.find(R'{', min_index)
+        outer_brace = text.find(R'}', min_index)
         if outer_brace == -1:
             # logging.warning('No outer brace')
             return text
@@ -1169,8 +1172,8 @@ def bracket_layers(text: str, index: int,
     If the index you are looking at is an opening brace or a closing brace,
     it will check the next position (even if it is blank).
 
-    If the above case is true and the next position is also an opening or closing brace,
-    it will treat that the opening or closing brace is not a brace.
+        If the above case is true and the next position is also an opening or closing brace,
+        it will treat that the opening or closing brace is not a brace.
 
     The starting index is the minimum index where brackets will be tracked.
 
@@ -1210,8 +1213,8 @@ def split_all_equations(text: str, max_len: int, skip: int = 0) -> str:
 
     Initially, skip must always be set to 0.
     """
-    starting_index = find_nth(text, r'\[', skip + 1)
-    finishing_index = find_nth(text, r'\]', skip + 1)
+    starting_index = find_nth(text, R'\[', skip + 1)
+    finishing_index = find_nth(text, R'\]', skip + 1)
     if -1 in (starting_index, finishing_index):
         return text
     assert starting_index < finishing_index
@@ -1221,10 +1224,10 @@ def split_all_equations(text: str, max_len: int, skip: int = 0) -> str:
         return split_all_equations(text, max_len, skip + 1)
     else:
         try:
-            text = text[:starting_index] + r'\[' + new_eqn_text + r'\]' + text[finishing_index + 2:]
+            text = text[:starting_index] + R'\[' + new_eqn_text + R'\]' + text[finishing_index + 2:]
             return split_all_equations(text, max_len, skip + 1)
         except IndexError:
-            text = text[:starting_index] + r'\[' + new_eqn_text + r'\]'
+            text = text[:starting_index] + R'\[' + new_eqn_text + R'\]'
             return split_all_equations(text, max_len, skip + 1)
 
 
@@ -1243,7 +1246,7 @@ def split_equation(text: str, max_len: int, list_mode: bool = False) -> None | s
         # everything goes down here
         equal_indexes = [0]  # the index where equal signs start.
         for i, char in enumerate(text):
-            if char in {'=', '<', '>', r'\leq', r'\geq'} and bracket_layers(text, i) == 0:
+            if char in {'=', '<', '>', R'\leq', R'\geq'} and bracket_layers(text, i) == 0:
                 equal_indexes.append(i)
         lines_of_eqn = []
         for i, eq_index in enumerate(equal_indexes):
@@ -1292,7 +1295,7 @@ def calculate_eqn_length(text: str, disable: Optional[Iterable] = None) -> int:
     # fraction blocks (this will recursively run itself)
     if 'frac' not in disable:
         while True:
-            frac_index = find_nth(text, r'\frac', 1)
+            frac_index = find_nth(text, R'\frac', 1)
             if frac_index == -1:
                 break
             ending_frac_index = index_fourth_closing_bracket(text, frac_index) + 1  # AT the char AFTER }
@@ -1320,7 +1323,7 @@ def calculate_eqn_length(text: str, disable: Optional[Iterable] = None) -> int:
 def remove_envs(text: str) -> str:
     """Remove everything between \\ up until it's not a letter
 
-    >>> temp_text = r'\lim(2+4)+\sum(3+6)'
+    >>> temp_text = R'\lim(2+4)+\sum(3+6)'
     >>> remove_envs(temp_text)
     '(2+4)+(3+6)'
     """
@@ -1380,7 +1383,7 @@ def seperate_fraction_block(frac_text: str) -> str:
     Preconditions:
         - frac_text looks like \\frac{}{}
 
-    >>> temp_text = r'\frac{2+4+6}{7}'
+    >>> temp_text = R'\frac{2+4+6}{7}'
     >>> seperate_fraction_block(temp_text)
     '2+4+6'
     """
@@ -1409,8 +1412,8 @@ def seperate_fraction_block(frac_text: str) -> str:
 def remove_matrices(text: str, matrix_type: str) -> str:
     """Approximate the length of all matrices.
     """
-    start = r'\begin{' + matrix_type + '}'
-    end = r'\end{' + matrix_type + '}'
+    start = R'\begin{' + matrix_type + '}'
+    end = R'\end{' + matrix_type + '}'
     start_pos_1 = find_nth(text, start, 1)  # the index of the first char of start.
     start_pos_2 = start_pos_1 + len(start)  # the index of the char after start.
     end_pos_1 = find_nth(text, end, 1)
@@ -1420,7 +1423,7 @@ def remove_matrices(text: str, matrix_type: str) -> str:
         return text
     else:
         matrix_text = text[start_pos_2:end_pos_1].replace('\n', '')
-        matrix_rows = matrix_text.split(r'\\')
+        matrix_rows = matrix_text.split(R'\\')
         row_len = []  # a list of ints
         for row in matrix_rows:
             row_len.append(calculate_eqn_length(row, ['frac', 'matrix']))
@@ -1445,7 +1448,7 @@ def combine_environments(text: str, env: str) -> str:
         # this is the position of the backslash of the next environment
         text_between = text[end_pos + len(end_str):next_start_pos]
         if check_region_empty(text_between):
-            text = text[:end_pos] + r' \\' + text[next_start_pos + len(begin_str):]
+            text = text[:end_pos] + R' \\' + text[next_start_pos + len(begin_str):]
         else:
             skip += 1
     return text
@@ -1526,14 +1529,14 @@ def modify_text_in_environment(text: str, env: str, modification: Callable[[str]
     this will not work for things that are not defined as environments
     """
     envs_traversed = 1
-    begin = r'\begin{' + env + '}'
-    end = r'\end{' + env + '}'
+    begin = R'\begin{' + env + '}'
+    # end = R'\end{' + env + '}'
     while True:
         # print(envs_traversed)
         start_pos_1 = find_nth(text, begin, envs_traversed)  # the index at the backslash of begin
         start_pos_2 = start_pos_1 + len(begin)  # the index on the char after begin env
-
-        end_pos_1 = find_nth(text, end, envs_traversed)
+        end_pos_1 = find_env_end(text, start_pos_1, env)
+        # end_pos_1 = find_nth(text, end, envs_traversed)
         # end_pos_2 = end_pos_1 + len(end)
 
         if -1 in {start_pos_1, end_pos_1}:
@@ -1555,10 +1558,10 @@ def longtable_backslash_add_line(text: str) -> str:
 
     Preconditions: no align regions or anything containing backslashes are allowed
     """
-    text = text.replace(r'\\', '🯰', 1)
-    backslash_occur = text.count(r'\\')
-    text = text.replace(r'\\', r'\\ \hline', backslash_occur - 1)
-    text = text.replace('🯰', r'\\')
+    text = text.replace(R'\\', '🯰', 1)
+    backslash_occur = text.count(R'\\')
+    text = text.replace(R'\\', R'\\ \hline', backslash_occur - 1)
+    text = text.replace('🯰', R'\\')
     return text
 
 
@@ -1663,8 +1666,8 @@ def verbatim_to_listing(text: str, lang: str) -> str:
     Language must be in this list:
     https://www.overleaf.com/learn/latex/Code_listing
     """
-    text = text.replace(r'\begin{verbatim}', r'\begin{lstlisting}[language=' + lang + ']')
-    text = text.replace(r'\end{verbatim}', r'\end{lstlisting}')
+    text = text.replace(R'\begin{verbatim}', R'\begin{lstlisting}[language=' + lang + ']')
+    text = text.replace(R'\end{verbatim}', R'\end{lstlisting}')
     return text
 
 
@@ -1952,9 +1955,9 @@ RRR = r"""
 def bad_backslash_replacer(text: str, eqs: str = '\\[', eqe: str = '\\]') -> str:
     """Replaces all bad backslash instances with just spaces.
     """
-    rpl = r'\ '
-    # eqs = r'\['
-    # eqe = r'\]'
+    rpl = R'\ '
+    # eqs = R'\['
+    # eqe = R'\]'
     fake_unicode = '🮿'
     ind = 0
     while True:
@@ -1962,9 +1965,9 @@ def bad_backslash_replacer(text: str, eqs: str = '\\[', eqe: str = '\\]') -> str
             extracted, st_in, en_in = find_between(text, eqs, eqe, ind)
         except ValueError:
             break
-        extracted = extracted.replace(r'\ \text{', fake_unicode)
+        extracted = extracted.replace(R'\ \text{', fake_unicode)
         extracted = extracted.replace(rpl, ' ')
-        extracted = extracted.replace(fake_unicode, r'\ \text{')
+        extracted = extracted.replace(fake_unicode, R'\ \text{')
         text = text[:st_in] + extracted + text[en_in:]
         ind = st_in + len(eqs) + len(extracted) + len(eqe)
     return text
@@ -2204,8 +2207,8 @@ def quote_to_environment(text: str, env: LatexEnvironment, has_extra_args: bool 
     this will not work for things that are not defined as environments
     """
     envs_traversed = 1
-    begin = r'\begin{quote}' + '\n'
-    end = '\n' + r'\end{quote}'
+    begin = R'\begin{quote}' + '\n'
+    end = '\n' + R'\end{quote}'
     while True:
         # print(envs_traversed)
         start_pos_1 = find_nth(text, begin, envs_traversed)  # the index at the backslash of begin
@@ -2220,7 +2223,7 @@ def quote_to_environment(text: str, env: LatexEnvironment, has_extra_args: bool 
         # before = text[:start_pos_2]
         during = text[start_pos_2:end_pos_1]
 
-        tbf = r'\textbf{'
+        tbf = R'\textbf{'
 
         if not during.startswith(tbf):
             envs_traversed += 1
@@ -2230,8 +2233,8 @@ def quote_to_environment(text: str, env: LatexEnvironment, has_extra_args: bool 
         if not bold_str.startswith(env.env_name):  # is something like "Definition" or an alias to that
             envs_traversed += 1
             continue
-        k_begin = r'\begin{' + env.env_name.lower() + '}'
-        k_end = r'\end{' + env.env_name.lower() + '}'
+        k_begin = R'\begin{' + env.env_name.lower() + '}'
+        k_end = R'\end{' + env.env_name.lower() + '}'
         env_starter_contents = bold_str.split(':')
         if has_extra_args:
             if len(env_starter_contents) == 2:
@@ -2315,8 +2318,8 @@ def hide_verbatims(text: str) -> tuple[str, dict[str, str]]:
     """
     env = 'verbatim'
     envs_traversed = 1
-    begin = r'\begin{' + env + '}'
-    end = r'\end{' + env + '}'
+    begin = R'\begin{' + env + '}'
+    end = R'\end{' + env + '}'
     dict_so_far = {}
     i = 0
     while True:
@@ -2424,8 +2427,8 @@ def valid_matrix(matrix: str) -> bool:
     return cms2 == 1
 
 
-FI = r'\text{because }x+4=9 \text{, this is true.} 9 + 10 = 21'
-FI2 = r'(4.3)'
+FI = R'\text{because }x+4=9 \text{, this is true.} 9 + 10 = 21'
+FI2 = R'(4.3)'
 
 
 def equation_to_regular_text_unused(text: str) -> str:
@@ -2502,8 +2505,8 @@ def environment_layer(text: str, index: int) -> bool:
 
     Using find and rfind at index.
     """
-    bg = r'\begin{'
-    en = r'\end{'
+    bg = R'\begin{'
+    en = R'\end{'
     next_end = text.find(en, index)  # -1 if fail
     next_begin = text.find(bg, index)  # big if fail
     # previous_begin = text.rfind(bg, index)  # big if fail
@@ -2522,8 +2525,8 @@ def environment_depth(text: str, index: int, env: str) -> int:
     If index is in the middle of an environment declaration, assume
     that declaration does not exist.
     """
-    be = r'\begin{' + env + '}'
-    en = r'\end{' + env + '}'
+    be = R'\begin{' + env + '}'
+    en = R'\end{' + env + '}'
     ti = text[:index]
     begins = ti.count(be)
     ends = ti.count(en)
@@ -2549,17 +2552,17 @@ def longtable_environment(text: str, env: str, env_info: LatexEnvironment) -> st
     # forbid_env_tolerance = {'longtable': 2}
     skip = 1
     while True:
-        lt_index = find_nth(text, r'\begin{longtable}', skip)
+        lt_index = find_nth(text, R'\begin{longtable}', skip)
         env_d = environment_depth(text, lt_index, 'longtable')
         forbid_env_tolerance = {'longtable': 2 + env_d}
         if lt_index == -1:
             break  # break if we can't find a starting longtable
-        # lt_end_index = find_nth(text, r'\end{longtable}', 1, lt_index)
+        # lt_end_index = find_nth(text, R'\end{longtable}', 1, lt_index)
         lt_end_index = find_env_end(text, lt_index, 'longtable')
         if lt_end_index == -1:
             break
         # we now have the contents of the longtable, represented by
-        # text[lt_index:lt_end_index + len(r'\end{longtable}')]
+        # text[lt_index:lt_end_index + len(R'\end{longtable}')]
 
         left_border = '\\begin{minipage}[b]{\\linewidth}\\raggedright\n'
         # right_border = '\\end{minipage}'
@@ -2567,38 +2570,41 @@ def longtable_environment(text: str, env: str, env_info: LatexEnvironment) -> st
         # right_index_border = find_nth(text, right_border, 1, lt_index)
         right_index_border = find_env_end(text, left_index_border, 'minipage')
         if right_index_border == -1:
-            assert False  # never supposed to happen here
+            skip += 1
+            continue
+            # pass
+            # assert False  # never supposed to happen here
         cur_header = text[left_index_border:right_index_border].strip()
         # This must be in the name of the environment
         if cur_header.lower() != env.lower():
             skip += 1  # skip if the header isn't the environment we look for
             continue
         # check if this table is only one wide:
-        if not text[right_index_border:].startswith(r'\end{minipage} \\'):
+        if not text[right_index_border:].startswith(R'\end{minipage} \\'):
             skip += 1
             continue  # if it is not one wide, then this is the wrong table
         # from this point, assume our table is one wide and only has 3 rows
-        # table_content_start = text.find(r'\endhead', right_index_border) + len(r'\endhead')
+        # table_content_start = text.find(R'\endhead', right_index_border) + len(R'\endhead')
 
-        table_content_start = find_not_in_environment_tolerance(text, r'\endhead', forbid_env_tolerance, right_index_border) + len(r'\endhead')
-        table_content_end = find_not_in_environment_tolerance(text, r'\bottomrule', forbid_env_tolerance, right_index_border)
-        # table_content_end = text.find(r'\bottomrule', right_index_border)
+        table_content_start = find_not_in_environment_tolerance(text, R'\endhead', forbid_env_tolerance, right_index_border) + len(R'\endhead')
+        table_content_end = find_not_in_environment_tolerance(text, R'\bottomrule', forbid_env_tolerance, right_index_border)
+        # table_content_end = text.find(R'\bottomrule', right_index_border)
         if table_content_start == -1 or table_content_end == -1:
             assert False  # never supposed to happen
         table_contents = text[table_content_start:table_content_end]
-        table_rows = str_split_not_in_env(table_contents, r'\\', forbid_envs)
+        table_rows = str_split_not_in_env(table_contents, R'\\', forbid_envs)
         table_rows = [minipage_remover(trrr) for trrr in table_rows]
         if len(table_rows) == 2:
             brack = '{}' if env_info.extra_args_type == 'brace' else '[]'
-            env_starter = r'\begin{' + env.lower() + '}' + brack[0] + table_rows[0] + \
+            env_starter = R'\begin{' + env.lower() + '}' + brack[0] + table_rows[0] + \
                           brack[1] + env_info.env_suffix + '\n'
-            total_env_contents = env_starter + force_not_inline(table_rows[1]) + r'\end{' + env.lower() + '}'
-            text = text[:lt_index] + total_env_contents + text[lt_end_index + len(r'\end{longtable}'):]
+            total_env_contents = env_starter + force_not_inline(table_rows[1]) + R'\end{' + env.lower() + '}'
+            text = text[:lt_index] + total_env_contents + text[lt_end_index + len(R'\end{longtable}'):]
         # if len(table_rows) == 2
         elif len(table_rows) == 1:
-            env_starter = r'\begin{' + env.lower() + '}'
-            total_env_contents = env_starter + force_not_inline(table_rows[0]) + '\n' + r'\end{' + env.lower() + '}'
-            text = text[:lt_index] + total_env_contents + text[lt_end_index + len(r'\end{longtable}'):]
+            env_starter = R'\begin{' + env.lower() + '}'
+            total_env_contents = env_starter + force_not_inline(table_rows[0]) + '\n' + R'\end{' + env.lower() + '}'
+            text = text[:lt_index] + total_env_contents + text[lt_end_index + len(R'\end{longtable}'):]
         else:
             skip += 1
             continue
@@ -2629,9 +2635,9 @@ def minipage_remover(text: str) -> str:
     >>> minipage_remover(TEST_ENV_STR_2)
     'Theorem'
     """
-    mp_1 = r'\begin{minipage}[t]{\linewidth}\raggedright'
-    mp_11 = r'\begin{minipage}[b]{\linewidth}\raggedright'
-    mp_2 = r'\end{minipage}'
+    mp_1 = R'\begin{minipage}[t]{\linewidth}\raggedright'
+    mp_11 = R'\begin{minipage}[b]{\linewidth}\raggedright'
+    mp_2 = R'\end{minipage}'
     text = text.strip()
     if (text.startswith(mp_1) or text.startswith(mp_11)) and text.endswith(mp_2):
         return text[len(mp_1):len(text) - len(mp_2)].strip()
@@ -2704,8 +2710,8 @@ def force_not_inline(text: str) -> str:
 def aug_matrix_spacing(text: str) -> str:
     """Spaces all augmented matrices.
     """
-    old = r'\end{matrix}\mid\begin{matrix}'
-    new = r'\end{matrix}\;\middle|\;\begin{matrix}'
+    old = R'\end{matrix}\mid\begin{matrix}'
+    new = R'\end{matrix}\;\middle|\;\begin{matrix}'
     return text.replace(old, new)
 
 
@@ -2731,8 +2737,8 @@ def find_env_end(text: str, index: int, env: str, skip: int = 1) -> int:
     index += 1
     skip_st = 1
     skip_en = 1
-    env_st = r'\begin{' + env + '}'
-    env_en = r'\end{' + env + '}'
+    env_st = R'\begin{' + env + '}'
+    env_en = R'\end{' + env + '}'
     while True:
         t_st = find_nth(text, env_st, skip_st, index)  # big if -1
         t_en = find_nth(text, env_en, skip_en, index)  # -1 if -1
@@ -2752,3 +2758,145 @@ def find_env_end(text: str, index: int, env: str, skip: int = 1) -> int:
                 continue
             else:
                 return t_en
+
+
+def modify_equations(text: str, func: Callable[[str], str], inline: bool = False) -> str:
+    """Modifies all equations, but only inline or not inline, depending on what
+    argument was passed into that parameter.
+
+    This should be placed before alignment regions are processed.
+
+    Preconditions:
+        - Backslash square brackets are only used to define equations.
+        - All verbatim environments are concealed.
+    """
+    eqs = '\\[' if not inline else '\\('
+    eqen = '\\]' if not inline else '\\)'
+    skip = 1
+    while True:
+        st = find_nth(text, eqs, skip)  # the backslash of equation start
+        stt = st + len(eqs)  # the character after \[_ (the underscore)
+        en = find_nth(text, eqen, skip)  # the backslash of equation end
+        if st == -1 or en == -1:
+            break
+        eq_contents = text[stt:en]
+        new_eq_contents = func(eq_contents)
+        text = text[:stt] + new_eq_contents + text[en:]
+        skip += 1
+    return text
+
+
+def blacksquare_detector(text: str) -> str:
+    """Looks through all inline and non-inline equations and kicks out any
+    black squares, changing them to proof finishers.
+    """
+    eq_array = (('\\[', '\\]'), ('\\(', '\\)'))
+    for wrapper_brackets in eq_array:
+        eqs = wrapper_brackets[0]  # '\\[' if not inline else '\\('
+        eqen = wrapper_brackets[1]  # '\\]' if not inline else '\\)'
+        skip = 1
+        while True:
+            dontskip = False
+            st = find_nth(text, eqs, skip)  # the backslash of equation start
+            stt = st + len(eqs)  # the character after \[_ (the underscore)
+            en = find_nth(text, eqen, skip)  # the backslash of equation end
+            if st == -1 or en == -1:
+                break
+            eq_contents = text[stt:en]
+            if '\\blacksquare' in eq_contents:
+                eq_contents = eq_contents.replace('\\blacksquare', '')
+                # if the leftovers of the equation is empty, apart from whitespaces or newlines,
+                # then get rid of the equation entirely
+                if eq_contents.replace(' ', '').replace('\n', '') == '':
+                    text = text[:st] + '\\end{proof}' + text[en + len(eqen):]
+                    dontskip = True
+                else:
+                    text = text[:stt] + eq_contents + eqen + '\n\\end{proof}' + text[en + len(eqen):]
+            # new_eq_contents = func(eq_contents)
+            # text = text[:stt] + new_eq_contents + text[en:]
+            # otherwise, do nothing
+            if not dontskip:
+                skip += 1
+        return text
+
+
+def fix_accents(text: str) -> str:
+    """Fix accents causing problems.
+    """
+    # Underbrace
+    skip = 1
+    while True:
+        # pattern:
+        # \overset{above}{︸}
+        overset_ind = find_nth(text, '\\overset', skip)
+        if overset_ind == -1:
+            break
+        overset_end = local_env_end(text, overset_ind)
+        contents = text[overset_ind + len('\\overset') + 1:overset_end]
+        if text[overset_end:overset_end + 5] == '}{︸}}':
+            text = text[:overset_ind] + '\\underbrace{' + contents + '}}' + text[overset_end + 5:]
+        else:
+            skip += 1
+
+    # weird left arrow
+    text = text.replace(R'\overset{⃐}', R'\mathbf')
+    # print(x)
+
+    # overleftrightarrow
+    skip = 1
+    while True:
+        over_lra = '\\overleftrightarrow{}}{'
+        os_ind = find_nth(text, '\\overset{', skip)
+        if os_ind == -1:
+            break
+        os_ind_after = os_ind + len('\\overset{')
+        if text[os_ind_after:os_ind_after + len(over_lra)] == '\\overleftrightarrow{}}{':
+            ending = find_next_closing_bracket(text, os_ind_after + len(over_lra))
+            assert ending != -1
+            contents = text[os_ind_after + len(over_lra):ending]
+            text = text[:os_ind] + '\\overleftrightarrow{' + contents + text[ending:]
+        else:
+            skip += 1
+    return text
+
+
+def find_next_closing_bracket(text: str, index: int) -> int:
+    """Find the next closing bracket.
+    Preconditions:
+        - text[index] != '{' or text[index] != '}'
+
+    Return -1 on failure.
+
+    >>> test_text = 'this{}{}{}{}{}{}}'
+    >>> find_next_closing_bracket(test_text, 0) == len(test_text) - 1
+    True
+
+    """
+    skip = 1
+    while True:
+        ind = find_nth(text, '}', skip, index)
+        if ind == -1:
+            return -1
+        if text[ind - 1] == '\\':
+            skip += 1
+            continue
+        if bracket_layers(text, ind, starting_index=index) != -1:
+            skip += 1
+            continue
+        else:
+            return ind
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

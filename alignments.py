@@ -142,7 +142,7 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
         processed_text = insert_after(text, pack_import_indicator, prestart)
         processed_text = processed_text.replace(section_num_text, '\n')
         if remove_default_font:
-            processed_text = processed_text.replace(r'\usepackage{lmodern}', '')
+            processed_text = processed_text.replace(R'\usepackage{lmodern}', '')
     # to_remove = generate_text_to_remove()
     # for remove_instance in to_remove:
     #    processed_text = processed_text.replace(remove_instance, '', 1)
@@ -270,9 +270,9 @@ def replace_align_region(text: str, proofs: bool = False,
         return text, True
     replace_with = process_align_region(isolated, auto_align, max_line_length, extra_info=extra_info)
     proof_line = ''
-    if proofs and r'\blacksquare' in replace_with:
-        replace_with = replace_with.replace(r'\ \blacksquare', '')
-        replace_with = replace_with.replace(r'\blacksquare', '')
+    if proofs and R'\blacksquare' in replace_with:
+        replace_with = replace_with.replace(R'\ \blacksquare', '')
+        replace_with = replace_with.replace(R'\blacksquare', '')
         proof_line = '\n\\end{proof}\n'
     align_start = '\n\\begin{align*}\n'
     align_end = '\\end{align*}\n'
@@ -482,8 +482,8 @@ def check_start_matrix(text: str) -> tuple[Optional[str], Optional[str]]:
     """
     # logging.warning(text)
     text = text.strip()  # strip the text first
-    bm = r'\begin{matrix}'
-    em = r'\end{matrix}'
+    bm = R'\begin{matrix}'
+    em = R'\end{matrix}'
     starting_matrix_location = text.find(bm)
     # conditions: above is 0
     if starting_matrix_location != 0:
@@ -494,19 +494,19 @@ def check_start_matrix(text: str) -> tuple[Optional[str], Optional[str]]:
     if ending_matrix_location != required_ending_location:
         return None, None
     # Matrix conditions should be met by this point.
-    hashtag = r'\#'
-    if r'\#' not in text:
+    hashtag = R'\#'
+    if R'\#' not in text:
         return None, None
     # intl passing location. For now, let's assume that this is only where # appears.
     ti_temp = text.rfind(hashtag)  # the index of the last hashtag, starting at the backslash
-    if dbl.any_layer(text, ti_temp, r'\left', r'\right') != 0:
+    if dbl.any_layer(text, ti_temp, R'\left', R'\right') != 0:
         return None, None
-    if dbl.any_layer(text, ti_temp, r'\begin', r'\end') != 1:
+    if dbl.any_layer(text, ti_temp, R'\begin', R'\end') != 1:
         return None, None
     # if dbl.any_layer(text, ti_temp, bm, em) != 1:
     #     return None, None
     start = ti_temp + len(hashtag)
-    end = text.find(r'\\', start)
+    end = text.find(R'\\', start)
     # we assume we didn't define any matrices in our comment
     comment = text[start:end].strip()
     b_start = len(bm)
@@ -551,7 +551,7 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
             # temp_comment = dbl.equation_to_regular_text(temp_comment)  # nope, won't work.
             logging.info('looks like we have a comment')
             text = temp_text
-            si_text = r'\shortintertext{' + temp_comment + '}' + '\n'
+            si_text = R'\shortintertext{' + temp_comment + '}' + '\n'
         else:
             temp_comment = ''
 

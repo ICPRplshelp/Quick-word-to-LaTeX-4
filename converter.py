@@ -12,11 +12,12 @@ from tkinter.filedialog import askopenfile
 
 import alignments as w2l
 import helpers as dbl
+import cleanup
 
 TEMP_TEX_FILENAME = 'temp.tex'
-REPLAC = {'α': r'\alpha', 'β': r'\beta', 'γ': r'\gamma', 'δ': r'\delta', 'ϵ': r'\epsilon',
-          'λ': r'\lambda', 'θ': r'\theta', 'ϑ': r'vartheta', 'π': r'\pi', 'Ω': r'\Omega', 'ε': r'\varepsilon',
-          'Λ': r'\Lambda', 'Δ': r'\Delta', 'μ': r'\mu', 'ν': r'\nu', 'ξ': r'\xi', 'ρ': r'\rho'}
+REPLAC = {'α': R'\alpha', 'β': R'\beta', 'γ': R'\gamma', 'δ': R'\delta', 'ϵ': R'\epsilon',
+          'λ': R'\lambda', 'θ': R'\theta', 'ϑ': R'vartheta', 'π': R'\pi', 'Ω': R'\Omega', 'ε': R'\varepsilon',
+          'Λ': R'\Lambda', 'Δ': R'\Delta', 'μ': R'\mu', 'ν': R'\nu', 'ξ': R'\xi', 'ρ': R'\rho'}
 # REPLAC = {'α'}
 ALLOWED_LATEX_COMPILERS = {'pdflatex', 'xelatex'}
 
@@ -122,8 +123,8 @@ class Preferences:
 
     table_of_contents: bool = False  # whether to include a table of contents.
     header_level: int = 0  # headers to shift by. 0 means no, 1 means L1 -> L2, -1 means L2 -> L1
-    export_file_name_suffix: str = 'LTP'  # name of the exported tex and pdf file; no suffix
-    media_folder_name: str = 'TEXIMAGE_'  # name of the image folder if any images are present
+    export_file_name_suffix: str = ''  # name of the exported tex and pdf file; no suffix
+    media_folder_name: str = 'latex_images_'  # name of the image folder if any images are present
 
     override_title: bool = True  # override the title in the replacement mode by the title in the Word doc
     override_author: bool = True  # override the author in the replacement mode by the author in the Word doc
@@ -141,6 +142,8 @@ class Preferences:
     conceal_verbatims: bool = True  # prevent verbatim environments from being affected,
     # unless a module specifically affects verbatim environments.
     citation_brackets: bool = False  # whether brackets should wrap citations. Default for APA citations.
+    cleanup: bool = True  # whether aux, bcf, log, and run.xml files should be removed only if
+    # a successful export occurs
 
 
 DEFAULT_PREF = Preferences('preamble_0.txt', False, False, False, False, False)
@@ -168,7 +171,7 @@ class WordFile:
     word_file_path: str
     word_file_nosuffix: str
     preferences: Preferences
-    output_path: str
+    output_path: str  # in the form filename.tex
     text: str  # our latex converted stuff
     citation_path: str  # must ALWAYS be a valid .txt file
     bib_path: Optional[str]  # not a directory; just the name of the bib file
@@ -286,6 +289,9 @@ class WordFile:
         if self.preferences.fix_vectors:
             text = w2l.fix_vectors(text)
             text = w2l.fix_vectors_again(text)
+            text = dbl.fix_accents(text)
+        if self.preferences.allow_proofs:
+            text = dbl.qed(text, self.preferences.special_proofs)
         if self.preferences.allow_environments and self.preferences.environments is not None:
             text = dbl.work_with_environments(text, self.preferences.environments)
         # if True:
@@ -323,8 +329,6 @@ class WordFile:
             text = w2l.prime_dealer(text)
         if self.preferences.fix_derivatives:
             text = dbl.dy_fixer(text)
-        if self.preferences.allow_proofs:
-            text = dbl.qed(text, self.preferences.special_proofs)
         if self.preferences.allow_no_longtable:
             text = dbl.eliminate_all_longtables(text, self.preferences.disallow_figures)  # EPIC FAIL!!!
         if self.preferences.dollar_sign_equations:
@@ -423,7 +427,13 @@ class WordFile:
             command_string_4 = f'{dq}self.output_path{dq}'
             print('You inputted a .tex file that contains images, so we aren\'t compiling')
             os.system(command_string_4)
+
         print('Finished!')
+        assert self.output_path[-4:] == '.tex'
+        if self.preferences.cleanup:
+            print('removing all unneeded files')
+            output_nameless = self.output_path[:-4]
+            cleanup.move_useless_files_away(output_nameless)
 
 
 class WordFileCombo(WordFile):

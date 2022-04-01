@@ -1,8 +1,10 @@
 dist/
 build/
 vnev/
+.pytest_cache/
 
 testing.py
+build.py
 TRASH_LATEX_FILES/
 
 *.pyc
