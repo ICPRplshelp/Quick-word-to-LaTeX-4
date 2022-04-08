@@ -144,6 +144,8 @@ class Preferences:
     citation_brackets: bool = False  # whether brackets should wrap citations. Default for APA citations.
     cleanup: bool = True  # whether aux, bcf, log, and run.xml files should be removed only if
     # a successful export occurs
+    modify_tables: bool = True  # determine whether tables should be modified.
+    # if false, longtable eliminator and table labeling will not work.
 
 
 DEFAULT_PREF = Preferences('preamble_0.txt', False, False, False, False, False)
@@ -299,6 +301,7 @@ class WordFile:
 
         eqn_comment = {'comment_type': self.preferences.eqn_comment_mode}
         if self.preferences.remove_spaces_from_eqns:
+            # TODO: after text
             text = dbl.bad_backslash_replacer(text)
             text = dbl.bad_backslash_replacer(text, '\\(', '\\)')
 
@@ -329,8 +332,9 @@ class WordFile:
             text = w2l.prime_dealer(text)
         if self.preferences.fix_derivatives:
             text = dbl.dy_fixer(text)
-        if self.preferences.allow_no_longtable:
-            text = dbl.eliminate_all_longtables(text, self.preferences.disallow_figures)  # EPIC FAIL!!!
+        if self.preferences.modify_tables:
+            text = dbl.eliminate_all_longtables(text, self.preferences.disallow_figures,
+                                                self.preferences.allow_no_longtable)
         if self.preferences.dollar_sign_equations:
             text = w2l.dollar_sign_equations(text)
         if self.preferences.fix_unicode:

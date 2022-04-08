@@ -31,7 +31,7 @@
   "code_lang": "",
   "citation_brackets": true,
   "no_secnum": false,
-  "start_of_doc_text": "\\renewcommand{\\arraystretch}{2}",
+  "start_of_doc_text": "",
   "environments": {
     "Theorem": {
       "env_name": "Theorem",

@@ -1,4 +1,6 @@
 """Most of the helper functions to converter.py and any other modules
+
+TODO: Longtables - add a way to figure them without removing them.
 """
 import json
 import logging
@@ -15,6 +17,16 @@ APA_MODE = True
 ALPHABET = 'abcdefghijklmnopqrstuvwxyz'
 ALPHABET_ALL = ALPHABET + ALPHABET.upper() + '1234567890-+.,*/?!='
 MAX_PAGE_LENGTH = 32
+
+
+class MinipageInLongtableError(Exception):
+    def __str__(self) -> str:
+        """Return a string representation of this
+        exception.
+        """
+        return 'Minipages in longtables detected. Check if your tables have lists, ' \
+               'or choose a different config mode - perhaps one with ' \
+               'eliminate longtables set to off.'
 
 
 def deduce_preamble_mode(tex_file: str) -> int:
@@ -74,6 +86,9 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '') -> str:
     else:
         tab_data = ''
     first_row = '& '.join(headers_so_far)
+    if '\\begin{minipage}' in first_row:
+        raise MinipageInLongtableError
+
     header_count = len(headers_so_far)
     # a table can have up to 3 headers until we start splitting up the tables.
 
@@ -82,8 +97,8 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '') -> str:
     if header_count > max_header_count:
         em_length = MAX_PAGE_LENGTH // header_count
         seperator = 'm{' + str(em_length) + 'em}'
-
-    table_width = (('|' + seperator) * header_count) + '|'
+    vertical_line = ''
+    table_width = ((vertical_line + seperator) * header_count) + vertical_line
     if tab_data != '':
         tab_data = '\n\\hline\n' + first_row + '\\\\ \\hline\n' + tab_data + '\n\\hline\n'
     else:
@@ -94,6 +109,8 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '') -> str:
         caption_info = ''
     table_start = '\\begin{table}[h]\n\\centering\n' + label + '\n\\begin{tabular}{' + table_width + '}\n'
     table_end = '\\end{tabular}\n' + '\n' + caption_info + '\\end{table}\n'
+    if '\\begin{minipage}' in tab_data:
+        raise MinipageInLongtableError
     new_table = table_start + tab_data + table_end
     new_table = new_table.replace(R'\[', R'\(')  # all math in tables are inline math
     new_table = new_table.replace(R'\]', R'\)')
@@ -204,10 +221,11 @@ def three_way_isolation(text: str, left_index: int, right_index: int) -> tuple[s
     """Three way isolation
     0: inside, 1: before, 2: after
     """
-    return text[left_index:right_index], text[:left_index], text[right_index - 1:]
+    return text[left_index:right_index], text[:left_index], text[right_index:]
 
 
-def eliminate_all_longtables(text: str, disallow_figures: bool = True) -> str:
+def eliminate_all_longtables(text: str, disallow_figures: bool = True,
+                             replace_longtable: bool = True) -> str:
     """Eliminate all longtables.
     Upper function for the other
 
@@ -218,10 +236,13 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True) -> str:
     lt_end = '\\end{longtable}'
     table_text_cap = 'Table'
     tables_so_far = []
+    skip = 1
     # j = 1
     while True:
-        lt_start_index = find_nth(text, lt_start, 1)
-        lt_end_index = find_nth(text, lt_end, 1) + len(lt_end) + 3
+        # find_not_in_environment(text, lt_start, )
+        lt_start_index = find_nth(text, lt_start, skip)  # backslash of begin
+        lt_end_index = find_env_end(text, lt_start_index, 'longtable') + len(lt_end) + 2
+        # lt_end_index = find_nth(text, lt_end, skip) + len(lt_end) + 2
         if lt_start_index == -1 or lt_end_index == -1:
             break
         during, before, after = three_way_isolation(text, lt_start_index, lt_end_index)
@@ -244,12 +265,53 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True) -> str:
                 figure_num = '-9999'
             fig_label = '\\label{table:p' + figure_num + '}\n'
             tables_so_far.append(figure_num)
-            new_table_info = longtable_eliminator(during, fig_label, figure_caption)
+            if replace_longtable:
+                new_table_info = longtable_eliminator(during, fig_label, figure_caption)
+            else:
+                during = add_label_to_longtable(during, figure_caption, fig_label)
+                new_table_info = during
+                skip += 1
         else:
-            new_table_info = longtable_eliminator(during, '', '')
+            if replace_longtable:
+                new_table_info = longtable_eliminator(during, '', '')
+            else:
+                new_table_info = during
+                skip += 1
         text = before + new_table_info + after
+    new_figures_so_far = ['\\ref{table:p' + x + '}' for x in tables_so_far]
+    old_figures_so_far = ['Table ' + y for y in tables_so_far]
+    old_figures_so_far_1 = ['table ' + z for z in tables_so_far]
+    for i in range(0, len(old_figures_so_far)):
+        text = text.replace(old_figures_so_far[i], 'Table ' + new_figures_so_far[i])
+    for i in range(0, len(old_figures_so_far_1)):
+        text = text.replace(old_figures_so_far_1[i], 'table ' + new_figures_so_far[i])
         # j += 1
     return text
+
+
+def add_label_to_longtable(text: str, caption: str, label: str) -> str:
+    """Add caption and label to the longtable.
+
+    caption is string; label has the latex command
+
+    Preconditions:
+        - text contains a longtable that is produced by pandoc
+        - text.startswith('\\begin{longtable}')
+    """
+    assert text.startswith('\\begin{longtable}')
+    caption_str = '\\caption{' + caption + '}' + label + '\\\\'
+    return insert_before(text, '\\toprule', caption_str)
+
+
+def insert_before(text: str, key: str, sub: str) -> str:
+    """Insert sub before key in text. We're looking for the first occurrence.
+    Return text if key not in text.
+    """
+    key_index = text.find(key)
+    if key_index == -1:
+        return text
+    else:
+        return text[:key_index] + sub + text[key_index:]
 
 
 def qed(text: str, special: bool = False) -> str:
@@ -1212,6 +1274,10 @@ def split_all_equations(text: str, max_len: int, skip: int = 0) -> str:
     this may not run.
 
     Initially, skip must always be set to 0.
+
+    TODO: Change this from recursion to while loop
+    TODO: If the equation is numbered, remove the matrix that surrounds it and return the eqn number
+    or none.
     """
     starting_index = find_nth(text, R'\[', skip + 1)
     finishing_index = find_nth(text, R'\]', skip + 1)
@@ -1316,7 +1382,7 @@ def calculate_eqn_length(text: str, disable: Optional[Iterable] = None) -> int:
     text = text.replace(',', ', ')
     if disable is None:
         pass
-    logging.warning(text)
+    # logging.warning(text)
     return len(text)
 
 
@@ -1470,11 +1536,11 @@ TEMP_OLD_TEXT = r"""
 """
 
 
-def test_author() -> None:
-    """Why
-    """
-    aa = swap_author(TEMP_OLD_TEXT, 'John', 'author')
-    # print(aa)
+# def test_author() -> None:
+#     """Why
+#     """
+#     aa = swap_author(TEMP_OLD_TEXT, 'John', 'author')
+#     # print(aa)
 
 
 def swap_day_with_today(text: str) -> str:
@@ -1874,8 +1940,8 @@ def find_not_in_environment_tolerance(text: str, sub: str, env: dict[str, int],
 def check_in_environment(text: str, env: str, index: int) -> bool:
     """Return if current index in environment.
 
-    Preconditions:
-        - index is not part of any environment declarations.
+    If index is part of an environment declaration, treat as if the
+    declaration never existed.
 
     >>> check_in_environment(TEST_STR_AGAIN, 'verbatim', 29)
     True
@@ -1970,6 +2036,23 @@ def bad_backslash_replacer(text: str, eqs: str = '\\[', eqe: str = '\\]') -> str
         extracted = extracted.replace(fake_unicode, R'\ \text{')
         text = text[:st_in] + extracted + text[en_in:]
         ind = st_in + len(eqs) + len(extracted) + len(eqe)
+    # Add spaces after all text envs
+    skip_text = 0
+
+    # comment this entire thing out for no post adding
+    while True:
+        closest_text = find_closest_local_env(text, 'text', skip_text)
+        if closest_text == -1:
+            break
+        if text[closest_text - 2:closest_text] != R'\ ':
+            skip_text += 1
+            continue
+        end_of_text = local_env_end(text, closest_text)
+        if end_of_text == -1:
+            break  # never supposed to run.
+        if text[end_of_text + 1:end_of_text + 3] != R'\ ':
+            text = text[:end_of_text + 1] + R'\ ' + text[end_of_text + 1:]
+        skip_text += 1
     return text
 
 
@@ -2481,9 +2564,14 @@ def equation_to_regular_text_unused(text: str) -> str:
     return new_str.strip()
 
 
-def find_closest_local_env(text: str, env: str) -> int:
+def find_closest_local_env(text: str, env: str, skip: int = 0) -> int:
     """Return the index of the closest local environment,
     that isn't nested with any other local environment.
+
+    Skip should be 0 if we're looking for the closest local env.
+
+    Preconditions:
+        - skip >= 0
 
     Return -1 on failure.
     """
@@ -2497,7 +2585,12 @@ def find_closest_local_env(text: str, env: str) -> int:
             n += 1
             continue
         else:
-            return ind
+            if skip > 0:
+                skip -= 1
+                n += 1
+                continue
+            else:
+                return ind
 
 
 def environment_layer(text: str, index: int) -> bool:
@@ -2586,8 +2679,10 @@ def longtable_environment(text: str, env: str, env_info: LatexEnvironment) -> st
         # from this point, assume our table is one wide and only has 3 rows
         # table_content_start = text.find(R'\endhead', right_index_border) + len(R'\endhead')
 
-        table_content_start = find_not_in_environment_tolerance(text, R'\endhead', forbid_env_tolerance, right_index_border) + len(R'\endhead')
-        table_content_end = find_not_in_environment_tolerance(text, R'\bottomrule', forbid_env_tolerance, right_index_border)
+        table_content_start = find_not_in_environment_tolerance(text, R'\endhead', forbid_env_tolerance,
+                                                                right_index_border) + len(R'\endhead')
+        table_content_end = find_not_in_environment_tolerance(text, R'\bottomrule', forbid_env_tolerance,
+                                                              right_index_border)
         # table_content_end = text.find(R'\bottomrule', right_index_border)
         if table_content_start == -1 or table_content_end == -1:
             assert False  # never supposed to happen
@@ -2724,7 +2819,7 @@ NO MORE
 """
 
 
-def find_env_end(text: str, index: int, env: str, skip: int = 1) -> int:
+def find_env_end(text: str, index: int, env: str) -> int:
     """Find where the environment ends. Helps
     bypass nesting.
 
@@ -2734,6 +2829,7 @@ def find_env_end(text: str, index: int, env: str, skip: int = 1) -> int:
     Return where the backslash occurs on the environment end.
     Return -1 on failure.
     """
+    skip = 1
     index += 1
     skip_st = 1
     skip_en = 1
@@ -2817,7 +2913,7 @@ def blacksquare_detector(text: str) -> str:
             # otherwise, do nothing
             if not dontskip:
                 skip += 1
-        return text
+    return text
 
 
 def fix_accents(text: str) -> str:
@@ -2887,16 +2983,266 @@ def find_next_closing_bracket(text: str, index: int) -> int:
             return ind
 
 
+SAMPL = r"""
+blblbllblblblblb\env{blblblbl}blblbl\begin{blbl}blblblb\end{blblbl}blblbl\(blblb\)blblbl
+"""
 
 
+# modify_text_not_in_environments(SAMPL, lambda x: x.upper())
 
 
+def modify_text_not_in_environments(text: str, key: Callable[[str], str]) -> str:
+    """Apply a key to modify a string. Will not attempt to modify anything
+    inside any environments.
+
+    This is done by breaking up each segment into lists. This means the following
+    will not be affected:
+        - begin/end environments
+        - local environments
+        - equations
+
+    Preconditions:
+        - verbatim is concealed
+        - environments are set up in a way such that latex won't cry
+    """
+    forbidden_regions: list[tuple] = []
+    # layers = 0
+    cur_pos = 0
+    # mode = ''
+    # assert mode in {'', 'local', 'begin', 'inline', 'equation'}
+
+    # the pattern for local is:
+    # \___{
+    # patterns
+    begin_st, begin_en = '\\begin{', '\\end{'
+    inline_st, inline_en = '\\(', '\\)'
+    equation_st, equation_en = '\\[', '\\]'
+    while True:
+        begin_ind = find_fallback(text, begin_st, cur_pos)
+        inline_ind = find_fallback(text, inline_st, cur_pos)
+        equation_ind = find_fallback(text, equation_st, cur_pos)
+        local_ind = nearest_local_env(text, cur_pos)
+        if local_ind == -1:
+            local_ind = len(text)
+        elif local_ind == begin_ind:
+            local_ind = begin_ind + 1  # prevents conflicts, as \begin{} is caught
+        assert local_ind <= len(text)
+        # detect which one is the lowest
+        starters = [begin_ind, inline_ind, equation_ind, local_ind]
+        starter_index = min(starters)
+        # check if lowest is unique
+        num_starters = starters.count(starter_index)
+        if num_starters > 1:
+            break
+        # by this point, we know that the starter is unique
+        # and no error would occur here
+        starter_map = ['begin', 'inline', 'equation', 'local']
+        type_of_starter = starter_map[starters.index(starter_index)]
+        if type_of_starter == 'begin':
+            finish = text.find(begin_en, starter_index)
+            end_of_env = local_env_end(text, finish) + 1
+            # [starter_index:end_of_env] would capture the environment
+            # otherwise, it won't be captured
+        elif type_of_starter == 'inline':
+            end_of_env = text.find(inline_en, starter_index) + len(inline_en)
+        elif type_of_starter == 'equation':
+            end_of_env = text.find(equation_en, starter_index) + len(inline_en)
+        elif type_of_starter == 'local':
+            end_of_env = local_env_end(text, starter_index) + 1
+            if end_of_env == 0:
+                logging.warning('runaway argument on command')
+                assert False  # something wrong happened
+        else:
+            assert False  # impossible to reach this branch
+        # prior = text[:starter_index]
+        # within = text[starter_index:end_of_env]
+        # after = text[end_of_env:]
+        assert starter_index < end_of_env
+        forbidden_bounds = (starter_index, end_of_env)
+        forbidden_regions.append(forbidden_bounds)
+        cur_pos = end_of_env  # cur pos is updated to the end of the environment,
+        # the character after the end of the environment we checked
+
+    # checking forbidden_regions:
+    split_text: list[str] = []  # always alternating between change and stay, starting from change
+    prev_region_end = 0
+    if len(forbidden_regions) == 0:
+        return key(text)
+    else:
+        for region in forbidden_regions:
+            split_text.append(text[prev_region_end:region[0]])
+            split_text.append(text[region[0]:region[1]])
+            prev_region_end = region[1]
+        new_str_list = []
+        for i, txt in enumerate(split_text):
+            if i % 2 == 0:  # is even, meaning change
+                new_str_list.append(key(txt))
+            else:
+                new_str_list.append(txt)
+        new_str_list.append(key(text[prev_region_end:]))
+        return ''.join(new_str_list)
 
 
+def find_fallback(text: str, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
+    """Similar to text.find(), but return len(text) on failure.
+    """
+    if start is not None and end is not None:
+        location = text.find(sub, start, end)
+    elif start is None and end is not None:
+        location = text.find(sub, __end=end)
+    elif start is not None and end is None:
+        location = text.find(sub, start)
+    else:
+        location = text.find(sub)
+
+    if location == -1:
+        return len(text)
+    else:
+        return location
 
 
+LC_ENV_STR = r"""C\tb{abcd}efgh\tb{ijklmn}"""
 
 
+def nearest_local_env(text: str, start: int = 0) -> int:
+    """Find the nearest location of the next local environment,
+    A.K.A. LaTeX command.
+
+    Return -1 on failure.
+    """
+    skip = 1
+    while True:
+        nearest_backslash = find_nth(text, '\\', skip, start)
+        if nearest_backslash == -1:
+            return -1
+        if not nearest_backslash == 0 and text[nearest_backslash - 1] == '\\':
+            # skip case 1: the character behind is also a backslash
+            skip += 1
+            continue
+        # now, check if opening brace comes before the next space
+        next_brace = find_fallback(text, '{', nearest_backslash)
+        next_space = find_fallback(text, ' ', nearest_backslash)
+        if next_brace > next_space:
+            skip += 1
+            continue
+        elif next_brace < next_space:
+            ending = local_env_end(text, next_brace)
+            if ending == -1:
+                raise IndexError  # The command never ended
+            else:
+                return nearest_backslash
+        else:
+            # this can only occur if the program cannot find the next { or space.
+            skip += 1
+            continue
 
 
+def modify_text_not_in_environments_encrypted(text: str, key: Callable[[str], str]) -> str:
+    """Encrypts texts similar to how it is done in verb environments.
 
+    Apply a key to modify a string. Will not attempt to modify anything
+    inside any environments.
+
+    This is done by breaking up each segment into lists. This means the following
+    will not be affected:
+        - begin/end environments
+        - local environments
+        - equations
+
+    Preconditions:
+        - verbatim is concealed
+        - environments are set up in a way such that latex won't cry
+    """
+    forbidden_regions: list[tuple] = []
+    # layers = 0
+    cur_pos = 0
+    # mode = ''
+    # assert mode in {'', 'local', 'begin', 'inline', 'equation'}
+
+    # the pattern for local is:
+    # \___{
+    # patterns
+    begin_st, begin_en = '\\begin{', '\\end{'
+    inline_st, inline_en = '\\(', '\\)'
+    equation_st, equation_en = '\\[', '\\]'
+    while True:
+        begin_ind = find_fallback(text, begin_st, cur_pos)
+        inline_ind = find_fallback(text, inline_st, cur_pos)
+        equation_ind = find_fallback(text, equation_st, cur_pos)
+        local_ind = nearest_local_env(text, cur_pos)
+        if local_ind == -1:
+            local_ind = len(text)
+        elif local_ind == begin_ind:
+            local_ind = begin_ind + 1  # prevents conflicts, as \begin{} is caught
+        assert local_ind <= len(text)
+        # detect which one is the lowest
+        starters = [begin_ind, inline_ind, equation_ind, local_ind]
+        starter_index = min(starters)
+        # check if lowest is unique
+        num_starters = starters.count(starter_index)
+        if num_starters > 1:
+            break
+        # by this point, we know that the starter is unique
+        # and no error would occur here
+        starter_map = ['begin', 'inline', 'equation', 'local']
+        type_of_starter = starter_map[starters.index(starter_index)]
+        if type_of_starter == 'begin':
+            finish = text.find(begin_en, starter_index)
+            end_of_env = local_env_end(text, finish) + 1
+            # [starter_index:end_of_env] would capture the environment
+            # otherwise, it won't be captured
+        elif type_of_starter == 'inline':
+            end_of_env = text.find(inline_en, starter_index) + len(inline_en)
+        elif type_of_starter == 'equation':
+            end_of_env = text.find(equation_en, starter_index) + len(inline_en)
+        elif type_of_starter == 'local':
+            end_of_env = local_env_end(text, starter_index) + 1
+            if end_of_env == 0:
+                logging.warning('runaway argument on command')
+                assert False  # something wrong happened
+        else:
+            assert False  # impossible to reach this branch
+        # prior = text[:starter_index]
+        # within = text[starter_index:end_of_env]
+        # after = text[end_of_env:]
+        assert starter_index < end_of_env
+        forbidden_bounds = (starter_index, end_of_env)
+        forbidden_regions.append(forbidden_bounds)
+        cur_pos = end_of_env  # cur pos is updated to the end of the environment,
+        # the character after the end of the environment we checked
+
+    # checking forbidden_regions:
+    split_text: list[str] = []  # always alternating between change and stay, starting from change
+    prev_region_end = 0
+    if len(forbidden_regions) == 0:
+        return key(text)
+    else:
+        encrypted = {}
+        for region in forbidden_regions:
+            split_text.append(text[prev_region_end:region[0]])
+            split_text.append(text[region[0]:region[1]])
+            prev_region_end = region[1]
+        new_str_list = []
+        for i, txt in enumerate(split_text):
+            if i % 2 == 0:  # is even, meaning change
+                new_str_list.append(txt)
+            else:
+                encrypt_key = text_environment_encryptor(i)
+                encrypted[encrypt_key] = txt
+                new_str_list.append(encrypt_key)
+        nst = ''.join(new_str_list)
+        nst = key(nst)
+        for k, v in encrypted.items():
+            nst = nst.replace(k, v)
+        # new_str_list.append(key(text[prev_region_end:]))
+        return nst
+
+
+def text_environment_encryptor(count: int) -> str:
+    """This was a list of t-env encryptors, but
+    we wouldn't list everything
+
+    Preconditions:
+        - count >= 0
+    """
+    return f'🬟{count}⚍⚋🬯⚎☆⚌⚏'

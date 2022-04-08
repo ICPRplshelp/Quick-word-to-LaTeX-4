@@ -559,8 +559,8 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
         return '& ' + text
     else:
         hierarchy = [
-            {'<', '>', '\\leq', '\\geq'},
             {'='},
+            {'<', '>', '\\leq', '\\geq', '\\approx'},
             {'\\subset', '\\subseteq', '\\not\\subset'},
             {'\\neq'}
         ]
