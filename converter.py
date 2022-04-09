@@ -1,18 +1,17 @@
 """This file chooses which modules to include when converting files.
 """
+import json
 import logging
+import os
 import time
 from dataclasses import dataclass, fields
-from typing import Optional, Union
-import json
-import os
-
 # import easygui
 from tkinter.filedialog import askopenfile
+from typing import Optional, Union
 
 import alignments as w2l
-import helpers as dbl
 import cleanup
+import helpers as dbl
 
 TEMP_TEX_FILENAME = 'temp.tex'
 REPLAC = {'α': R'\alpha', 'β': R'\beta', 'γ': R'\gamma', 'δ': R'\delta', 'ϵ': R'\epsilon',
@@ -36,6 +35,7 @@ def open_file(file: str, allow_exceptions: bool = False) -> str:
             return file_text
         except FileNotFoundError:
             return ''
+
 
 def write_file(text: str, filename: str) -> None:
     """Write file with given name.
@@ -144,6 +144,8 @@ class Preferences:
     citation_brackets: bool = False  # whether brackets should wrap citations. Default for APA citations.
     cleanup: bool = True  # whether aux, bcf, log, and run.xml files should be removed only if
     # a successful export occurs
+    disable_table_figuring: bool = False  # if set to true, prevents tables from being figured
+    # no matter what.
     modify_tables: bool = True  # determine whether tables should be modified.
     # if false, longtable eliminator and table labeling will not work.
 
@@ -271,7 +273,8 @@ class WordFile:
 
         # self.preferences.pdf_engine
 
-        pdf_engine_str = '--pdf-engine=xelatex '  # f'--pdf-engine={self.preferences.pdf_engine} ' if self.preferences.pdf_engine != 'pdflatex' else ''
+        pdf_engine_str = '--pdf-engine=xelatex '
+        # f'--pdf-engine={self.preferences.pdf_engine} ' if self.preferences.pdf_engine != 'pdflatex' else ''
         command_string = f'pandoc {dquote}{media_path}{dquote} {filters_1} {dquote}{self.word_file_path}{dquote} {pdf_engine_str}-o {self._temp_tex_file}'
         os.system(command_string)
         return open_file(self._temp_tex_file)
@@ -333,7 +336,8 @@ class WordFile:
         if self.preferences.fix_derivatives:
             text = dbl.dy_fixer(text)
         if self.preferences.modify_tables:
-            text = dbl.eliminate_all_longtables(text, self.preferences.disallow_figures,
+            disallow_tab_f = self.preferences.disable_table_figuring or self.preferences.disallow_figures
+            text = dbl.eliminate_all_longtables(text, disallow_tab_f,
                                                 self.preferences.allow_no_longtable)
         if self.preferences.dollar_sign_equations:
             text = w2l.dollar_sign_equations(text)

@@ -1,11 +1,8 @@
 """Most of the helper functions to converter.py and any other modules
-
-TODO: Longtables - add a way to figure them without removing them.
 """
 import json
 import logging
 import math
-import re
 from dataclasses import dataclass, fields
 from typing import Optional, Iterable, Callable, Union
 
@@ -285,6 +282,33 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
         text = text.replace(old_figures_so_far[i], 'Table ' + new_figures_so_far[i])
     for i in range(0, len(old_figures_so_far_1)):
         text = text.replace(old_figures_so_far_1[i], 'table ' + new_figures_so_far[i])
+        # j += 1
+    return text
+
+
+def bulk_labeling(text: str, label_tags: list[str], type_labeled: str,
+                  ref_cmd: str = 'ref', ref_kw: Optional[str] = None) -> str:
+    """Used for all your labelling needs.
+        - label_tags: [4A, 1, 2B, 3C]
+        - type_labeled: table -> Table, table - the first letter upper first lower
+        - ref_cmd: ref - the ref command used in text
+        - ref_kw: table -> table: - inserted at the start of the ref
+
+    Preconditions:
+        - type_labeled != ''
+    """
+    type_upper = type_labeled[0].upper() + type_labeled[1:] + ' '
+    type_lower = type_labeled[0].lower() + type_labeled[0] + ' '
+    if ref_kw is None:
+        ref_kw = type_labeled.lower().replace(' ', '')
+    ref_cmd = '\\' + ref_cmd + '{' + ref_kw + ':k'
+    new_figures_so_far = [ref_cmd + x + '}' for x in label_tags]
+    old_figures_so_far = [type_upper + y for y in label_tags]
+    old_figures_so_far_1 = [type_lower + z for z in label_tags]
+    for i in range(0, len(old_figures_so_far)):
+        text = text.replace(old_figures_so_far[i], type_upper + new_figures_so_far[i])
+    for i in range(0, len(old_figures_so_far_1)):
+        text = text.replace(old_figures_so_far_1[i], type_lower + new_figures_so_far[i])
         # j += 1
     return text
 
@@ -844,7 +868,7 @@ def environment_stack(text: str, envs: list[LatexEnvironment]) -> list[Environme
 
     ◺"""
     last_tracking_index = 0
-    former_tracking_index = -1
+    # former_tracking_index = -1
     finished_env_instances = []
     working_env_instances = []
     while True:
@@ -1035,9 +1059,9 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
                 continue
             else:
                 break
-        text = text[:start] + k_begin + br[0] + term + br[1] + env_info.env_suffix + '\n' + text[
-                                                                                            end + 1:next_newline].strip() + '\n' + k_end + text[
-                                                                                                                                           next_newline:]
+        text = text[:start] + k_begin + br[0] + term + \
+               br[1] + env_info.env_suffix + '\n' + text[
+                                                    end + 1:next_newline].strip() + '\n' + k_end + text[next_newline:]
     return text
 
 
@@ -1267,34 +1291,173 @@ def bracket_layers(text: str, index: int,
         raise IndexError('Your index was out of bounds.')
 
 
-def split_all_equations(text: str, max_len: int, skip: int = 0) -> str:
+# NUMBERED_EQUATIONS = True
+
+
+def split_all_equations(text: str, max_len: int, skip: int = 0,
+                        numbered_equations: bool = True, label_equations: bool = False) -> str:
     """Split equation done for all equations.
+    Also, label equations if needed.
     Must be done before dollar sign equations, but after alignment regions
     are processed for the first time. If fix alignment regions are off,
     this may not run.
 
     Initially, skip must always be set to 0.
 
-    TODO: Change this from recursion to while loop
-    TODO: If the equation is numbered, remove the matrix that surrounds it and return the eqn number
-    or none.
+    Long equations may not be numbered. Shorter equations can. If so,
+    nothing that would result in backslashes or braces appearing
+    in the comment may be present,
+    otherwise the comment will be thrown out.
     """
-    starting_index = find_nth(text, R'\[', skip + 1)
-    finishing_index = find_nth(text, R'\]', skip + 1)
-    if -1 in (starting_index, finishing_index):
-        return text
-    assert starting_index < finishing_index
-    eqn_text = text[starting_index + 2:finishing_index]
-    new_eqn_text = split_equation(eqn_text, max_len)
-    if new_eqn_text is None:
-        return split_all_equations(text, max_len, skip + 1)
-    else:
-        try:
+    equation_labels = []
+    while True:
+        equation_is_numbered = False
+        starting_index = find_nth(text, R'\[', skip + 1)
+        finishing_index = find_nth(text, R'\]', skip + 1)
+        if -1 in (starting_index, finishing_index):
+            break
+        assert starting_index < finishing_index
+        eqn_text = text[starting_index + 2:finishing_index]
+        eqn_comment = None
+        if numbered_equations and valid_matrix(eqn_text):
+            eqn_text, eqn_comment = matrix_equation_extractor(eqn_text)
+            equation_is_numbered = True
+        new_eqn_text = split_equation(eqn_text, max_len)
+        if new_eqn_text is None:  # everything is fine - no updates done.
+            if equation_is_numbered:
+                # wrap the entire equation using the equation environment.
+                # equations can be tagged, but labelling isn't supported.
+                # I don't even want to support labelling, but I will.
+                begin_equation = '\n\\begin{equation}\n'
+                end_equation = '\n\\end{equation}\n'
+
+                # begin_equation_st = '\n\\begin{equation}\n'
+                # end_equation_st = '\n\\end{equation}\n'
+
+                eqn_label = get_equation_label(eqn_comment)
+                if eqn_label is not None:
+                    labeling = R'\tag{' + eqn_label + '} '
+                    if label_equations:
+                        labeling += '\\label{eq:' + eqn_label + '}'
+                        equation_labels.append(eqn_label)
+                    eqn_env_text = begin_equation + eqn_text + labeling + end_equation
+                else:  # no time for wrapping
+                    logging.warning(f'equation {eqn_text} has an invalid comment; removing comment.'
+                                    f' Invalid comments are not plain text or numbers.')
+                    eqn_env_text = '\\[' + eqn_text + '\\]'
+                    skip += 1
+                text = text[:starting_index] + eqn_env_text + text[finishing_index + 2:]
+            else:  # skip only if we didn't wrap this around an eqn environment
+                skip += 1
+        else:  # otherwise, updates are done, and then we continue.
+            if equation_is_numbered:
+                logging.warning(f'Extra long numbered equation: {eqn_comment}. Comment deleted.')
             text = text[:starting_index] + R'\[' + new_eqn_text + R'\]' + text[finishing_index + 2:]
-            return split_all_equations(text, max_len, skip + 1)
-        except IndexError:
-            text = text[:starting_index] + R'\[' + new_eqn_text + R'\]'
-            return split_all_equations(text, max_len, skip + 1)
+            skip += 1
+    # if equation_labels:  # if equation_labels isn't empty
+    #     text = bulk_labeling(text, equation_labels, )
+    # we will not be including refs because of how equations are typed out.
+
+    return text
+
+
+def remove_local_environment(text: str, env: Union[str, list[str]]) -> str:
+    """Remove all local environments in env from text.
+    """
+    if isinstance(env, str):
+        env = [env]
+    for env_instance in env:
+        env_start = '\\' + env_instance + '{'
+        while True:
+            starting_index = text.find(env_start)
+            if starting_index == -1:
+                break
+            ending_index = local_env_end(text, starting_index)
+            # the local environment is always destroyed everytime this is run.
+            text = text[:starting_index] + text[starting_index + len(env_start):ending_index] + \
+                   text[ending_index + 1:]
+        return text
+
+
+def get_equation_label(numbering: str) -> Optional[str]:
+    """Return the equation label from the comment.
+    In other words:
+        - if numbering is wrapped by parentheses, remove the brackets.
+        - otherwise, return numbering without making changes.
+        - if the label results in errors, then return None.
+    """
+    if len(numbering) == 0:
+        return None
+    if numbering[0] == '(' and numbering[-1] == ')':
+        numbering = numbering[1:len(numbering) - 1]
+    elif numbering.startswith(R'\left(') and numbering.endswith(R'\right)'):
+        numbering = numbering[len(R'\left('):len(numbering) - len(R'\right)')]
+    # afterwards, check if the label is valid
+    # remove all text from local environments
+    numbering = remove_local_environment(numbering, ['text', 'mathbf'])
+    numbering = formatted_text_encryptor(numbering, ['textbf', 'emph'])
+    if check_valid_label(numbering):
+        numbering = formatted_text_decryptor(numbering, ['textbf', 'emph'])
+        return numbering.strip()
+    else:
+        return None
+
+
+def check_valid_label(label: str) -> bool:
+    """Return True if the label is valid.
+    A label is valid when the following conditions
+    of this function is met.
+    """
+    # first condition: no backslashes at all
+    if '\\' in label:
+        return False
+    elif '{' in label:
+        return False
+    elif '}' in label:
+        return False
+    else:
+        return True
+
+
+def matrix_equation_extractor(text: str) -> tuple[str, str]:
+    """Extract the one value in the matrix.
+
+    Preconditions:
+        - valid_matrix(text)
+    """
+    # logging.warning(text)
+    text = text.strip()  # strip the text first
+    bm = R'\begin{matrix}'
+    em = R'\end{matrix}'
+    starting_matrix_location = text.find(bm)
+    # conditions: above is 0
+    if starting_matrix_location != 0:
+        assert False
+    ending_matrix_location = text.rfind(em)
+    required_ending_location = len(text) - len(em)
+    # conditions: ending matrix ends where it is supposed to end
+    if ending_matrix_location != required_ending_location:
+        assert False
+    # Matrix conditions should be met by this point.
+    hashtag = R'\#'
+    if R'\#' not in text:
+        assert False
+    # intl passing location. For now, let's assume that this is only where # appears.
+    ti_temp = text.rfind(hashtag)  # the index of the last hashtag, starting at the backslash
+    if any_layer(text, ti_temp, R'\left', R'\right') != 0:
+        assert False
+    if any_layer(text, ti_temp, R'\begin', R'\end') != 1:
+        assert False
+    # if dbl.any_layer(text, ti_temp, bm, em) != 1:
+    #     return None, None
+    start = ti_temp + len(hashtag)
+    end = text.find(R'\\', start)
+    # we assume we didn't define any matrices in our comment
+    comment = text[start:end].strip()
+    b_start = len(bm)
+    # ti_temp is also where the hashtag point starts, so everything before it is the contents
+    equation_contents = text[b_start:ti_temp].strip()
+    return equation_contents, comment
 
 
 def split_equation(text: str, max_len: int, list_mode: bool = False) -> None | str | list[str]:
@@ -2481,7 +2644,8 @@ TEST_STR_3 = """
 
 def valid_matrix(matrix: str) -> bool:
     """Check if the matrix happens to be one used for
-    the hashtag.
+    the hashtag. Input to matrix is always stripped before
+    checking.
 
     The matrix must have its begin and end keywords.
 
@@ -3246,3 +3410,31 @@ def text_environment_encryptor(count: int) -> str:
         - count >= 0
     """
     return f'🬟{count}⚍⚋🬯⚎☆⚌⚏'
+
+
+def formatted_text_encryptor(text: str, envs_to_encrypt: list[str]) -> str:
+    """Hide local environment declarations. There will be a decrypt function.
+    """
+    env_st = ['🮥sT1🮥' + z + '🮥sT2🮥' for z in envs_to_encrypt]
+    env_en = '🮥eN1🮥'
+    for env, env_st_kw in zip(envs_to_encrypt, env_st):
+        env_bg = '\\' + env + '{'
+        while True:
+            st_ind = text.find(env_bg)
+            if st_ind == -1:
+                break
+            en_ind = local_env_end(text, st_ind)
+            text = text[:st_ind] + env_st_kw + text[st_ind + len(env_bg):en_ind] + env_en + text[en_ind + 1:]
+    return text
+
+
+def formatted_text_decryptor(text: str, envs_to_decrypt: list[str]) -> str:
+    """Ran after formatted_text_encryptor.
+    """
+    env_st = ['🮥sT1🮥' + z + '🮥sT2🮥' for z in envs_to_decrypt]
+    env_en = '🮥eN1🮥'
+    text = text.replace(env_en, '}')
+    for env, env_st_kw in zip(envs_to_decrypt, env_st):
+        env_bg = '\\' + env + '{'
+        text = text.replace(env_st_kw, env_bg)
+    return text

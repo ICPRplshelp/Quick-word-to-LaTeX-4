@@ -1,1 +1,1 @@
-config_modes/config_quiet.json
+config_modes/config_standard.json

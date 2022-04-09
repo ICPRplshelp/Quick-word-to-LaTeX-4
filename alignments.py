@@ -131,8 +131,9 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
 
     prestart = preamble_path
     if isinstance(has_bib_file, bool) and has_bib_file is True:
-        bib_file_name = input('What is your .bib file name? (Must include suffix .bib) ')
-        prestart = prestart + '\n\\addbibresource{' + bib_file_name + '}\n\n'
+        assert False  # this is never supposed to run.
+        # bib_file_name = input('What is your .bib file name? (Must include suffix .bib) ')
+        # prestart = prestart + '\n\\addbibresource{' + bib_file_name + '}\n\n'
     elif isinstance(has_bib_file, str):  # type(has_bib_file) == type('string'):
         prestart = prestart + '\n\\addbibresource{' + has_bib_file + '}\n\n'
     section_num_text = '\\setcounter{secnumdepth}{-\\maxdimen} % remove section numbering' if not \
