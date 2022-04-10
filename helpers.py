@@ -470,9 +470,15 @@ def truncate_path(text: str, disallow_pdf: bool = False) -> tuple[str, bool]:
 
 def remove_images(text: str) -> str:
     """Remove all images.
+
+    Preconditions:
+        - include graphics is all on one line
+        - verbatims are concealed
     """
     # figures_so_far = []
-    return text.replace('\\includegraphics', '% \\includegraphics')
+    all_lines = text.split('\n')
+    all_lines_2 = [x for x in all_lines if not x.startswith('\\includegraphics')]
+    return '\n'.join(all_lines_2)
 
 
 def detect_include_graphics(text: str, disallow_figures: bool = False) -> str:
