@@ -295,18 +295,20 @@ class WordFile:
             text = w2l.fix_vectors(text)
             text = w2l.fix_vectors_again(text)
             text = dbl.fix_accents(text)
-        if self.preferences.allow_proofs:
-            text = dbl.qed(text, self.preferences.special_proofs)
+
         if self.preferences.allow_environments and self.preferences.environments is not None:
             text = dbl.work_with_environments(text, self.preferences.environments)
+
+        if self.preferences.allow_proofs:
+            text = dbl.qed(text, self.preferences.special_proofs)
         # if True:
         #    text = dbl.longtable_backslash_add_full(text)
 
         eqn_comment = {'comment_type': self.preferences.eqn_comment_mode}
-        if self.preferences.remove_spaces_from_eqns:
-            # TODO: after text
-            text = dbl.bad_backslash_replacer(text)
-            text = dbl.bad_backslash_replacer(text, '\\(', '\\)')
+        # if self.preferences.remove_spaces_from_eqns:
+        #     # TODO: after text, prevent messing with commands
+        #     text = dbl.bad_backslash_replacer(text)
+        #     text = dbl.bad_backslash_replacer(text, '\\(', '\\)')
 
         if self.preferences.allow_alignments:  # alignments must always run first
             while True:

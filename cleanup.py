@@ -16,7 +16,8 @@ def new_folder(folder_name: str) -> str:
     if not os.path.exists(final_directory):
         os.makedirs(final_directory)
     else:
-        logging.warning('cannot create new folder due to existing folder')
+        pass
+        # logging.warning('cannot create new folder due to existing folder')
     return current_directory + '\\' + folder_name
 
 

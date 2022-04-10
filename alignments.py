@@ -271,10 +271,10 @@ def replace_align_region(text: str, proofs: bool = False,
         return text, True
     replace_with = process_align_region(isolated, auto_align, max_line_length, extra_info=extra_info)
     proof_line = ''
-    if proofs and R'\blacksquare' in replace_with:
-        replace_with = replace_with.replace(R'\ \blacksquare', '')
-        replace_with = replace_with.replace(R'\blacksquare', '')
-        proof_line = '\n\\end{proof}\n'
+    # if proofs and R'\blacksquare' in replace_with:
+    #     replace_with = replace_with.replace(R'\ \blacksquare', '')
+    #     replace_with = replace_with.replace(R'\blacksquare', '')
+    #     proof_line = '\n\\end{proof}\n'
     align_start = '\n\\begin{align*}\n'
     align_end = '\\end{align*}\n'
     end_result = text[

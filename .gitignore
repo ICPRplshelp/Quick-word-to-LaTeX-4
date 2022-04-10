@@ -6,6 +6,7 @@ vnev/
 testing.py
 build.py
 TRASH_LATEX_FILES/
+check_files.py
 
 *.pyc
 *.tex
