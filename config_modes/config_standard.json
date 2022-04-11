@@ -20,7 +20,7 @@
   "replace_font": true,
   "fix_unicode": true,
   "autodetect_align_symbols": true,
-  "pdf_engine": "pdflatex",
+  "pdf_engine": "xelatex",
   "max_line_length": 110,
   "max_line_align": true,
   "fix_texttt": false,

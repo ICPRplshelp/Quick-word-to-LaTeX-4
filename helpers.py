@@ -2721,7 +2721,7 @@ def count_outer(text: str, key: str, avoid_escape_char: bool = True) -> int:
     all_matrices = ['matrix', 'bmatrix', 'pmatrix']
     for m_mode in all_matrices:
         text = modify_text_in_environment(text, m_mode, lambda s: '')
-    text = do_something_to_local_env(text, 'text', lambda s: '')
+    # text = do_something_to_local_env(text, 'text', lambda s: '')
     if len(key) == 1 and avoid_escape_char:
         text = text.replace(f'\\{key}', '')
     return text.count(key)

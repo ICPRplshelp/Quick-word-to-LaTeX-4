@@ -1,5 +1,5 @@
-\usepackage[fontsize=11pt]{scrextend}
-% \usepackage[margin=0.75in]{geometry}
+\usepackage[fontsize=12pt]{scrextend}
+\usepackage[margin=0.75in]{geometry}
 \usepackage{amsthm}
 \theoremstyle{theorem}
 \newtheorem{theorem}{Theorem}[section]
@@ -11,7 +11,7 @@
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]  % remove this to prevent sections from appearing
 \renewcommand\qedsymbol{$\blacksquare$}
-\usepackage[style=apa]{biblatex}
+\usepackage{biblatex}
 % \usepackage{mathptmx}
 \usepackage{mathtools}
 \usepackage{listings}
