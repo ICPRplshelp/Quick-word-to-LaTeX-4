@@ -34,8 +34,6 @@ into a PDF, and the PDF compiler breaks midway, check to see
 if your `*.docx` has the following, because these prevent
 proper compilation:
 
-- Nested tables
-- Lists in tables if config is set to strict
 - Unicode characters not in equations, if the compiler is pdfLaTeX
 - Equations in headings
 - Footnotes in tables, if the config is set to strict
