@@ -96,45 +96,9 @@
       "extra_args_type": "bracket",
       "env_suffix": "{}"
     },
-    "mytheorem": {
-      "env_name": "mytheorem",
-      "start": "MT.",
-      "end": "End MT.",
-      "encapsulation": "textbf",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": false,
-      "extra_args_type": "brace"
-    },
-    "hintbox": {
-      "env_name": "hintbox",
-      "start": "Hint.",
-      "end": "End hint.",
-      "encapsulation": "emph",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": true,
-      "extra_args_type": "brace"
-    },
-        "infobox": {
-          "env_name": "infobox",
-      "start": "Info.",
-      "end": "End info.",
-      "encapsulation": "emph",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": true,
-      "extra_args_type": "brace"
-    },
-        "warningbox": {
-          "env_name": "warningbox",
-      "start": "Warning.",
-      "end": "End warning.",
-      "encapsulation": "emph",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": true,
-      "extra_args_type": "brace"
+      "Framed": {
+      "env_name": "Framed",
+      "has_extra_args": false
     }
   }
 }

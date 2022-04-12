@@ -1,14 +1,16 @@
 """This module helps align equations.
+
+I/O functions are NOT allowed.
 """
 import logging
 from typing import Optional, Union
-
+import sys
 # import os
 import re
 # import sys
 import helpers as dbl
 
-import sys
+
 sys.setrecursionlimit(20000)
 # (   ]
 # 'aaa(aa]aa' to 'aaa[removed]aa[removed]aa'
@@ -240,9 +242,9 @@ def hypertarget_eliminator(txt: str) -> str:
     # txt = "\\hypertarget{example-2-onto-but-not-one-to-one}{%\n\\subsubsection{Example 2: Onto but
     # not\none-to-one}\\label{example-2-onto-but-not-one-to-one}}"
     # y = re.findall("^\\\\hypertarget\{.*\}", txt)
-    z = re.sub("\\\\hypertarget\{.*\}\{%", '', txt)
+    z = re.sub("\\\\hypertarget{.*}{%", '', txt)
     # print(z)
-    a = re.sub("\\\\label\{.*\}", '', z)
+    a = re.sub("\\\\label{.*}", '', z)
     # print(a)
     # x = re.sub("\\\\" + arg1, "\\\\" + replace1, txt)
     # x = re.sub("\(.*\)", "[remove]", x)
@@ -403,16 +405,16 @@ def detect_align_region(text: str) -> Optional[tuple[str, int, int]]:
     if found:
         if special_region_info is None:
             captured_region = text[finished_region[0]:finished_region[1]]
-            print(captured_region)
+            # print(captured_region)
         else:
             captured_region = text[finished_region[0]:special_region_info[0]] + '{' + \
                               text[special_region_info[0]:special_region_info[1]] + '}' + \
                               text[special_region_info[1]:finished_region[1]]
-            print(captured_region)
+            # print(captured_region)
 
         return captured_region, finished_region[0], finished_region[1]
     else:
-        print('ran out of alignment regions to check')
+        # print('ran out of alignment regions to check')
         return None
 
 
@@ -588,7 +590,7 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
         return to_return
 
 
-def bracket_region(text: str, open: str, close: str) -> dict:
+def bracket_region(text: str, opening_bracket: str, close: str) -> dict:
     """Bracket region.
     \{ x+y \} means \\{ x+y \\}
     Preconditions:
@@ -609,7 +611,7 @@ def bracket_region(text: str, open: str, close: str) -> dict:
             backslash_state = True
         elif backslash_state:
             backslash_state = False
-        if c == open:
+        if c == opening_bracket:
             if not backslash_state:  # if the previous char isn't \\
                 istart.append(i)
             elif c != '\\':  # turn it back to false, UNLESS c == \\
@@ -619,15 +621,15 @@ def bracket_region(text: str, open: str, close: str) -> dict:
                 try:
                     d[istart.pop()] = i
                 except IndexError:
-                    print('Too many closing parentheses')
+                    logging.warning('Too many closing parentheses')
             elif c != '\\':
                 backslash_state = False
     if istart:  # check if stack is empty afterwards
-        print('Too many opening parentheses')
+        logging.warning('Too many opening parentheses')
     return d
 
 
-def bracket_region_outer(text: str, open: str, close: str):
+def bracket_region_outer(text: str, opening_bracket: str, close: str):
     """Bracket region. Outer only. Skips backslash cases.
     \{ x+y \} means \\{ x+y \\}
     Preconditions:
@@ -648,7 +650,7 @@ def bracket_region_outer(text: str, open: str, close: str):
             backslash_state = True
         elif backslash_state:
             backslash_state = False
-        if c == open:
+        if c == opening_bracket:
             if not backslash_state:  # if the previous char isn't \\
                 istart.append(i)
             elif c != '\\':  # turn it back to false, UNLESS c == \\
@@ -661,11 +663,11 @@ def bracket_region_outer(text: str, open: str, close: str):
                     if len(istart) == 0:  # only when capturing outermost brackets
                         d[kc] = i
                 except IndexError:
-                    print('Too many closing parentheses')
+                    logging.warning('Too many closing parentheses')
             elif c != '\\':
                 backslash_state = False
     if istart:  # check if stack is empty afterwards
-        print('Too many opening parentheses')
+        logging.warning('Too many opening parentheses')
     return d
 
 

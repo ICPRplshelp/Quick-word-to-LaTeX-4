@@ -2,3 +2,4 @@
 \usepackage{lmodern,iftex}
 \usepackage[fontsize=11pt]{scrextend}
 \usepackage{array}
+\usepackage{framed}

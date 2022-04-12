@@ -4,6 +4,7 @@
 \theoremstyle{theorem}
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{corollary}{Corollary}
+\usepackage{framed}
 \theoremstyle{lemma}
 \newtheorem{lemma}{Lemma}
 \theoremstyle{remark}

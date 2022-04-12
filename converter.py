@@ -9,9 +9,8 @@ from dataclasses import dataclass, fields
 from tkinter.filedialog import askopenfile
 from typing import Optional, Union
 
-import alignments as w2l
+from src import alignments as w2l, helpers as dbl
 import cleanup
-import helpers as dbl
 
 TEMP_TEX_FILENAME = 'temp.tex'
 REPLAC = {'α': R'\alpha', 'β': R'\beta', 'γ': R'\gamma', 'δ': R'\delta', 'ϵ': R'\epsilon',
@@ -297,6 +296,7 @@ class WordFile:
             text = dbl.fix_accents(text)
 
         if self.preferences.allow_environments and self.preferences.environments is not None:
+            text = dbl.framed(text)
             text = dbl.work_with_environments(text, self.preferences.environments)
 
         if self.preferences.allow_proofs:

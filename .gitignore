@@ -2,6 +2,11 @@ dist/
 build/
 vnev/
 .pytest_cache/
+out/
+
+images/
+*.cls
+*.def
 
 testing.py
 build.py
