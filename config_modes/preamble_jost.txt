@@ -62,6 +62,9 @@
 %%% START JoST ADDITIONS %%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\newcommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
 \usepackage{comment}
 \usepackage{latexsym}
 \usepackage[utf8]{inputenc}
@@ -177,5 +180,7 @@ pics/circles/.style args={#1#2#3#4}{
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt plus 2pt minus 1pt}
+
+\newcommand{\sout}[1]{\emph{#1}}
 
 \newcommand{\emptyfig}{\includegraphics[width=.3\textwidth]{example-image-a}}  % stops overlap of objects in sidebar
