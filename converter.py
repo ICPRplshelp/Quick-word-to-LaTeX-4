@@ -144,6 +144,10 @@ class Preferences:
     conceal_verbatims: bool = True  # prevent verbatim environments from being affected,
     # unless a module specifically affects verbatim environments.
     citation_brackets: bool = False  # whether brackets should wrap citations. Default for APA citations.
+    bibtex_def: str = '\\usepackage{biblatex}'  # bibtex def.
+    citation_keyword: str = 'cite'  # the citation keyword, with no backslash at the end.
+    # \usepackage[style=verbose-ibid,backend=bibtex]{biblatex}
+    # there is something a bit off with the citations' module.
     cleanup: bool = True  # whether aux, bcf, log, and run.xml files should be removed only if
     # a successful export occurs
     disable_table_figuring: bool = False  # if set to true, prevents tables from being figured
@@ -279,6 +283,8 @@ class WordFile:
     def latex_repair(self) -> None:
         """Repair generated latex file.
         """
+        p_start = open_multiple_files(self.preferences.preamble_path)
+
         text = self.text
         start = '\\begin{document}'
         end = '\\end{document}'
@@ -369,12 +375,13 @@ class WordFile:
 
                     # temp_text_here = temp_text_here[:bib_ind] + bib_final + \
                     #     temp_text_here[bib_ind:]
-
+                    cite_properties = {'bibtex_def': self.preferences.bibtex_def, 'citation_kw':
+                                       self.preferences.citation_keyword}
                     temp_text_here = temp_text_here[:bib_ind] + '\\medskip\n\\printbibliography' + \
-                                     temp_text_here[bib_ind:]
+                                temp_text_here[bib_ind:]
                     # then replace the citations
                     text = dbl.do_citations(temp_text_here, bib_data, self.preferences.citation_mode,
-                                            self.preferences.citation_brackets)
+                                            self.preferences.citation_brackets, cite_properties)
                     last_dbl_backslash = self.bib_path.rfind('\\')
                     if last_dbl_backslash == -1:
                         last_dbl_backslash -= 1
@@ -382,6 +389,10 @@ class WordFile:
                     # rewrite the bib file in the same directory as this .py file
                     # ensure that the bib file is written as well in the same location
                     write_file(bib_data, has_bib_file)
+                    # check if we have used bibtex
+                    # modify the preamble to add the bibtex module specified in the config
+                    if self.preferences.bibtex_def != '':
+                        p_start = dbl.check_bibtex(p_start, self.preferences.bibtex_def)
         # if self.preferences.allow_citations and self.citation_path \
         #         is not None and self.bib_path is not None:
         #     bib_data = open_file(self.bib_path)
@@ -392,7 +403,7 @@ class WordFile:
         # always on
         text = dbl.verbatim_regular_quotes(text)
 
-        p_start = open_multiple_files(self.preferences.preamble_path)
+
 
         if not self.preferences.exclude_preamble:  # if preamble is included
             self.text = w2l.deal_with_preamble(text=self.raw_text[:start],

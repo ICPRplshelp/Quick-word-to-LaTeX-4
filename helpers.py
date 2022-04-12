@@ -4,7 +4,7 @@ import json
 import logging
 import math
 from dataclasses import dataclass, fields
-from typing import Optional, Iterable, Callable, Union
+from typing import Optional, Iterable, Callable, Union, Any
 
 # ch = logging.StreamHandler()
 # ch.setLevel(logging.DEBUG)
@@ -639,23 +639,29 @@ def rfind_nth(haystack: str, needle: str, n: int, starter: int = 0,
     return end
 
 
-def do_citations(text: str, bib_contents: str, mode: str = 'mla', brackets: bool = False) -> str:
+def do_citations(text: str, bib_contents: str, mode: str = 'mla', brackets: bool = False,
+                 cite_properities: Optional[dict[str, Any]] = None) -> str:
     """Return text with converted citations.
     """
+    if cite_properities is None:
+        cite_properities = {}
     authors = extract_authors_from_bib(bib_contents)
-    text = citation_handler(text, authors, brackets)
-    text = bulk_citation_page_handler(text, mode, False, authors, brackets)
-    text = multi_cite_handler_bulk(text, authors)
+    text = citation_handler(text, authors, brackets, cite_properities)
+    text = bulk_citation_page_handler(text, mode, False, authors, brackets, cite_properities)
+    text = multi_cite_handler_bulk(text, authors, cite_properities)
     return text
 
 
-def citation_handler(text: str, citation_list: list[str], brackets: bool = False) -> str:
+def citation_handler(text: str, citation_list: list[str], brackets: bool = False,
+                     cite_properities: Optional[dict[str, Any]] = None) -> str:
     """Handle all non-page citations.
     """
     # citation_list = bib_path
+    if cite_properities is None:
+        cite_properities = {}
     for src in citation_list:
         bracket_src = '(' + src + ')'
-        cite_src = '\\cite{' + src + '}'
+        cite_src = '\\' + cite_properities['citation_kw'] + '{' + src + '}'
         if brackets:
             cite_src = ' (' + cite_src + ')'
         text.replace(bracket_src, cite_src)
@@ -663,14 +669,17 @@ def citation_handler(text: str, citation_list: list[str], brackets: bool = False
 
 
 def bulk_citation_page_handler(text: str, mode: str,
-                               p: bool, citation_list: list[str], brackets: bool = False) -> str:
+                               p: bool, citation_list: list[str], brackets: bool = False,
+                               cite_properities: Optional[dict[str, Any]] = None) -> str:
     """Page numbers
     mode: apa1, apa2, or mla (default mla)
     if p is true latex page numbers will start with p. otherwise nothing
     """
     # citation_list = extract_authors_from_bib(bib_path)
+    if cite_properities is None:
+        cite_properities = {}
     for src in citation_list:
-        text = citation_page_handler(text, src, mode, p, brackets)
+        text = citation_page_handler(text, src, mode, p, brackets, cite_properities)
     return text
 
 
@@ -684,7 +693,8 @@ def create_citations_list(directory: str) -> list[str]:
     return citation_list
 
 
-def citation_page_handler(text: str, src: str, mode: str = 'apa2', p: bool = False, brackets: bool = False) -> str:
+def citation_page_handler(text: str, src: str, mode: str = 'apa2', p: bool = False, brackets: bool = False,
+                          cite_properities: Optional[dict[str, Any]] = None) -> str:
     """Handle all page citations.
     The text should never make a fake-out citation ( please)
 
@@ -697,6 +707,8 @@ def citation_page_handler(text: str, src: str, mode: str = 'apa2', p: bool = Fal
     >>> citation_page_handler(original_text, source, 'mla', False) == expect
     True
     """
+    if cite_properities is None:
+        cite_properities = {}
     mode = mode.lower()
     if mode == 'apa1':
         str_text = '(' + src + ','
@@ -718,19 +730,21 @@ def citation_page_handler(text: str, src: str, mode: str = 'apa2', p: bool = Fal
         citation_bound_end = closing_bracket + 1
         if p:
             page_number = 'p. ' + page_number
-        cite_src = '\\cite[' + page_number + ']{' + src + '}'
+        cite_src = '\\' + cite_properities['citation_kw'] + '[' + page_number + ']{' + src + '}'
         if brackets:
             cite_src = ' (' + cite_src + ')'
         text = text[:starter - 1] + cite_src + text[citation_bound_end:]
     return text
 
 
-def multi_cite_handler_bulk(text: str, srcs: list[str]) -> str:
+def multi_cite_handler_bulk(text: str, srcs: list[str], cite_properities: Optional[dict[str, Any]] = None) -> str:
     """Handle all the multi-inline citations in bulk.
     Must be called after all the other citation modules.
     """
+    if cite_properities is None:
+        cite_properities = {}
     for src in srcs:
-        text = multi_cite_handler(text, src, srcs)
+        text = multi_cite_handler(text, src, srcs, cite_properities)
     return text
 
 
@@ -740,7 +754,7 @@ This is (a1, a2, a3, a4). Also, (a1, a2, a3, a4).
 T_ALIST = ['a1', 'a2', 'a3', 'a4']
 
 
-def multi_cite_handler(text: str, cur_src: str, srcs: list[str]) -> str:
+def multi_cite_handler(text: str, cur_src: str, srcs: list[str], cite_properities: Optional[dict[str, Any]] = None) -> str:
     """Handle multiple authors cited in the same inline
     citation.
     If there is anything wrong with the citation syntax, stop the process.
@@ -753,6 +767,8 @@ def multi_cite_handler(text: str, cur_src: str, srcs: list[str]) -> str:
         - All other citation handlers have run
         - Raw text is in the format (Author1, Author2, Author3) or related
     """
+    if cite_properities is None:
+        cite_properities = {}
     look_for = f'({cur_src}, '
     n = 1
     while True:  # per initial occurrence
@@ -775,7 +791,7 @@ def multi_cite_handler(text: str, cur_src: str, srcs: list[str]) -> str:
                 if ending_author_ind != -1:
                     author_list.append(author)
         # updated text
-        text = text[:cite_ind] + R'\cite{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
+        text = text[:cite_ind] + '\\' + cite_properities['citation_kw'] + '{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
     return text
 
 
@@ -3712,3 +3728,42 @@ def formatted_text_decryptor(text: str, envs_to_decrypt: list[str]) -> str:
         env_bg = '\\' + env + '{'
         text = text.replace(env_st_kw, env_bg)
     return text
+
+
+def check_bibtex(preamble: str, replace_bibtex: str) -> str:
+    """Overwrite the preamble's bibtex thing. Firstly, check
+    if bibtex is defined. If so, then remove it.
+    """
+    btex = 'biblatex'
+    skip = 1
+    while True:
+        closest_package = find_closest_local_env(preamble, 'usepackage', skip)
+        if closest_package == -1:  # base case
+            return preamble + replace_bibtex
+        # start_of_brace = find_no_escape_char(preamble, '{', 1, closest_package)  # preamble.find('{', closest_package)
+        package_end = local_env_end(preamble, closest_package)
+        preamble_contents = preamble[closest_package:package_end]  # I don't care otherwise
+        if btex in preamble_contents:  # oop, try again
+            return preamble[:closest_package] + replace_bibtex + preamble[package_end + 1:]
+
+
+
+def find_no_escape_char(text: str, sub: str, skip: int = 1, start: int = 0) -> int:
+    """Same as find_nth, but prevents looking at escape characters.
+    """
+    private_skip = 1
+    while True:
+        candidate_location = find_nth(text, sub, skip, start)
+        if candidate_location == -1:
+            return -1
+        temp_state = text[candidate_location - 1] == '\\' if len(text) != 0 else False
+        if temp_state:
+            private_skip += 1
+            continue
+        else:
+            skip -= 1
+            if skip == 0:
+                return candidate_location
+            else:
+                private_skip += 1
+    # return candidate_location
