@@ -2,15 +2,14 @@
 \usepackage[margin=0.75in]{geometry}
 \usepackage{amsthm}
 \theoremstyle{theorem}
-\newtheorem{theorem}{Theorem}[section]
+\newtheorem{theorem}{Theorem}
 \newtheorem{corollary}{Corollary}
 \usepackage{framed}
-\theoremstyle{lemma}
 \newtheorem{lemma}{Lemma}
 \theoremstyle{remark}
 \newtheorem{remark}{Remark}
 \theoremstyle{definition}
-\newtheorem{definition}{Definition}[section]  % remove this to prevent sections from appearing
+\newtheorem{definition}{Definition}  % remove this to prevent sections from appearing
 \renewcommand\qedsymbol{$\blacksquare$}
 \usepackage{biblatex}
 % \usepackage{mathptmx}

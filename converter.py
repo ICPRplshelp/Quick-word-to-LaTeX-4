@@ -9,7 +9,8 @@ from dataclasses import dataclass, fields
 from tkinter.filedialog import askopenfile
 from typing import Optional, Union
 
-from src import alignments as w2l, helpers as dbl
+import helpers as dbl
+import alignments as w2l
 import cleanup
 
 TEMP_TEX_FILENAME = 'temp.tex'
@@ -147,6 +148,8 @@ class Preferences:
     # no matter what.
     modify_tables: bool = True  # determine whether tables should be modified.
     # if false, longtable eliminator and table labeling will not work.
+    document_class: str = ''  # the document class, or '' if it should not be changed.
+    subsection_limit: int = -1  # the subsection limit. anything deeper will fallback to the limit. -1 disable
 
 
 DEFAULT_PREF = Preferences('preamble_0.txt', False, False, False, False, False)
@@ -240,7 +243,11 @@ class WordFile:
 
     def _recalculate_erase_preamble(self) -> None:
         """Determine whether the pandoc preamble should be removed based on preferences."""
-        self.erase_pandoc_preamble = all([self.preferences.allow_no_longtable, self.preferences.erase_pandoc_preamble])
+        force = True
+        if force:
+            self.erase_pandoc_preamble = self.preferences.erase_pandoc_preamble
+        else:
+            self.erase_pandoc_preamble = all([self.preferences.allow_no_longtable, self.preferences.erase_pandoc_preamble])
 
     def sequence(self) -> None:
         """Completely process and export the word file to tex."""
@@ -389,6 +396,8 @@ class WordFile:
         #     bib_data = open_file(self.bib_path)
         #     text = dbl.do_citations(text, bib_data, self.preferences.citation_mode)
         #     text = text + '\\medskip\n\\printbibliography'
+        if self.preferences.subsection_limit >= 1:
+            text = dbl.subsection_limit(text, self.preferences.subsection_limit, 6)
         if self.preferences.conceal_verbatims:
             text = dbl.show_verbatims(text, dict_info_hide_verb)
         # always on
@@ -397,7 +406,7 @@ class WordFile:
         p_start = open_multiple_files(self.preferences.preamble_path)
 
         if not self.preferences.exclude_preamble:  # if preamble is included
-            self.text = w2l.deal_with_preamble(text=self.raw_text[:start],
+            text = w2l.deal_with_preamble(text=self.raw_text[:start],
                                                has_bib_file=has_bib_file,
                                                remove_default_font=self.preferences.replace_font,
                                                preamble_path=p_start,
@@ -405,9 +414,10 @@ class WordFile:
                                                omit_section_numbering=self.preferences.no_secnum) \
                         + '\n' + self.preferences.start_of_doc_text + '\n' + text + '\n' + \
                         self.raw_text[end:]
-        else:
-            self.text = text
         # else do nothing
+        if self.preferences.document_class != '':
+            text = dbl.change_document_class(text, self.preferences.document_class)
+        self.text = text
 
     def export(self) -> None:
         """Export everything in self.text

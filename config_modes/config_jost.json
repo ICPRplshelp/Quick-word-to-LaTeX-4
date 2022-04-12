@@ -1,5 +1,5 @@
 {
-  "preamble_path": "config_modes/preamble.txt",
+  "preamble_path": "config_modes/preamble_jost.txt",
   "allow_proofs": true,
   "allow_citations": true,
   "allow_no_longtable": true,
@@ -17,7 +17,7 @@
   "allow_environments": true,
   "prevent_pdf_exports": false,
   "fix_derivatives": true,
-  "replace_font": false,
+  "replace_font": true,
   "fix_unicode": true,
   "autodetect_align_symbols": true,
   "pdf_engine": "pdflatex",
@@ -27,12 +27,14 @@
   "combine_aligns": true,
   "table_of_contents": false,
   "special_proofs": false,
-  "forbid_images": true,
-  "erase_pandoc_preamble": true,
-  "verbatim_lang": "",
-  "start_of_doc_text": "",
+  "forbid_images": false,
+  "code_lang": "",
   "citation_brackets": true,
   "no_secnum": false,
+  "subsection_limit": 2,
+  "erase_pandoc_preamble": true,
+  "document_class": "tufte-handout",
+  "start_of_doc_text": "",
   "environments": {
     "Theorem": {
       "env_name": "Theorem",
@@ -43,7 +45,7 @@
       "priority": 3,
       "has_extra_args": true,
       "extra_args_type": "bracket",
-      "env_suffix": ""
+      "env_suffix": "{}"
     },
     "Corollary": {
       "env_name": "Corollary",
@@ -84,7 +86,7 @@
       "priority": 1,
       "has_extra_args": true,
       "extra_args_type": "bracket",
-      "env_suffix": ""
+      "env_suffix": "{}"
     },
     "Example": {
       "env_name": "Example",
@@ -95,47 +97,11 @@
       "priority": 2,
       "has_extra_args": true,
       "extra_args_type": "bracket",
-      "env_suffix": ""
+      "env_suffix": "{}"
     },
-    "mytheorem": {
-      "env_name": "mytheorem",
-      "start": "MT.",
-      "end": "End MT.",
-      "encapsulation": "textbf",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": false,
-      "extra_args_type": "brace"
-    },
-    "hintbox": {
-      "env_name": "hintbox",
-      "start": "Hint.",
-      "end": "End hint.",
-      "encapsulation": "emph",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": true,
-      "extra_args_type": "brace"
-    },
-        "infobox": {
-          "env_name": "infobox",
-      "start": "Info.",
-      "end": "End info.",
-      "encapsulation": "emph",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": true,
-      "extra_args_type": "brace"
-    },
-        "warningbox": {
-          "env_name": "warningbox",
-      "start": "Warning.",
-      "end": "End warning.",
-      "encapsulation": "emph",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": true,
-      "extra_args_type": "brace"
+      "Framed": {
+      "env_name": "Framed",
+      "has_extra_args": false
     }
   }
 }

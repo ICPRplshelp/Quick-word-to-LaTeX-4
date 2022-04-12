@@ -5,8 +5,7 @@ vnev/
 out/
 
 images/
-*.cls
-*.def
+
 
 testing.py
 build.py

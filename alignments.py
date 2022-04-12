@@ -111,16 +111,18 @@ def prime_dealer(text: str) -> str:
     return text
 
 
-HARDCODED_TEXT = r"""\documentclass[fontsize=11pt]{article}  
+HARDCODED_TEXT = r"""
+\documentclass[fontsize=11pt]{article}  
 \usepackage{amsmath, amssymb}
-\usepackage{lmodern, iftex}  
-\usepackage[utf8]{inputenc}  
+% \usepackage{lmodern, iftex}  
+% \usepackage[utf8]{inputenc}  
 \usepackage{array}
-\usepackage{graphicx}
+% \usepackage{graphicx}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt plus 2pt minus 1pt}
 \usepackage{mathtools}
 """
+# not recommended.
 
 
 def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
@@ -150,7 +152,7 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
     # for remove_instance in to_remove:
     #    processed_text = processed_text.replace(remove_instance, '', 1)
     else:
-        processed_text = HARDCODED_TEXT + prestart + dbl.retain_author_info(text) + '\n\\begin{document}'
+        processed_text = HARDCODED_TEXT + '\n' + prestart + '\n' + dbl.retain_author_info(text) + '\n\\begin{document}'
     return processed_text
 
 

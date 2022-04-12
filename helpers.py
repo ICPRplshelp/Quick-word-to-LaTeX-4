@@ -3759,3 +3759,41 @@ def formatted_text_decryptor(text: str, envs_to_decrypt: list[str]) -> str:
         env_bg = '\\' + env + '{'
         text = text.replace(env_st_kw, env_bg)
     return text
+
+
+def change_document_class(text: str, document_class: str) -> str:
+    """Change the document class of the entire document.
+        - text is the entire latex document.
+
+        Do nothing if document_class == ''.
+    """
+    if document_class == '':
+        return text
+    document_class_ind = text.find('\\documentclass')
+    end_of_doc_class_declaration = local_env_end(text, document_class_ind)
+    doc_class_text = '\\documentclass{' + document_class + '}'
+    text = text[:document_class_ind] + doc_class_text + text[end_of_doc_class_declaration + 1:]
+    return text
+
+
+def remove_comments_from_document(text: str) -> str:
+    """I want every single comment in this document gone
+    """
+    raise NotImplementedError
+
+
+def subsection_limit(text: str, section_limit: int, deepest_section: int = 6) -> str:
+    """Subsection fallback time.
+    Section limit is based on how they are numbered in MS Word.
+    Anything greater would be reduced to section limit
+
+    Preconditions:
+        - section_limit >= 1
+    """
+    if section_limit < 1:
+        raise ValueError
+    default_section = '\\' + (section_limit - 1) * 'sub' + 'section{'
+    for i in range(deepest_section, section_limit, -1):
+        section_kw = '\\' + (i - 1) * 'sub' + 'section{'
+        text = text.replace(section_kw, default_section)
+    return text
