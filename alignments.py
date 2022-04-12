@@ -412,7 +412,7 @@ def detect_align_region(text: str) -> Optional[tuple[str, int, int]]:
 
         return captured_region, finished_region[0], finished_region[1]
     else:
-        print('ran out of alignment regions to check')
+        # print('ran out of alignment regions to check')
         return None
 
 

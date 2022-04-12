@@ -8,6 +8,7 @@ from dataclasses import dataclass, fields
 # import easygui
 from tkinter.filedialog import askopenfile
 from typing import Optional, Union
+import subprocess
 
 import alignments as w2l
 import cleanup
@@ -105,6 +106,7 @@ class Preferences:
     center_images: bool = True  # disabling this prevents figures
     fix_prime_symbols: bool = True  # prevents prime symbols from looking ugly
     allow_environments: bool = False  # enable the environment module.
+    disable_legacy_environments: bool = False  # disable the legacy way to define environments.
     prevent_pdf_exports: bool = False  # prevents compiling of the tex file this program generates
     fix_derivatives: bool = True  # prevents dy/dx from looking weird
     replace_font: bool = False  # if True, you can change the font using preamble_0.txt
@@ -254,29 +256,24 @@ class WordFile:
     def open_word_file(self) -> str:
         """Return tex code of WordFile."""
         media_path = '--extract-media=' + self.preferences.media_folder_name + self.word_file_nosuffix
-        dquote = '"'
+        # dquote = '"'
         # toc = '--toc'
         # these are writer options
         # tuple index 0 is the string; tuple index 1 is the condition
-        filter_list = [
+        # pdf_engine_str = '--pdf-engine=xelatex '
+        command_list_raw = [
+            ('pandoc', True),
+            (media_path, True),
             ('-s', True),
             (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level != 0),
-            ('--toc', self.preferences.table_of_contents)
+            ('--toc', self.preferences.table_of_contents),
+            (self.word_file_path, True),  # FILTERS END HERE
+            ('--pdf-engine=xelatex', True),
+            ('-o', True),
+            (self._temp_tex_file, True)
         ]
-        # if self.preferences.table_of_contents:
-        #     filter_list.append('--toc')
-
-        filters_1 = ' '.join(process_permissive_list(filter_list))
-
-        # command_string = 'cmd /c "pandoc ' + media_path + ' -s ' + \
-        #                 self.word_file_path + ' -o ' + self._temp_tex_file
-
-        # self.preferences.pdf_engine
-
-        pdf_engine_str = '--pdf-engine=xelatex '
-        # f'--pdf-engine={self.preferences.pdf_engine} ' if self.preferences.pdf_engine != 'pdflatex' else ''
-        command_string = f'pandoc {dquote}{media_path}{dquote} {filters_1} {dquote}{self.word_file_path}{dquote} {pdf_engine_str}-o {self._temp_tex_file}'
-        os.system(command_string)
+        command_list = process_permissive_list(command_list_raw)
+        subprocess.run(command_list)
         return open_file(self._temp_tex_file)
 
     def latex_repair(self) -> None:
@@ -297,7 +294,8 @@ class WordFile:
             text = dbl.fix_accents(text)
 
         if self.preferences.allow_environments and self.preferences.environments is not None:
-            text = dbl.work_with_environments(text, self.preferences.environments)
+            text = dbl.work_with_environments(text, self.preferences.environments,
+                                              self.preferences.disable_legacy_environments)
 
         if self.preferences.allow_proofs:
             text = dbl.qed(text, self.preferences.special_proofs)
@@ -373,7 +371,7 @@ class WordFile:
                     #     temp_text_here[bib_ind:]
 
                     temp_text_here = temp_text_here[:bib_ind] + '\\medskip\n\\printbibliography' + \
-                        temp_text_here[bib_ind:]
+                                     temp_text_here[bib_ind:]
                     # then replace the citations
                     text = dbl.do_citations(temp_text_here, bib_data, self.preferences.citation_mode,
                                             self.preferences.citation_brackets)
@@ -423,18 +421,23 @@ class WordFile:
         dq = '"'
         write_file(self.text, self.output_path)
         if not self._disallow_pdf:
-            command_string_2 = latex_engine + ' "' + self.output_path + '"'
+            latex_compile_command = [latex_engine, self.output_path]
+            # latex_output_path = self.output_path[:-4] + '.pdf'
+            subprocess.run(latex_compile_command)
+
+            # command_string_2 = latex_engine + ' "' + self.output_path + '"'
             command_string_3 = '"' + self.output_path[:-4] + '.pdf' '"'
-            # os.system(command_string_2)
-            os.system(command_string_2)  # compile the pdf
+            # os.system(command_string_2)  # compile the pdf
+
             # if citations are on OR (figures are on AND center images / long table eliminators are on)
             if (self.preferences.allow_citations and self.bib_path is not None) or (
                     not self.preferences.disallow_figures and (
                     self.preferences.allow_no_longtable or self.preferences.center_images)):
-                os.system(command_string_2)  # compile it again
+                subprocess.run(latex_compile_command)
             os.system(command_string_3)
+            # subprocess.run(['open', latex_output_path])
         else:
-            command_string_4 = f'{dq}self.output_path{dq}'
+            command_string_4 = f'{dq}{self.output_path}{dq}'
             print('You inputted a .tex file that contains images, so we aren\'t compiling')
             os.system(command_string_4)
 

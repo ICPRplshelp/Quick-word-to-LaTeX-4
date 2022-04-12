@@ -849,11 +849,11 @@ class _RawLatexEnvironment:
     #     pass
 
 
-def work_with_environments(text, envs: dict) -> str:
+def work_with_environments(text, envs: dict, disable_legacy: bool = False) -> str:
     """The master function for working with environments.
     """
     envs = unpack_environments(envs)
-    return bulk_environment_wrapper(text, envs)
+    return bulk_environment_wrapper(text, envs, disable_legacy)
 
 
 def check_environments(json_dir: str) -> list[LatexEnvironment]:
@@ -909,7 +909,7 @@ def unpack_environments(envs: dict) -> list[LatexEnvironment]:
     return envs_so_far
 
 
-def bulk_environment_wrapper(text: str, envs: list[LatexEnvironment]) -> str:
+def bulk_environment_wrapper(text: str, envs: list[LatexEnvironment], disable_legacy: bool = False) -> str:
     """Return environment_wrapper(text...) run on all environments.
     """
 
@@ -924,11 +924,12 @@ def bulk_environment_wrapper(text: str, envs: list[LatexEnvironment]) -> str:
         text = longtable_environment(text, env.env_name, env)
     for env in env_complex:
         text = environment_wrapper_2(text, env)
-    for env in envs:
-        text = environment_wrapper(text=text, env=env.env_name, start=env.start,
-                                   end=env.end, initial_newline=env.initial_newline,
-                                   has_extra_args=env.has_extra_args, extra_args_type=env.extra_args_type,
-                                   env_info=env)
+    if not disable_legacy:
+        for env in envs:
+            text = environment_wrapper(text=text, env=env.env_name, start=env.start,
+                                       end=env.end, initial_newline=env.initial_newline,
+                                       has_extra_args=env.has_extra_args, extra_args_type=env.extra_args_type,
+                                       env_info=env)
     return text
 
 
