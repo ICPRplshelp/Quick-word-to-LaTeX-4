@@ -5,7 +5,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass, fields
-# import easygui
+
 from tkinter.filedialog import askopenfile
 from typing import Optional, Union
 import subprocess
@@ -120,6 +120,7 @@ class Preferences:
     special_proofs: bool = False  # whether proofs use the tcolorbox environment
     start_of_doc_text: str = ''  # text to append at the start right after the document begins
     verbatim_lang: str = ''  # the language of every code block in the document. Blank for don't even try.
+    verbatim_plugin: str = 'lstlisting'  # the plugin used for verbatim syntax highlighting.
 
     replacement_marker: str = 'TODO'  # the replacement marker in when using replacement mode
 
@@ -259,26 +260,54 @@ class WordFile:
 
     def open_word_file(self) -> str:
         """Return tex code of WordFile."""
-        media_path = '--extract-media=' + self.preferences.media_folder_name + self.word_file_nosuffix
-        # dquote = '"'
-        # toc = '--toc'
-        # these are writer options
-        # tuple index 0 is the string; tuple index 1 is the condition
-        # pdf_engine_str = '--pdf-engine=xelatex '
-        command_list_raw = [
-            ('pandoc', True),
-            (media_path, True),
-            ('-s', True),
-            (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level != 0),
-            ('--toc', self.preferences.table_of_contents),
-            (self.word_file_path, True),  # FILTERS END HERE
-            ('--pdf-engine=xelatex', True),
-            ('-o', True),
-            (self._temp_tex_file, True)
-        ]
-        command_list = process_permissive_list(command_list_raw)
-        subprocess.run(command_list)
-        return open_file(self._temp_tex_file)
+        using_command_prompt = True
+        if using_command_prompt:
+            media_path = '--extract-media=' + self.preferences.media_folder_name + self.word_file_nosuffix
+            dquote = '"'
+            # toc = '--toc'
+            # these are writer options
+            # tuple index 0 is the string; tuple index 1 is the condition
+            filter_list = [
+                ('-s', True),
+                (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level != 0),
+                ('--toc', self.preferences.table_of_contents)
+            ]
+            # if self.preferences.table_of_contents:
+            #     filter_list.append('--toc')
+
+            filters_1 = ' '.join(process_permissive_list(filter_list))
+
+            # command_string = 'cmd /c "pandoc ' + media_path + ' -s ' + \
+            #                 self.word_file_path + ' -o ' + self._temp_tex_file
+
+            # self.preferences.pdf_engine
+
+            pdf_engine_str = '--pdf-engine=xelatex '
+            # f'--pdf-engine={self.preferences.pdf_engine} ' if self.preferences.pdf_engine != 'pdflatex' else ''
+            command_string = f'pandoc {dquote}{media_path}{dquote} {filters_1} {dquote}{self.word_file_path}{dquote} {pdf_engine_str}-o {self._temp_tex_file}'
+            os.system(command_string)
+            return open_file(self._temp_tex_file)
+        else:
+            media_path = '--extract-media=' + self.preferences.media_folder_name + self.word_file_nosuffix
+            # dquote = '"'
+            # toc = '--toc'
+            # these are writer options
+            # tuple index 0 is the string; tuple index 1 is the condition
+            # pdf_engine_str = '--pdf-engine=xelatex '
+            command_list_raw = [
+                ('pandoc', True),
+                (media_path, True),
+                ('-s', True),
+                (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level != 0),
+                ('--toc', self.preferences.table_of_contents),
+                (self.word_file_path, True),  # FILTERS END HERE
+                ('--pdf-engine=xelatex', False),
+                ('-o', True),
+                (self._temp_tex_file, True)
+            ]
+            command_list = process_permissive_list(command_list_raw)
+            subprocess.run(command_list)
+            return open_file(self._temp_tex_file)
 
     def latex_repair(self) -> None:
         """Repair generated latex file.
@@ -421,43 +450,78 @@ class WordFile:
     def export(self) -> None:
         """Export everything in self.text
         """
-        # try:
-        #     os.mkdir('export')
-        # except FileExistsError:
-        #     pass
-        # self.output_path = 'export\\' + self.output_path
-        latex_engine = self.preferences.pdf_engine
-        if latex_engine not in ALLOWED_LATEX_COMPILERS:
-            latex_engine = 'xelatex'
-        dq = '"'
-        write_file(self.text, self.output_path)
-        if not self._disallow_pdf:
-            latex_compile_command = [latex_engine, self.output_path]
-            # latex_output_path = self.output_path[:-4] + '.pdf'
-            subprocess.run(latex_compile_command)
-
-            # command_string_2 = latex_engine + ' "' + self.output_path + '"'
-            command_string_3 = '"' + self.output_path[:-4] + '.pdf' '"'
-            # os.system(command_string_2)  # compile the pdf
-
-            # if citations are on OR (figures are on AND center images / long table eliminators are on)
-            if (self.preferences.allow_citations and self.bib_path is not None) or (
-                    not self.preferences.disallow_figures and (
-                    self.preferences.allow_no_longtable or self.preferences.center_images)):
+        subprocesses = False
+        if subprocesses:
+            # try:
+            #     os.mkdir('export')
+            # except FileExistsError:
+            #     pass
+            # self.output_path = 'export\\' + self.output_path
+            latex_engine = self.preferences.pdf_engine
+            if latex_engine not in ALLOWED_LATEX_COMPILERS:
+                latex_engine = 'xelatex'
+            dq = '"'
+            write_file(self.text, self.output_path)
+            if not self._disallow_pdf:
+                latex_compile_command = [latex_engine, self.output_path]
+                # latex_output_path = self.output_path[:-4] + '.pdf'
                 subprocess.run(latex_compile_command)
-            os.system(command_string_3)
-            # subprocess.run(['open', latex_output_path])
-        else:
-            command_string_4 = f'{dq}{self.output_path}{dq}'
-            print('You inputted a .tex file that contains images, so we aren\'t compiling')
-            os.system(command_string_4)
 
-        print('Finished!')
-        assert self.output_path[-4:] == '.tex'
-        if self.preferences.cleanup:
-            print('removing all unneeded files')
-            output_nameless = self.output_path[:-4]
-            cleanup.move_useless_files_away(output_nameless)
+                # command_string_2 = latex_engine + ' "' + self.output_path + '"'
+                command_string_3 = '"' + self.output_path[:-4] + '.pdf' '"'
+                # os.system(command_string_2)  # compile the pdf
+
+                # if citations are on OR (figures are on AND center images / long table eliminators are on)
+                if (self.preferences.allow_citations and self.bib_path is not None) or (
+                        not self.preferences.disallow_figures and (
+                        self.preferences.allow_no_longtable or self.preferences.center_images)):
+                    subprocess.run(latex_compile_command)
+                os.system(command_string_3)
+                # subprocess.run(['open', latex_output_path])
+            else:
+                command_string_4 = f'{dq}{self.output_path}{dq}'
+                print('You inputted a .tex file that contains images, so we aren\'t compiling')
+                os.system(command_string_4)
+
+            print('Finished!')
+            assert self.output_path[-4:] == '.tex'
+            if self.preferences.cleanup:
+                print('removing all unneeded files')
+                output_nameless = self.output_path[:-4]
+                cleanup.move_useless_files_away(output_nameless)
+        else:
+            # try:
+            #     os.mkdir('export')
+            # except FileExistsError:
+            #     pass
+            # self.output_path = 'export\\' + self.output_path
+            latex_engine = self.preferences.pdf_engine
+            if latex_engine not in ALLOWED_LATEX_COMPILERS:
+                latex_engine = 'xelatex'
+            dq = '"'
+            write_file(self.text, self.output_path)
+            if not self._disallow_pdf:
+                command_string_2 = latex_engine + ' "' + self.output_path + '"'
+                command_string_3 = '"' + self.output_path[:-4] + '.pdf' '"'
+                # os.system(command_string_2)
+                os.system(command_string_2)  # compile the pdf
+                # if citations are on OR (figures are on AND center images / long table eliminators are on)
+                if (self.preferences.allow_citations and self.bib_path is not None) or (
+                        not self.preferences.disallow_figures and (
+                        self.preferences.allow_no_longtable or self.preferences.center_images)):
+                    os.system(command_string_2)  # compile it again
+                os.system(command_string_3)
+            else:
+                command_string_4 = f'{dq}self.output_path{dq}'
+                print('You inputted a .tex file that contains images, so we aren\'t compiling')
+                os.system(command_string_4)
+
+            print('Finished!')
+            assert self.output_path[-4:] == '.tex'
+            if self.preferences.cleanup:
+                print('removing all unneeded files')
+                output_nameless = self.output_path[:-4]
+                cleanup.move_useless_files_away(output_nameless)
 
 
 class WordFileCombo(WordFile):

@@ -149,6 +149,7 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
     #    processed_text = processed_text.replace(remove_instance, '', 1)
     else:
         processed_text = HARDCODED_TEXT + prestart + dbl.retain_author_info(text) + '\n\\begin{document}'
+    # processed_text = dbl.date_today(processed_text)
     return processed_text
 
 
@@ -240,9 +241,9 @@ def hypertarget_eliminator(txt: str) -> str:
     # txt = "\\hypertarget{example-2-onto-but-not-one-to-one}{%\n\\subsubsection{Example 2: Onto but
     # not\none-to-one}\\label{example-2-onto-but-not-one-to-one}}"
     # y = re.findall("^\\\\hypertarget\{.*\}", txt)
-    z = re.sub("\\\\hypertarget\{.*\}\{%", '', txt)
+    z = re.sub("\\\\hypertarget{.*}{%", '', txt)
     # print(z)
-    a = re.sub("\\\\label\{.*\}", '', z)
+    a = re.sub("\\\\label{.*}", '', z)
     # print(a)
     # x = re.sub("\\\\" + arg1, "\\\\" + replace1, txt)
     # x = re.sub("\(.*\)", "[remove]", x)

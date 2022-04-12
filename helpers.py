@@ -201,6 +201,26 @@ def detect_end_of_bracket_env(text: str, env_start: int) -> int:
 
 
 def fix_all_textt(text: str) -> str:
+    """This method aims to do all the following:
+        - if two texttt commands are shown in a row, combine them.
+    """
+    # combine all texttt commands.
+    texttt_command = '\\texttt{'
+    len_texttt = len(texttt_command)
+    skip = 1
+    while True:
+        texttt_index = find_nth(text, texttt_command, skip)
+        if texttt_index == -1:
+            break
+        texttt_end = local_env_end(text, texttt_index)  # the index where texttt ends
+        if text[texttt_end + 1:texttt_end + 1 + len_texttt] == texttt_command:
+            text = text[:texttt_end] + text[texttt_end + 1 + len_texttt:]  # the index after the } in texttt
+        else:
+            skip += 1
+    return text
+
+
+def fix_all_textt_old(text: str) -> str:
     """Do it
     """
     text = text.replace('{[}', '[')
@@ -1206,24 +1226,14 @@ def environment_wrapper(text: str, env: str, start: str, end: str, env_info: Lat
     if has_extra_args:  # only generate extra args when permitted AND does not cut off on line 1
         start_pos_3 = find_nth(text, '\n\n', 1, start_pos_2)
         if start_pos_3 != -1 and end_pos_1 > start_pos_3 and abs(end_pos_1 - start_pos_3) >= 10:
-            match extra_args_type:
-                case 'bracket':
-                    brc = ('[', ']')
-                case 'brace':
-                    brc = ('{', '}')
-                case _:
-                    brc = ('[', ']')
+            extra_args_choices = {'bracket': ('[', ']'), 'brace': ('{', '}')}
+            brc = extra_args_choices.get(extra_args_type, ('[', ']'))
             extra_text = text[start_pos_2:start_pos_3]
             begin_env = begin_env + env_info.env_prefix + brc[0] + extra_text.strip() + brc[1] + env_info.env_suffix
             start_pos_2 = start_pos_3
         elif len(env_info.env_suffix) > 0:
-            match extra_args_type:
-                case 'bracket':
-                    brc = ('[', ']')
-                case 'brace':
-                    brc = ('{', '}')
-                case _:
-                    brc = ('[', ']')
+            extra_args_choices = {'bracket': ('[', ']'), 'brace': ('{', '}')}
+            brc = extra_args_choices.get(extra_args_type, ('[', ']'))
             extra_text = brc[0] + brc[1]
             begin_env = begin_env + env_info.env_prefix + brc[0] + brc[1] + env_info.env_suffix
             # extra_env_args = (text[start_pos_2:start_pos_3].strip()).replace('\n', '')
@@ -1562,7 +1572,7 @@ def matrix_equation_extractor(text: str) -> tuple[str, str]:
     return equation_contents, comment
 
 
-def split_equation(text: str, max_len: int, list_mode: bool = False) -> None | str | list[str]:
+def split_equation(text: str, max_len: int, list_mode: bool = False) -> Union[None, str, list[str]]:
     """Return a split version of an equation.
     text is the raw equation text.
     max_len is the max length of an equation line before a newline
@@ -1991,14 +2001,21 @@ def retain_author_info(text: str) -> str:
     return author_text
 
 
-def verbatim_to_listing(text: str, lang: str) -> str:
+def verbatim_to_listing(text: str, lang: str, plugin: str = 'lstlisting') -> str:
     """Converts all verbatim environments to the language in question.
     No language detection is done.
     Language must be in this list:
     https://www.overleaf.com/learn/latex/Code_listing
     """
-    text = text.replace(R'\begin{verbatim}', R'\begin{lstlisting}[language=' + lang + ']')
-    text = text.replace(R'\end{verbatim}', R'\end{lstlisting}')
+    if plugin == 'minted':
+        params = ''
+        command_start = '\\begin{minted}' + params + '{' + lang + '}'
+        command_end = '\\end{minted}'
+    else:
+        command_start = '\\begin{lstlisting}[language=' + lang + ']'
+
+    text = text.replace(R'\begin{verbatim}', command_start)
+    text = text.replace(R'\end{verbatim}', command_end)
     return text
 
 
@@ -3069,7 +3086,7 @@ def minipage_remover(text: str) -> str:
         return text  # just the generic text otherwise.
 
 
-def str_split_not_in_env(text: str, sep: str, env: str | list[str]) -> list[str]:
+def str_split_not_in_env(text: str, sep: str, env: Union[str, list[str]]) -> list[str]:
     """Similar to str.split(), but prevent splitting things inside
     the specified environment.
     """
@@ -3747,7 +3764,6 @@ def check_bibtex(preamble: str, replace_bibtex: str) -> str:
             return preamble[:closest_package] + replace_bibtex + preamble[package_end + 1:]
 
 
-
 def find_no_escape_char(text: str, sub: str, skip: int = 1, start: int = 0) -> int:
     """Same as find_nth, but prevents looking at escape characters.
     """
@@ -3767,3 +3783,11 @@ def find_no_escape_char(text: str, sub: str, skip: int = 1, start: int = 0) -> i
             else:
                 private_skip += 1
     # return candidate_location
+
+
+def date_today(text: str) -> str:
+    """If the date in the preamble contains the word Today, then actually make it today.
+    This is case-sensitive.
+    """
+    # text = text.replace('\\date{Today}', '\\date{\\today}', 1)
+    return text

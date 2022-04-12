@@ -23,7 +23,7 @@
   "pdf_engine": "pdflatex",
   "max_line_length": 110,
   "max_line_align": true,
-  "fix_texttt": false,
+  "fix_texttt": true,
   "combine_aligns": true,
   "table_of_contents": false,
   "special_proofs": false,
