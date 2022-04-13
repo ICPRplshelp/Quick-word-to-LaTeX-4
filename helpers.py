@@ -774,7 +774,8 @@ This is (a1, a2, a3, a4). Also, (a1, a2, a3, a4).
 T_ALIST = ['a1', 'a2', 'a3', 'a4']
 
 
-def multi_cite_handler(text: str, cur_src: str, srcs: list[str], cite_properities: Optional[dict[str, Any]] = None) -> str:
+def multi_cite_handler(text: str, cur_src: str, srcs: list[str],
+                       cite_properities: Optional[dict[str, Any]] = None) -> str:
     """Handle multiple authors cited in the same inline
     citation.
     If there is anything wrong with the citation syntax, stop the process.
@@ -811,7 +812,8 @@ def multi_cite_handler(text: str, cur_src: str, srcs: list[str], cite_properitie
                 if ending_author_ind != -1:
                     author_list.append(author)
         # updated text
-        text = text[:cite_ind] + '\\' + cite_properities['citation_kw'] + '{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
+        text = text[:cite_ind] + '\\' + cite_properities['citation_kw'] + '{' + ','.join(author_list) + '}' + text[
+                                                                                                              next_parentheses + 1:]
     return text
 
 
@@ -833,11 +835,13 @@ class LatexEnvironment:
     extra_args_type: str
     env_prefix: str
     env_suffix: str
+    env_middlefix: str
 
     def __init__(self, env_name: str, start: str, end: str,
                  encapsulation: Optional[str] = None, initial_newline: bool = False, priority: int = 0,
                  has_extra_args: bool = False, extra_args_type: str = 'bracket',
-                 env_prefix: str = '', env_suffix: str = '', start_alt: str = '') -> None:
+                 env_prefix: str = '', env_suffix: str = '', start_alt: str = '',
+                 env_middlefix: str = '') -> None:
         """start and end here are not formatted - formats are done in encapsulation. This is in
         terms of the inputs. In the class itself, start and end are what you would see in
         LaTeX.
@@ -859,6 +863,7 @@ class LatexEnvironment:
         self.extra_args_type = extra_args_type
         self.env_prefix = env_prefix
         self.env_suffix = env_suffix
+        self.env_middlefix = env_middlefix
 
 
 @dataclass
@@ -883,12 +888,17 @@ class _RawLatexEnvironment:
 
     # def create_latex_env(self) -> LatexEnvironment:
     #     pass
+    #
 
 
-def work_with_environments(text, envs: dict, disable_legacy: bool = False) -> str:
+def work_with_environments(text, envs: Union[dict, list], disable_legacy: bool = False) -> str:
     """The master function for working with environments.
     """
-    envs = unpack_environments(envs)
+    if isinstance(envs, dict):
+        envs = unpack_environments(envs)
+    else:
+        envs = unpack_environment_list(envs)
+        disable_legacy = True
     return bulk_environment_wrapper(text, envs, disable_legacy)
 
 
@@ -915,6 +925,58 @@ def check_environments(json_dir: str) -> list[LatexEnvironment]:
         #                             env_info['has_extra_args'], env_info['extra_args_type'])
         envs_so_far.append(latex_env)
     envs_so_far.sort(key=lambda x: x.priority, reverse=True)
+    return envs_so_far
+
+
+def unpack_environment_list(envs: list[str]) -> list[LatexEnvironment]:
+    """Unpack the environments list in the most lazy way possible.
+    Syntax: if theorem is the name of our environment
+        - "theorem" for default: extra args is bracket. no start/end
+        - "theorem[]" is the same as "theorem"
+        - "theorem{}": extra args is brace. start/end
+        - "theorem{}{}": extra args is brace; suffix is '{}'
+        - "theo!theorem{}{}": the env alias (start_alt) is theo, but the env name is theorem
+        - "the!theorem[shut up]{}{shut up}": the env alias is the, env name is theorem
+
+    """
+    envs_so_far = []
+    for env in envs:
+        # I am skeptical and don't want to mutate envs
+        # So I will reassign it
+        env_name = env
+        # this is meant for optional parameters.
+        # the last two chars in the env str may state whether
+        # it has optional parameters.
+        nearest_bracket = find_fallback(env_name, '[]')
+        nearest_brace = find_fallback(env_name, '{}')
+        extra_args = 'bracket' if nearest_bracket <= nearest_brace else 'brace'
+        nearest_delimiter = min(nearest_brace, nearest_bracket)
+        true_env_name = env_name[:nearest_delimiter]
+        env_suffix = env_name[nearest_delimiter + 2:]
+        if true_env_name[-1] == ']':
+            nearest_square = true_env_name.find('[')
+            env_middlefix = true_env_name[nearest_square:]
+            true_env_name = true_env_name[:nearest_square]
+            # if extra_args == 'bracket':
+            #    raise ValueError('Forced [optional] parameter paired with [insertable] optional parameter')
+        else:
+            env_middlefix = ''
+
+        splitted_env_name = true_env_name.split('!')
+        if len(splitted_env_name) == 2:
+            start_alt = splitted_env_name[0].strip()
+            env_name_to_use = splitted_env_name[1].strip()
+        else:
+            if len(splitted_env_name) != 1:
+                raise ValueError('Invalid syntax for list environment declaration - more than one ! used')
+            start_alt = ''
+            env_name_to_use = splitted_env_name[0].strip()
+        env_name_to_use = env_name_to_use.lower()
+        new_environment = LatexEnvironment(env_name_to_use, 'r»aò»doò un»icoò»e', 'r»aòd»om un»i»òod»e',
+                                           env_suffix=env_suffix, extra_args_type=extra_args,
+                                           start_alt=start_alt,
+                                           has_extra_args=True, env_middlefix=env_middlefix)
+        envs_so_far.append(new_environment)
     return envs_so_far
 
 
@@ -954,13 +1016,14 @@ def bulk_environment_wrapper(text: str, envs: list[LatexEnvironment], disable_le
 
     # env_basic = [en for en in envs if not en.has_extra_args]
     env_complex = [en for en in envs if en.has_extra_args]
-    for env in envs:
-        text = quote_to_environment(text, env, env.has_extra_args)
+
     for env in envs:
         text = longtable_environment(text, env.env_name, env)
     for env in env_complex:
         text = environment_wrapper_2(text, env)
     if not disable_legacy:
+        for env in envs:
+            text = quote_to_environment(text, env, env.has_extra_args)
         for env in envs:
             text = environment_wrapper(text=text, env=env.env_name, start=env.start,
                                        end=env.end, initial_newline=env.initial_newline,
@@ -1140,10 +1203,15 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
     Compatible with the old environment wrapper, though this is always run first.
     """
     braces = env_info.extra_args_type != 'bracket'
-    dashes = {'-', '–', '—'}
+    if (not braces) and env_info.env_middlefix != '':
+        return text
+
+    # mid_fix = env_info.env_middlefix  # if braces else ''
+    # assert braces or mid_fix == ''
+    dashes = {'- ', '– ', '— ', '--'}
     k_begin = R'\begin{' + env_info.env_name.lower() + '}'
     k_end = R'\end{' + env_info.env_name.lower() + '}'
-    keyword = env_info.start_alt
+    keyword = env_info.start_alt[0].upper() + env_info.start_alt[1:]
     wrapper = 'textbf'
     br = '{}' if braces else '[]'
     allowed_terms = [R'\begin{enumerate}', R'\begin{itemize}']
@@ -1156,7 +1224,7 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
         if start == -1:  # BASE CASE: we couldn't find an environment starter
             break
         start_after = start + len(keyword_wrapper)  # index of the dash
-        if (text[start_after] not in dashes) or text[start - 2:start] != '\n\n':
+        if (text[start_after:start_after + 2] not in dashes) or text[start - 2:start] != '\n\n':
             n += 1
             continue
         # otherwise
@@ -1175,14 +1243,16 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
                 return text
                 # break
 
-            elif text[next_newline + 2:next_newline + 4] == R'\[' or text[next_newline + 2] in ALPHABET or any(
+            elif text[next_newline + 2:next_newline + 4] == R'\[' or text[next_newline + 2:next_newline + 3] in ALPHABET or any(
                     text[next_newline + 2:].startswith(tx) for tx in allowed_terms):
                 next_nl_skip += 1
                 continue
             else:
                 break
-        text = text[:start] + k_begin + br[0] + term + \
-               br[1] + env_info.env_suffix + '\n' + text[
+
+        extra_args = br[0] + term + br[1]
+
+        text = text[:start] + k_begin + extra_args + env_info.env_suffix + '\n' + text[
                                                     end + 1:next_newline].strip() + '\n' + k_end + text[next_newline:]
     return text
 
@@ -1574,7 +1644,7 @@ def matrix_equation_extractor(text: str) -> tuple[str, str]:
 
 def split_equation(text: str, max_len: int, list_mode: bool = False) -> Union[None, str, list[str]]:
     """Return a split version of an equation.
-    text is the raw equation text.
+    text is the raw equation text, and is not wrapped by display style brackets.
     max_len is the max length of an equation line before a newline
     has to be added.
     Return none if the equation does not need to be split.
@@ -1582,21 +1652,31 @@ def split_equation(text: str, max_len: int, list_mode: bool = False) -> Union[No
     """
     text = text.strip()
     eqn_len = calculate_eqn_length(text)  # split equal signs.
-    breaker_chars = {'<', '>', '\\leq', '\\geq', '=', '\\subset', '\\subseteq', '\\not\\subset', '\\neq'}
+    breaker_chars = ['<', '>', '\\leq', '\\geq', '=', '\\land', '\\lor',
+                     '\\subset', '\\subseteq', '\\not\\subset', '\\neq']
+    # breaker_chars_highest = max(len(x) for x in breaker_chars)
     if eqn_len > max_len and any(x in text for x in breaker_chars):
         # everything goes down here
         equal_indexes = [0]  # the index where equal signs start.
         for i, char in enumerate(text):
-            if char in {'=', '<', '>', R'\leq', R'\geq'} and bracket_layers(text, i) == 0:
+            # if any(text[i:].startswith(x) for x in breaker_chars)
+            if text.startswith(tuple(breaker_chars), i) and \
+                    bracket_layers(text, i) == 0 and \
+                    any_layer(text, i, '\\left', '\\right') == 0 and environment_layer(text, i) == 0:
                 equal_indexes.append(i)
         lines_of_eqn = []
+        if len(equal_indexes) == 1:
+            return None  # we wouldn't be able to split the equation anyway.
+        # temp_start = 0
+        temp_end = 0
         for i, eq_index in enumerate(equal_indexes):
             if i == 0:
                 continue
             temp_start = equal_indexes[i - 1]
             temp_end = eq_index
             lines_of_eqn.append(text[temp_start:temp_end])
-
+        # add the last line
+        lines_of_eqn.append(text[temp_end:len(text)])
         # now we have the lines of equation
         # now we want to distribute them
         master = []
@@ -1619,6 +1699,7 @@ def split_equation(text: str, max_len: int, list_mode: bool = False) -> Union[No
             return final_str
         else:
             return new_master
+    return None
 
 
 def calculate_eqn_length(text: str, disable: Optional[Iterable] = None) -> int:
@@ -2013,6 +2094,7 @@ def verbatim_to_listing(text: str, lang: str, plugin: str = 'lstlisting') -> str
         command_end = '\\end{minted}'
     else:
         command_start = '\\begin{lstlisting}[language=' + lang + ']'
+        command_end = '\\end{lstlisting}'
 
     text = text.replace(R'\begin{verbatim}', command_start)
     text = text.replace(R'\end{verbatim}', command_end)
@@ -2987,6 +3069,8 @@ def longtable_environment(text: str, env: str, env_info: LatexEnvironment) -> st
     The third row is the contents of the environment, which
     one may do anything they want. Even lists are allowed there.
     """
+    # assert env == env_info.env_name
+    env_alias = env_info.start_alt
     forbid_envs = ['matrix', 'bmatrix', 'pmatrix', 'minipage', 'align*', 'longtable']
     # forbid_env_tolerance = {'longtable': 2}
     skip = 1
@@ -3015,7 +3099,8 @@ def longtable_environment(text: str, env: str, env_info: LatexEnvironment) -> st
             # assert False  # never supposed to happen here
         cur_header = text[left_index_border:right_index_border].strip()
         # This must be in the name of the environment
-        if cur_header.lower() != env.lower():
+        if cur_header.lower().strip().strip('.') not in [env_alias.lower(), '\\textbf{' + env_alias.lower() + '}',
+                                                         '\\emph{' + env_alias.lower() + '}']:
             skip += 1  # skip if the header isn't the environment we look for
             continue
         # check if this table is only one wide:
@@ -3037,13 +3122,19 @@ def longtable_environment(text: str, env: str, env_info: LatexEnvironment) -> st
         table_rows = [minipage_remover(trrr) for trrr in table_rows]
         if len(table_rows) == 2:
             brack = '{}' if env_info.extra_args_type == 'brace' else '[]'
-            env_starter = R'\begin{' + env.lower() + '}' + brack[0] + table_rows[0] + \
-                          brack[1] + env_info.env_suffix + '\n'
-            total_env_contents = env_starter + force_not_inline(table_rows[1]) + R'\end{' + env.lower() + '}'
+            if env_info.extra_args_type == 'brace' or env_info.env_middlefix == '':
+                extra_args = brack[0] + table_rows[0] + brack[1]
+            else:
+                extra_args = ''
+            middle_fix = env_info.env_middlefix if env_info.env_middlefix != '[EMPTY]' else ''
+            env_starter = R'\begin{' + env.lower() + '}' + middle_fix + extra_args + env_info.env_suffix + '\n'
+            total_env_contents = env_starter + force_not_inline(table_rows[1]) + '\n' + R'\end{' + env.lower() + '}'
             text = text[:lt_index] + total_env_contents + text[lt_end_index + len(R'\end{longtable}'):]
         # if len(table_rows) == 2
         elif len(table_rows) == 1:
-            env_starter = R'\begin{' + env.lower() + '}'
+            forced_brace = '{}' if env_info.extra_args_type == 'brace' else ''
+            middle_fix = env_info.env_middlefix if env_info.env_middlefix != '[EMPTY]' else ''
+            env_starter = R'\begin{' + env.lower() + '}' + middle_fix + forced_brace
             total_env_contents = env_starter + force_not_inline(table_rows[0]) + '\n' + R'\end{' + env.lower() + '}'
             text = text[:lt_index] + total_env_contents + text[lt_end_index + len(R'\end{longtable}'):]
         else:

@@ -14,6 +14,9 @@ import alignments as w2l
 import cleanup
 import helpers as dbl
 
+
+USE_SUBPROCESSES = False
+
 TEMP_TEX_FILENAME = 'temp.tex'
 REPLAC = {'α': R'\alpha', 'β': R'\beta', 'γ': R'\gamma', 'δ': R'\delta', 'ϵ': R'\epsilon',
           'λ': R'\lambda', 'θ': R'\theta', 'ϑ': R'vartheta', 'π': R'\pi', 'Ω': R'\Omega', 'ε': R'\varepsilon',
@@ -189,6 +192,7 @@ class WordFile:
     raw_text: str
     original_tex: bool
     erase_pandoc_preamble: bool  # erase the pandoc preamble.
+    citations_enabled: bool
 
     _temp_tex_file: str
     _disallow_pdf: bool
@@ -199,6 +203,7 @@ class WordFile:
         Raise an InvalidFileTypeError if word_file_path is not a Microsoft word file.
         Raise a SpaceError if word_file_path has a space character in it.
         """
+        self.citations_enabled = False
         if word_file_path[-5:] != '.docx' and word_file_path[-4:] != '.tex':
             raise InvalidFileTypeError
         if ' ' in word_file_path:
@@ -260,7 +265,7 @@ class WordFile:
 
     def open_word_file(self) -> str:
         """Return tex code of WordFile."""
-        using_command_prompt = True
+        using_command_prompt = not USE_SUBPROCESSES
         if using_command_prompt:
             media_path = '--extract-media=' + self.preferences.media_folder_name + self.word_file_nosuffix
             dquote = '"'
@@ -315,6 +320,9 @@ class WordFile:
         p_start = open_multiple_files(self.preferences.preamble_path)
 
         text = self.text
+        text = text + '\n\n\n\n\n\nò÷öæ🬵🬶	🬷'
+        # some additional text to prevent abrupt document ends.
+        # as an invariant, the unicode mess above must remain untouched.
         start = '\\begin{document}'
         end = '\\end{document}'
         text, start, end = w2l.find_between(text, start, end)
@@ -415,13 +423,14 @@ class WordFile:
                     if last_dbl_backslash == -1:
                         last_dbl_backslash -= 1
                     has_bib_file: Union[bool, str] = self.bib_path[last_dbl_backslash + 1:]
+                    self.citations_enabled = True
                     # rewrite the bib file in the same directory as this .py file
                     # ensure that the bib file is written as well in the same location
                     write_file(bib_data, has_bib_file)
                     # check if we have used bibtex
                     # modify the preamble to add the bibtex module specified in the config
-                    if self.preferences.bibtex_def != '':
-                        p_start = dbl.check_bibtex(p_start, self.preferences.bibtex_def)
+                    # if self.preferences.bibtex_def != '':
+                        # p_start = dbl.check_bibtex(p_start, self.preferences.bibtex_def)
         # if self.preferences.allow_citations and self.citation_path \
         #         is not None and self.bib_path is not None:
         #     bib_data = open_file(self.bib_path)
@@ -431,7 +440,7 @@ class WordFile:
             text = dbl.show_verbatims(text, dict_info_hide_verb)
         # always on
         text = dbl.verbatim_regular_quotes(text)
-
+        text = text.replace('ò÷öæ🬵🬶	🬷', '').strip()
 
 
         if not self.preferences.exclude_preamble:  # if preamble is included
@@ -450,7 +459,7 @@ class WordFile:
     def export(self) -> None:
         """Export everything in self.text
         """
-        subprocesses = False
+        subprocesses = USE_SUBPROCESSES
         if subprocesses:
             # try:
             #     os.mkdir('export')
@@ -466,6 +475,14 @@ class WordFile:
                 latex_compile_command = [latex_engine, self.output_path]
                 # latex_output_path = self.output_path[:-4] + '.pdf'
                 subprocess.run(latex_compile_command)
+
+                # running biblatex on the file
+                # this is broken.
+                # if self.citations_enabled:
+                #     biblatex_command = ['biblatex', self.output_path]
+                #     print(biblatex_command)
+                #     subprocess.run(biblatex_command)
+                #     subprocess.run(latex_compile_command)
 
                 # command_string_2 = latex_engine + ' "' + self.output_path + '"'
                 command_string_3 = '"' + self.output_path[:-4] + '.pdf' '"'

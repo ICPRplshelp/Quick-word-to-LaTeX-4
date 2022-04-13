@@ -570,8 +570,10 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
             occurrences = set()
             for symbol in series:
                 ind = text.find(symbol)
-                layer = dbl.bracket_layers(text, ind)
-                if ind != -1 and layer == 0:
+                layer = dbl.bracket_layers(text, ind)  # ensure not in command
+                env_layer = dbl.environment_layer(text, ind)  # ensure not in environment
+                left_right_layer = dbl.any_layer(text, ind, '\\left', '\\right')  # ensure not in L/R
+                if ind != -1 and all(x == 0 for x in [layer, env_layer, left_right_layer]):
                     occurrences.add(ind)
             if occurrences != set():
                 min_ind = min(occurrences)

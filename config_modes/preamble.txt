@@ -1,17 +1,30 @@
 \usepackage[fontsize=12pt]{scrextend}
 \usepackage[margin=0.75in]{geometry}
 \usepackage{amsthm}
-\theoremstyle{theorem}
+
+\theoremstyle{plain}
 \newtheorem{theorem}{Theorem}[section]
-\newtheorem{corollary}{Corollary}
-\theoremstyle{lemma}
 \newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\newtheorem{conjecture}{Conjecture}
+
 \theoremstyle{remark}
 \newtheorem{remark}{Remark}
+\newtheorem{note}{Note}
+\newtheorem{claim}{Claim}
+
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]  % remove this to prevent sections from appearing
+\newtheorem{condition}{Condition}
+\newtheorem{problem}{Problem}[section]
+\newtheorem{example}{Example}[section]
+
 \renewcommand\qedsymbol{$\blacksquare$}
-\usepackage{biblatex}
+\usepackage{csquotes}
+\usepackage[backend=biber]{biblatex}
+% bibtex is a bit broken right now, so
+% just copy everything to overleaf and recompile
 % \usepackage{mathptmx}
 \usepackage{mathtools}
 \usepackage{listings}
