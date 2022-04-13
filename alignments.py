@@ -542,10 +542,11 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
 
     # extra_info = {'comment_type': 'shortintertext'}
     cur_mode = extra_info.get('comment_type', '')
-    assert cur_mode in {'', 'align', 'shortintertext'}
+    assert cur_mode in {'', 'align', 'shortintertext', 'tag'}
     si_text = ''
     temp_comment = ''
-    if cur_mode not in {'align', 'shortintertext'}:
+    labeling = ''
+    if cur_mode not in {'align', 'shortintertext', 'tag'}:
         pass
     else:
         temp_text, temp_comment = check_start_matrix(text)
@@ -554,6 +555,9 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
             logging.info('looks like we have a comment')
             text = temp_text
             si_text = R'\shortintertext{' + temp_comment + '}' + '\n'
+            eqn_label = dbl.get_equation_label(temp_comment)
+            if eqn_label is not None:
+                labeling = R'\tag{' + eqn_label + '} '
         else:
             temp_comment = ''
 
@@ -580,12 +584,16 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
                 final_string = text[:min_ind] + '&' + text[min_ind:]
                 if cur_mode == 'shortintertext':
                     final_string = si_text + final_string
+                elif cur_mode == 'tag':
+                    final_string = final_string + labeling
                 elif cur_mode == 'align' and temp_comment != '':
                     final_string = final_string + ' && ' + temp_comment
                 return final_string
         to_return = '&' + text
         if cur_mode == 'shortintertext':
             to_return = si_text + '&' + text
+        elif cur_mode == 'tag':
+            to_return = to_return + labeling
         elif cur_mode == 'align' and temp_comment != '':
             to_return = to_return + ' && ' + temp_comment
         return to_return

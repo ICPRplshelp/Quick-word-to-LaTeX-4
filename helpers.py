@@ -518,7 +518,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False) -> str:
         before = text[:include_index]
         temp_after = text[include_index:]
         try:
-            temp_after_index = temp_after.index('\n')
+            temp_after_index = local_env_end(temp_after, 0)  # temp_after.index('\n')
         except ValueError:
             break
 

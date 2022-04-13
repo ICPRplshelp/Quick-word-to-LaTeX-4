@@ -141,7 +141,7 @@ class Preferences:
     replacement_mode: bool = False  # whether replacement mode is on or off.
     environments: Optional[dict] = None  # information relating to environments.
 
-    eqn_comment_mode: str = 'align'  # how comments in equations should be handled.
+    eqn_comment_mode: str = 'tag'  # how comments in equations should be handled.
     remove_spaces_from_eqns: bool = True  # whether long spaces should be removed from equations.
 
     no_secnum: bool = False  # omit section numbering. This may affect how environments are numbered.
