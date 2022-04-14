@@ -254,7 +254,7 @@ def hypertarget_eliminator(txt: str) -> str:
 
 def replace_align_region(text: str, proofs: bool = False,
                          auto_align: bool = False, max_line_length: int = -1,
-                         extra_info: Optional[dict] = None) -> tuple[str, bool]:
+                         extra_info: Optional[dict] = None) -> tuple[str, bool, list[str]]:
     """The entire process
     THIS ONE IS THE ONE WE ARE GOING TO USE
     loop until error occurs.
@@ -269,20 +269,20 @@ def replace_align_region(text: str, proofs: bool = False,
         isolated, start_replace, end_replace = temp_al
     else:
         # logging.warning('returning back.')
-        return text, True
-    replace_with = process_align_region(isolated, auto_align, max_line_length, extra_info=extra_info)
+        return text, True, []
+    replace_with, has_comment, labels_so_far = process_align_region(isolated, auto_align, max_line_length,
+                                                                    extra_info=extra_info)
     proof_line = ''
     # if proofs and R'\blacksquare' in replace_with:
     #     replace_with = replace_with.replace(R'\ \blacksquare', '')
     #     replace_with = replace_with.replace(R'\blacksquare', '')
     #     proof_line = '\n\\end{proof}\n'
-    align_start = '\n\\begin{align*}\n'
-    align_end = '\\end{align*}\n'
+    align_start = '\n\\begin{align*}\n' if not has_comment else '\n\\begin{align}\n'
+    align_end = '\\end{align*}\n' if not has_comment else '\\end{align}\n'
     end_result = text[
-                 :start_replace - 1] + align_start + replace_with.strip() + '\n' + align_end + \
-                 proof_line + text[
-                              end_replace:]
-    return end_result, False
+                      :start_replace - 1] + align_start + replace_with.strip() + '\n' + align_end + \
+                      proof_line + text[end_replace:]
+    return end_result, False, labels_so_far
 
 
 TEST_EQN = r"""
@@ -418,7 +418,7 @@ def detect_align_region(text: str) -> Optional[tuple[str, int, int]]:
 
 
 def process_align_region(txt: str, auto_align: bool = False, max_line_len: int = -1,
-                         extra_info: Optional[dict] = None) -> str:
+                         extra_info: Optional[dict] = None) -> tuple[str, bool, list[str]]:
     """Repairs all multiline equation environments.
 
     Preconditions:
@@ -454,10 +454,18 @@ def process_align_region(txt: str, auto_align: bool = False, max_line_len: int =
             pass
     else:
         lines_so_far_1 = lines_so_far
-    lines_so_far_2 = [align_expression(a_line, auto_align, extra_info=extra_info) for a_line in lines_so_far_1]
+    has_comments = any(dbl.valid_matrix(x) for x in lines_so_far_1) and \
+        (extra_info.get('comment_type', '') == 'hidden') and \
+        extra_info.get('label_equations', False)  # entire alignment region has at least one comment,
+    # comment type is hidden, and label equations is true
+    lines_so_far_2 = [align_expression(a_line, auto_align, extra_info=extra_info, has_comments=has_comments) for
+                      a_line in lines_so_far_1]
     # print(lines_so_far)
-    output = ' \\\\\n'.join(lines_so_far_2)
-    return output
+    lines_so_far_3 = [lsf[0] for lsf in lines_so_far_2]
+    labels_so_far: list[str] = [lsf[1] for lsf in lines_so_far_2 if lsf[1] is not None]
+
+    output = ' \\\\\n'.join(lines_so_far_3)
+    return output, has_comments, labels_so_far
 
 
 TEST_MATRIX = r"""
@@ -517,7 +525,8 @@ def check_start_matrix(text: str) -> tuple[Optional[str], Optional[str]]:
     return equation_contents, comment
 
 
-def align_expression(text: str, auto_align: bool = False, extra_info: Optional[dict] = None) -> str:
+def align_expression(text: str, auto_align: bool = False, extra_info: Optional[dict] = None,
+                     has_comments: bool = False) -> tuple[str, Optional[str]]:
     """Adds an & when applicable. If not, add it at the start.
 
     Preconditions:
@@ -536,19 +545,39 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
     >>> align_expression(text, True)
     'y {>} &< x + 2'
     """
+    cur_label_to_return = None
     if extra_info is None:
         # extra_info = {}
         raise ValueError  # THIS NEVER RUNS!!!
-
+    # tag equations is always true by default, but label is always false by default. tag is NOT comment_type.
     # extra_info = {'comment_type': 'shortintertext'}
     cur_mode = extra_info.get('comment_type', '')
-    assert cur_mode in {'', 'align', 'shortintertext', 'tag'}
+    allow_labs = extra_info.get('label_equations', False)  # this is a predicate!!!
+
+    no_number_predicate = cur_mode == 'hidden' and allow_labs and has_comments
+    no_number_str = '\\nonumber' if no_number_predicate else ''
+
+    # comment types:
+    # '' - do not process comments. equations may not have comments in the first place.
+    # align - process comments by aligning them in the align region.
+    # shortintertext - process comments by using the shortintertext package
+    # tag - process comments by tagging them
+    # hidden - hides all comments. If label_equations is true and comment type is set to hidden,
+    # then use nonumber.
+    # if no_number_predicate is true, if any equation may have
+
+    assert cur_mode in {'', 'align', 'shortintertext', 'tag', 'hidden'}
     si_text = ''
     temp_comment = ''
     labeling = ''
-    if cur_mode not in {'align', 'shortintertext', 'tag'}:
+    labs = no_number_str
+    if cur_mode not in {'align', 'shortintertext', 'tag', 'hidden'}:
         pass
     else:
+        show_labeling = True
+        if cur_mode == 'hidden':
+            cur_mode = 'tag'
+            show_labeling = False
         temp_text, temp_comment = check_start_matrix(text)
         if temp_text is not None:
             # temp_comment = dbl.equation_to_regular_text(temp_comment)  # nope, won't work.
@@ -557,12 +586,15 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
             si_text = R'\shortintertext{' + temp_comment + '}' + '\n'
             eqn_label = dbl.get_equation_label(temp_comment)
             if eqn_label is not None:
-                labeling = R'\tag{' + eqn_label + '} '
+                labeling = R'\tag{' + eqn_label + '} ' if show_labeling else ''
+                if allow_labs:
+                    labs = '\\label{eq:' + eqn_label + '}'
+                    cur_label_to_return = eqn_label
         else:
             temp_comment = ''
 
     if not auto_align:
-        return '& ' + text
+        return '& ' + text, cur_label_to_return
     else:
         hierarchy = [
             {'='},
@@ -570,6 +602,7 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
             {'\\subset', '\\subseteq', '\\not\\subset'},
             {'\\neq'}
         ]
+
         for series in hierarchy:
             occurrences = set()
             for symbol in series:
@@ -583,30 +616,30 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
                 min_ind = min(occurrences)
                 final_string = text[:min_ind] + '&' + text[min_ind:]
                 if cur_mode == 'shortintertext':
-                    final_string = si_text + final_string
+                    final_string = si_text + final_string + labs
                 elif cur_mode == 'tag':
-                    final_string = final_string + labeling
+                    final_string = final_string + labeling + labs
                 elif cur_mode == 'align' and temp_comment != '':
-                    final_string = final_string + ' && ' + temp_comment
-                return final_string
+                    final_string = final_string + ' && ' + temp_comment + labs
+                return final_string, cur_label_to_return
         to_return = '&' + text
         if cur_mode == 'shortintertext':
-            to_return = si_text + '&' + text
+            to_return = si_text + '&' + text + labs
         elif cur_mode == 'tag':
-            to_return = to_return + labeling
+            to_return = to_return + labeling + labs
         elif cur_mode == 'align' and temp_comment != '':
-            to_return = to_return + ' && ' + temp_comment
-        return to_return
+            to_return = to_return + ' && ' + temp_comment + labs
+        return to_return, cur_label_to_return
 
 
-def bracket_region(text: str, open: str, close: str) -> dict:
+def bracket_region(text: str, opening_bracket: str, close: str) -> dict:
     """Bracket region.
     \{ x+y \} means \\{ x+y \\}
     Preconditions:
         - len(open) = 1 and len(close) = 1
         - open != '\\' and close != '\\'
 
-    >>> bracket_region('abc\bdefghi', 'b', 'h')
+    >>> bracket_region('abc\bdefghi','b','h')
 
     """
     # text = 'aaaa(bb()()ccc)dd'
@@ -620,7 +653,7 @@ def bracket_region(text: str, open: str, close: str) -> dict:
             backslash_state = True
         elif backslash_state:
             backslash_state = False
-        if c == open:
+        if c == opening_bracket:
             if not backslash_state:  # if the previous char isn't \\
                 istart.append(i)
             elif c != '\\':  # turn it back to false, UNLESS c == \\
@@ -645,7 +678,7 @@ def bracket_region_outer(text: str, open: str, close: str):
         - len(open) = 1 and len(close) = 1
         - open != '\\' and close != '\\'
 
-    >>> bracket_region('abc\bdefghi', 'b', 'h')
+    >>> bracket_region('abc\bdefghi','b','h')
 
     """
     # text = 'aaaa(bb()()ccc)dd'

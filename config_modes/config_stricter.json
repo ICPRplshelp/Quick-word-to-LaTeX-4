@@ -1,4 +1,5 @@
 {
+  "description": "Similar to config_standard, with the exception of how tables are handled.",
   "preamble_path": "config_modes/preamble.txt",
   "allow_proofs": true,
   "allow_citations": true,

@@ -1,4 +1,5 @@
 {
+  "description": "This config mode minimizes any errors by making minimal changes, but has the least features.",
   "preamble_path": "config_modes/preamble.txt",
   "allow_proofs": false,
   "allow_citations": false,

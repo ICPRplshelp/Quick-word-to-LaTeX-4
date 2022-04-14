@@ -333,18 +333,22 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
             end_of_numbering_1 = find_nth(temp_figure_text_2, ':', 1)
             end_of_numbering_2 = find_nth(temp_figure_text_2, '\n', 1)
             # we can assert that end of both numbers aren't the same
-            if end_of_numbering_1 < 0:
-                end_of_numbering_1 = end_of_numbering_2
-            if end_of_numbering_2 < 0:
-                end_of_numbering_2 = end_of_numbering_1
-            end_of_numbering = min(end_of_numbering_2, end_of_numbering_1)
+            if end_of_numbering_1 == end_of_numbering_2 == -1:
+                end_of_numbering = len(temp_figure_text_2)
+            else:
+                if end_of_numbering_1 < 0:
+                    end_of_numbering_1 = end_of_numbering_2
+                if end_of_numbering_2 < 0:
+                    end_of_numbering_2 = end_of_numbering_1
+                end_of_numbering = min(end_of_numbering_2, end_of_numbering_1)
             figure_num = temp_figure_text_2[:end_of_numbering]  # this is actually a string
             figure_caption = temp_figure_text_2[end_of_numbering + 2:end_figure_index]
             after = after[end_figure_index:]
-            if figure_num == '':
-                figure_num = '-9999'
-            fig_label = '\\label{table:p' + figure_num + '}\n'
-            tables_so_far.append(figure_num)
+            if figure_num == '' or not check_valid_label(figure_num):  # if the label is invalid, don't add it.
+                fig_label = ''
+            else:
+                fig_label = '\\label{table:p' + figure_num + '}\n'
+                tables_so_far.append(figure_num)
             if replace_longtable:
                 new_table_info = longtable_eliminator(during, fig_label, figure_caption)
             else:
@@ -375,7 +379,7 @@ def bulk_labeling(text: str, label_tags: list[str], type_labeled: str,
         - label_tags: [4A, 1, 2B, 3C]
         - type_labeled: table -> Table, table - the first letter upper first lower
         - ref_cmd: ref - the ref command used in text
-        - ref_kw: table -> table: - inserted at the start of the ref
+        - ref_kw: table -> \\labs{table:___} - inserted at the start of the ref
 
     Preconditions:
         - type_labeled != ''
@@ -384,7 +388,7 @@ def bulk_labeling(text: str, label_tags: list[str], type_labeled: str,
     type_lower = type_labeled[0].lower() + type_labeled[0] + ' '
     if ref_kw is None:
         ref_kw = type_labeled.lower().replace(' ', '')
-    ref_cmd = '\\' + ref_cmd + '{' + ref_kw + ':k'
+    ref_cmd = '\\' + ref_cmd + '{' + ref_kw + ':'
     new_figures_so_far = [ref_cmd + x + '}' for x in label_tags]
     old_figures_so_far = [type_upper + y for y in label_tags]
     old_figures_so_far_1 = [type_lower + z for z in label_tags]
@@ -537,11 +541,13 @@ def detect_include_graphics(text: str, disallow_figures: bool = False) -> str:
                 end_of_numbering_2 = end_of_numbering_1
             end_of_numbering = min(end_of_numbering_2, end_of_numbering_1)
             figure_num = temp_figure_text_2[:end_of_numbering]
+            valid_figure = check_valid_label(figure_num)
             figure_caption = temp_figure_text_2[end_of_numbering + 2:end_figure_index]
             after = after[end_figure_index:]
-            fig_label = '\\label{fig:p' + figure_num + '}\n'
+            fig_label = '\\label{fig:p' + figure_num + '}\n' if valid_figure else ''
             el = '\n\\caption{' + figure_caption + '}\n' + fig_label + el
-            figures_so_far.append(figure_num)
+            if valid_figure:
+                figures_so_far.append(figure_num)
         else:
             bl = '\n\\begin{center}\n'
             el = '\\end{center}\n'
@@ -1477,7 +1483,8 @@ def bracket_layers(text: str, index: int,
 
 
 def split_all_equations(text: str, max_len: int, skip: int = 0,
-                        numbered_equations: bool = True, label_equations: bool = False) -> str:
+                        numbered_equations: bool = True, label_equations: bool = False,
+                        tag_equations: bool = True) -> tuple[str, list[str]]:
     """Split equation done for all equations.
     Also, label equations if needed.
     Must be done before dollar sign equations, but after alignment regions
@@ -1491,7 +1498,8 @@ def split_all_equations(text: str, max_len: int, skip: int = 0,
     in the comment may be present,
     otherwise the comment will be thrown out.
     """
-    equation_labels = []
+    equation_labels = []  # this is an equation label. Feel free to
+    # screenshot.
     while True:
         equation_is_numbered = False
         starting_index = find_nth(text, R'\[', skip + 1)
@@ -1518,7 +1526,7 @@ def split_all_equations(text: str, max_len: int, skip: int = 0,
 
                 eqn_label = get_equation_label(eqn_comment)
                 if eqn_label is not None:
-                    labeling = R'\tag{' + eqn_label + '} '
+                    labeling = R'\tag{' + eqn_label + '} ' if tag_equations else ''
                     if label_equations:
                         labeling += '\\label{eq:' + eqn_label + '}'
                         equation_labels.append(eqn_label)
@@ -1540,7 +1548,7 @@ def split_all_equations(text: str, max_len: int, skip: int = 0,
     #     text = bulk_labeling(text, equation_labels, )
     # we will not be including refs because of how equations are typed out.
 
-    return text
+    return text, equation_labels
 
 
 def remove_local_environment(text: str, env: Union[str, list[str]]) -> str:
@@ -1589,6 +1597,9 @@ def check_valid_label(label: str) -> bool:
     """Return True if the label is valid.
     A label is valid when the following conditions
     of this function is met.
+
+    - no backslashes
+    - no braces
     """
     # first condition: no backslashes at all
     if '\\' in label:
@@ -3127,14 +3138,14 @@ def longtable_environment(text: str, env: str, env_info: LatexEnvironment) -> st
             else:
                 extra_args = ''
             middle_fix = env_info.env_middlefix if env_info.env_middlefix != '[EMPTY]' else ''
-            env_starter = R'\begin{' + env.lower() + '}' + middle_fix + extra_args + env_info.env_suffix + '\n'
+            env_starter = R'\begin{' + env.lower() + '}' + middle_fix + extra_args + env_info.env_suffix + '\n\n'
             total_env_contents = env_starter + force_not_inline(table_rows[1]) + '\n' + R'\end{' + env.lower() + '}'
             text = text[:lt_index] + total_env_contents + text[lt_end_index + len(R'\end{longtable}'):]
         # if len(table_rows) == 2
         elif len(table_rows) == 1:
             forced_brace = '{}' if env_info.extra_args_type == 'brace' else ''
             middle_fix = env_info.env_middlefix if env_info.env_middlefix != '[EMPTY]' else ''
-            env_starter = R'\begin{' + env.lower() + '}' + middle_fix + forced_brace
+            env_starter = R'\begin{' + env.lower() + '}' + middle_fix + forced_brace + '\n\n'
             total_env_contents = env_starter + force_not_inline(table_rows[0]) + '\n' + R'\end{' + env.lower() + '}'
             text = text[:lt_index] + total_env_contents + text[lt_end_index + len(R'\end{longtable}'):]
         else:

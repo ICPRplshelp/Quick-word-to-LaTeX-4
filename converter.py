@@ -15,7 +15,7 @@ import cleanup
 import helpers as dbl
 
 
-USE_SUBPROCESSES = False
+USE_SUBPROCESSES = True
 
 TEMP_TEX_FILENAME = 'temp.tex'
 REPLAC = {'α': R'\alpha', 'β': R'\beta', 'γ': R'\gamma', 'δ': R'\delta', 'ϵ': R'\epsilon',
@@ -142,6 +142,10 @@ class Preferences:
     environments: Optional[dict] = None  # information relating to environments.
 
     eqn_comment_mode: str = 'tag'  # how comments in equations should be handled.
+    label_equations: bool = True  # whether equations can be referenced
+    auto_numbering: bool = False  # if this is true, label equations will be set to true and
+    # comment mode will be set to "hidden" - meaning equations will be automatically numbered.
+
     remove_spaces_from_eqns: bool = True  # whether long spaces should be removed from equations.
 
     no_secnum: bool = False  # omit section numbering. This may affect how environments are numbered.
@@ -158,6 +162,14 @@ class Preferences:
     # no matter what.
     modify_tables: bool = True  # determine whether tables should be modified.
     # if false, longtable eliminator and table labeling will not work.
+
+    def recalculate_invariants(self) -> None:
+        """Recalculate some of its
+        instance attributes.
+        """
+        if self.auto_numbering:  # auto numbering disallows comments
+            self.label_equations = True
+            self.eqn_comment_mode = 'hidden'
 
 
 DEFAULT_PREF = Preferences('preamble_0.txt', False, False, False, False, False)
@@ -345,28 +357,42 @@ class WordFile:
         # if True:
         #    text = dbl.longtable_backslash_add_full(text)
 
-        eqn_comment = {'comment_type': self.preferences.eqn_comment_mode}
+        eqn_comment = {'comment_type': self.preferences.eqn_comment_mode, 'label_equations':
+                       self.preferences.label_equations}
         # if self.preferences.remove_spaces_from_eqns:
         #     # TODO: after text, prevent messing with commands
         #     text = dbl.bad_backslash_replacer(text)
         #     text = dbl.bad_backslash_replacer(text, '\\(', '\\)')
-
+        labels_so_far = []
         if self.preferences.allow_alignments:  # alignments must always run first
             while True:
                 max_line = self.preferences.max_line_length if self.preferences.max_line_align else -1
-                text, stat = w2l.replace_align_region(text, self.preferences.allow_proofs,
+                text, stat, labbs = w2l.replace_align_region(text, self.preferences.allow_proofs,
                                                       self.preferences.autodetect_align_symbols,
                                                       max_line, extra_info=eqn_comment)
                 # print('stat')
+                labels_so_far.extend(labbs)
                 if stat:
                     break
+        auto_labeling = self.preferences.label_equations and self.preferences.eqn_comment_mode == 'hidden'
+        # eqn_comment['second_time'] = True
         if self.preferences.max_line_length >= 1:
-            text = dbl.split_all_equations(text, self.preferences.max_line_length)
+            text, labels_split_so_far = dbl.split_all_equations(text, self.preferences.max_line_length,
+                                                                label_equations=self.preferences.label_equations,
+                                                                tag_equations=not auto_labeling)
+            labels_so_far.extend(labels_split_so_far)
+            if len(set(labels_so_far)) != len(labels_so_far):
+                logging.warning('Some equations have duplicate labels.')
             while True:
-                text, stat = w2l.replace_align_region(text, self.preferences.allow_proofs,
+                # the second time alignment replacement is used.
+                # this time, discard all labels.
+                text, stat, _ = w2l.replace_align_region(text, self.preferences.allow_proofs,
                                                       self.preferences.autodetect_align_symbols)
                 if stat:
                     break
+        # use refs, which work in a very similar way to how it is implemented in tables
+        if self.preferences.label_equations:
+            text = dbl.bulk_labeling(text, labels_so_far, 'equation', 'ref', 'eq')
         if self.original_tex:
             text, self._disallow_pdf = dbl.truncate_path(text, self._disallow_pdf)
         if self.preferences.forbid_images:

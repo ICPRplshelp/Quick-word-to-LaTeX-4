@@ -1,5 +1,7 @@
 {
+  "description": "This is the default configuration file.",
   "preamble_path": "config_modes/preamble.txt",
+  "auto_numbering": false,
   "allow_proofs": true,
   "allow_citations": true,
   "allow_no_longtable": false,

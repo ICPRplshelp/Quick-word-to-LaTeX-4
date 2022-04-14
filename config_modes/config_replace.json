@@ -1,4 +1,6 @@
 {
+  "description": "Used for replacement mode. Replaces all instances of TODO with your word file, separated by heading 1s",
+  "replacement_marker": "TODO:",
   "preamble_path": "config_modes/preamble_light.txt",
   "allow_proofs": false,
   "allow_citations": false,

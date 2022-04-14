@@ -1,4 +1,5 @@
 {
+  "preamble_description": "Similar to config_standard, but minimizes the length of the preamble.",
   "preamble_path": "config_modes/preamble.txt",
   "allow_proofs": true,
   "allow_citations": true,
@@ -20,7 +21,7 @@
   "replace_font": false,
   "fix_unicode": true,
   "autodetect_align_symbols": true,
-  "pdf_engine": "pdflatex",
+  "pdf_engine": "xelatex",
   "max_line_length": 110,
   "max_line_align": true,
   "fix_texttt": false,
@@ -28,7 +29,7 @@
   "table_of_contents": false,
   "special_proofs": false,
   "forbid_images": true,
-  "erase_pandoc_preamble": false,
+  "erase_pandoc_preamble": true,
   "verbatim_lang": "",
   "start_of_doc_text": "",
   "citation_brackets": true,
