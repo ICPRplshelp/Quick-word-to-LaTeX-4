@@ -1,0 +1,186 @@
+\usepackage[T1]{fontenc}
+\usepackage{babel}
+
+
+% proofs and theory stuff
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\usepackage{framed}
+\newtheorem{lemma}{Lemma}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+\newtheorem{definition}{Definition}  % remove this to prevent sections from appearing
+\renewcommand\qedsymbol{$\blacksquare$}
+
+
+
+% all the needed ones
+
+% \title[JOST \LaTeX\ Template] %short margin title should not be more than half width of page
+% {\LaTeX\ Template for the Journal of Systems Thinking} % [header short title] {Full title}
+
+
+%\subsection{Typefaces}\label{sec:typefaces} %If the Palatino, \textsf{Helvetica}, and \texttt{Bera Mono} typefaces are installed, this style will use them automatically.  Otherwise, we'll fall back on the Computer Modern typefaces.
+
+
+%\author{\noindent{Author 1}\\[3mm] \noindent{Author2}\\[3mm]}
+
+%\author{
+%\and
+%  {Derek Cabrera \thanks{dog}}
+%\and
+%  Laura Cabrera
+%}
+%\author[The Tufte-LaTeX Developers]{Author}
+%\date{28 March 2010} % without \date command, current date is supplied
+
+%\geometry{showframe} % display margins for debugging page layout
+
+\usepackage{graphicx} % allow embedded images
+  \setkeys{Gin}{width=\linewidth,totalheight=\textheight,keepaspectratio}
+  \graphicspath{{graphics/}} % set of paths to search for images
+\usepackage{amsmath}  % extended mathematics
+\usepackage{booktabs} % book-quality tables
+\usepackage{units}    % non-stacked fractions and better unit spacing
+\usepackage{multicol} % multiple column layout facilities
+\usepackage{lipsum}   % filler text
+\usepackage{fancyvrb} % extended verbatim environments
+  \fvset{fontsize=\normalsize}% default font size for fancy-verbatim environments
+
+% Standardize command font styles and environments
+\newcommand{\doccmd}[1]{\texttt{\textbackslash#1}}% command name -- adds backslash automatically
+\newcommand{\docopt}[1]{\ensuremath{\langle}\textrm{\textit{#1}}\ensuremath{\rangle}}% optional command argument
+\newcommand{\docarg}[1]{\textrm{\textit{#1}}}% (required) command argument
+\newcommand{\docenv}[1]{\textsf{#1}}% environment name
+\newcommand{\docpkg}[1]{\texttt{#1}}% package name
+\newcommand{\doccls}[1]{\texttt{#1}}% document class name
+\newcommand{\docclsopt}[1]{\texttt{#1}}% document class option name
+\newenvironment{docspec}{\begin{quote}\noindent}{\end{quote}}% command specification environment
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% START JoST ADDITIONS %%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\usepackage{comment}
+\usepackage{latexsym}
+\usepackage[utf8]{inputenc}
+%\usepackage{csquotes}
+\usepackage{longtable}
+\usepackage{cancel}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{arrows,matrix,positioning,fit,external,calc,tikzmark,arrows.meta,backgrounds}
+\usepackage{tikz-network}
+\usepackage{tikzpagenodes}
+\usepackage{eso-pic}
+%\tikzexternalize[prefix=tikz/]
+%\usepackage{siunitx}
+\usepackage{verbatim}
+\usepackage[utf8]{inputenc}
+\usepackage{blindtext}
+\usepackage{xspace}
+\usepackage{hologo}
+\usepackage{tabularx}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{fdsymbol}
+\usepackage{etex}
+\usepackage{graphicx}
+\usepackage{stackengine}
+\stackMath
+
+
+
+
+\newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+\makeatletter
+\tikzset{
+  prefix after node/.style={
+    prefix after command={\pgfextra{#1}}
+  },
+  /semifill/ang/.store in=\semi@ang,
+  /semifill/ang=0,
+  semifill/.style={
+    circle, draw,
+    prefix after node={
+      \typeout{aaa \semi@ang}
+      \let\nodename\tikz@last@fig@name
+      \fill[/semifill/.cd, /semifill/.search also={/tikz}, #1]
+        let \p1 = (\nodename.north), \p2 = (\nodename.center) in
+        let \n1 = {\y1 - \y2} in
+        (\nodename.\semi@ang) arc [radius=\n1, start angle=\semi@ang, delta angle=180];
+    },
+  }
+}
+\makeatother
+%\numberwithin{equation}{section}
+
+\makeatletter
+\newcommand{\lrarrow}{\mathrel{\mathpalette\lrarrow@\relax}}
+\newcommand{\lrarrow@}[2]{%
+  \vcenter{\hbox{\ooalign{%
+    $\m@th#1\mkern6mu\rightarrow$\cr
+    \noalign{\vskip1pt}
+    $\m@th#1\leftarrow\mkern6mu$\cr
+  }}}%
+}
+\makeatother
+
+\newcommand\xtab[1][1cm]{\hspace*{#1}} % create \xtab
+
+
+\definecolor{hlyellow}{RGB}{255, 251, 100}
+\definecolor{hlyellow2}{RGB}{210, 251, 80}
+\definecolor{hlblue}{RGB}{95, 170, 255}
+\newcommand{\hlc}[2][yellow]{ {\sethlcolor{#1} \hl{#2}} }
+
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
+\extrafloats{100}
+
+\definecolor{colorS}{RGB}{255,255,255}
+\definecolor{colorI}{RGB}{0,255,255}
+\tikzset{
+S/.style={circle,draw=black!50,fill=colorS!30,thick, minimum size=2mm, inner sep = 0mm},
+I/.style={circle,draw=black!50,fill=colorI!20,thick, minimum size=2mm, inner sep = 0mm},
+BigCirc/.style={circle,draw=black!50,thick,inner sep=0pt,minimum size=0pt, inner sep = 0mm},
+pics/circles/.style args={#1#2#3#4}{
+  code={
+   \node [#1,minimum size=2mm] (#1#2#3#4top) at (0,0.25) {};
+   \node [#2,minimum size=2mm] (#1#2#3#4left) at (-0.2165,-0.125) {};
+   \node [#3,minimum size=2mm] (#1#2#3#4right) at (0.2165,-0.125) {};
+   \node [#4,minimum size=2mm] (#1#2#3#4center) at (0,0) {};
+   \draw (#1#2#3#4top) -- (#1#2#3#4center) -- (#1#2#3#4left) (#1#2#3#4center) -- (#1#2#3#4right);
+    \node[BigCirc, fit = (#1#2#3#4left)(#1#2#3#4top)(#1#2#3#4right)] (circ) at (#1#2#3#4center) {};
+   }
+  }
+}
+
+\pgfmathsetmacro{\xA}{1.5}
+\pgfmathsetmacro{\xB}{3}
+\pgfmathsetmacro{\xC}{3.35}
+\pgfmathsetmacro{\yA}{1.2}
+\pgfmathsetmacro{\yB}{2.05}
+\pgfmathsetmacro{\yC}{2.9}
+
+\newcommand\Vtextvisiblespace[1][.3em]{%
+  \mbox{\kern.06em\vrule height.3ex}%
+  \vbox{\hrule width#1}%
+  \hbox{\vrule height.3ex}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+
+\newcommand{\sout}[1]{\emph{#1}}
+
+\newcommand{\emptyfig}{\includegraphics[width=.3\textwidth]{example-image-a}}  % stops overlap of objects in sidebar

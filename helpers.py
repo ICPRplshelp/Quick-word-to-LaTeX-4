@@ -1,6 +1,8 @@
-"""Most of the helper functions to converter.py and any other modules
+"""Most of the helper functions to converter.py and any other modules.
+
+I/O functions are NOT allowed.
 """
-import json
+# import json
 import logging
 import math
 from dataclasses import dataclass, fields
@@ -46,7 +48,7 @@ def insert_in_preamble(tex_file: str, file_text: str) -> str:
     return newest_text
 
 
-def many_instances(old_tex: str, tex_file: str, todo_str: str):
+def many_instances(old_tex: str, tex_file: str, todo_str: str) -> str:
     """Many instances
     """
     while True:
@@ -709,14 +711,14 @@ def bulk_citation_page_handler(text: str, mode: str,
     return text
 
 
-def create_citations_list(directory: str) -> list[str]:
-    """Create a citations list.
-    This function shouldn't run at all.
-    """
-    with open(directory) as f:
-        citations = f.read()
-    citation_list = citations.split('\n')
-    return citation_list
+# def create_citations_list(directory: str) -> list[str]:
+#     """Create a citations list.
+#     This function shouldn't run at all.
+#     """
+#     with open(directory) as f:
+#         citations = f.read()
+#     citation_list = citations.split('\n')
+#     return citation_list
 
 
 def citation_page_handler(text: str, src: str, mode: str = 'apa2', p: bool = False, brackets: bool = False,
@@ -908,30 +910,30 @@ def work_with_environments(text, envs: Union[dict, list], disable_legacy: bool =
     return bulk_environment_wrapper(text, envs, disable_legacy)
 
 
-def check_environments(json_dir: str) -> list[LatexEnvironment]:
-    """The old version.
-    """
-    with open(json_dir) as json_file:
-        json_data = json.load(json_file)
-    env_dict = json_data["environments"]
-    envs_so_far = []
-
-    for env_name, env_info in env_dict.items():
-        field_names = set(f.name for f in fields(_RawLatexEnvironment))
-        raw_latex_env = _RawLatexEnvironment(**{k: v for k, v in env_info.items() if k in field_names})
-        latex_env = LatexEnvironment(raw_latex_env.env_name, raw_latex_env.start, raw_latex_env.end,
-                                     raw_latex_env.encapsulation, raw_latex_env.initial_newline,
-                                     raw_latex_env.priority, raw_latex_env.has_extra_args,
-                                     raw_latex_env.extra_args_type,
-                                     raw_latex_env.env_prefix, raw_latex_env.env_suffix,
-                                     raw_latex_env.name_alt)
-        # latex_env = LatexEnvironment(env_name, env_info['start'],
-        #                             env_info['end'], env_info['encapsulation'],
-        #                             env_info['initial_newline'], env_info['priority'],
-        #                             env_info['has_extra_args'], env_info['extra_args_type'])
-        envs_so_far.append(latex_env)
-    envs_so_far.sort(key=lambda x: x.priority, reverse=True)
-    return envs_so_far
+# def check_environments(json_dir: str) -> list[LatexEnvironment]:
+#     """The old version.
+#     """
+#     with open(json_dir) as json_file:
+#         json_data = json.load(json_file)
+#     env_dict = json_data["environments"]
+#     envs_so_far = []
+#
+#     for env_name, env_info in env_dict.items():
+#         field_names = set(f.name for f in fields(_RawLatexEnvironment))
+#         raw_latex_env = _RawLatexEnvironment(**{k: v for k, v in env_info.items() if k in field_names})
+#         latex_env = LatexEnvironment(raw_latex_env.env_name, raw_latex_env.start, raw_latex_env.end,
+#                                      raw_latex_env.encapsulation, raw_latex_env.initial_newline,
+#                                      raw_latex_env.priority, raw_latex_env.has_extra_args,
+#                                      raw_latex_env.extra_args_type,
+#                                      raw_latex_env.env_prefix, raw_latex_env.env_suffix,
+#                                      raw_latex_env.name_alt)
+#         # latex_env = LatexEnvironment(env_name, env_info['start'],
+#         #                             env_info['end'], env_info['encapsulation'],
+#         #                             env_info['initial_newline'], env_info['priority'],
+#         #                             env_info['has_extra_args'], env_info['extra_args_type'])
+#         envs_so_far.append(latex_env)
+#     envs_so_far.sort(key=lambda x: x.priority, reverse=True)
+#     return envs_so_far
 
 
 def unpack_environment_list(envs: list[str]) -> list[LatexEnvironment]:
@@ -1565,8 +1567,8 @@ def remove_local_environment(text: str, env: Union[str, list[str]]) -> str:
             ending_index = local_env_end(text, starting_index)
             # the local environment is always destroyed everytime this is run.
             text = text[:starting_index] + text[starting_index + len(env_start):ending_index] + \
-                   text[ending_index + 1:]
-        return text
+                text[ending_index + 1:]
+    return text
 
 
 def get_equation_label(numbering: str) -> Optional[str]:
@@ -2929,7 +2931,7 @@ def equation_to_regular_text_unused(text: str) -> str:
     set_string = {st for st in text}
     temp_allowed_chars = {st for st in '[]().0123456789'}
     if set_string.issubset(temp_allowed_chars):
-        print('fast time')
+        # print('fast time')
         return text
     # approach: like an AST, but using lists
     # [text, True], where True means equation and False means regular text
@@ -3069,6 +3071,52 @@ def verbatim_regular_quotes(text: str) -> str:
     """Remove weird quotes from verbatim environments.
     """
     text = modify_text_in_environment(text, 'verbatim', lambda s: s.replace('‘', "'").replace('’', "'"))
+    return text
+
+
+def framed(text: str) -> str:
+    """Frame all 1x1 tables.
+    Ran before long table environment and proofs.
+    """
+    skip = 1
+    while True:
+        lt_index = find_nth(text, R'\begin{longtable}', skip)
+        env_d = environment_depth(text, lt_index, 'longtable')
+        # forbid_env_tolerance = {'longtable': 2 + env_d}
+        if lt_index == -1:
+            break  # break if we can't find a starting longtable
+        # lt_end_index = find_nth(text, R'\end{longtable}', 1, lt_index)
+        lt_end_index = find_env_end(text, lt_index, 'longtable')
+        if lt_end_index == -1:
+            break
+        # we now have the contents of the longtable, represented by
+        # text[lt_index:lt_end_index + len(R'\end{longtable}')]
+
+        left_border = '\\begin{minipage}[b]{\\linewidth}\\raggedright\n'
+        # right_border = '\\end{minipage}'
+        left_index_border = find_nth(text, left_border, 1, lt_index) + len(left_border)
+        # right_index_border = find_nth(text, right_border, 1, lt_index)
+        right_index_border = find_env_end(text, left_index_border, 'minipage')
+        if right_index_border == -1:
+            skip += 1
+            continue
+            # pass
+            # assert False  # never supposed to happen here
+        cur_header = text[left_index_border:right_index_border].strip()
+        # This must be in the name of the environment
+        # if cur_header.lower() != env.lower():
+        #     skip += 1  # skip if the header isn't the environment we look for
+        #     continue
+        # check if this table is only one wide:
+        if not text[right_index_border:].startswith('\\end{minipage} \\\\\n\\midrule\n\\endhead\n\\bottomrule'
+                                                    '\n\\end{longtable}'):
+            skip += 1
+            continue  # if it is not one wide, then this is the wrong table
+        # from this point, assume our table is one wide and only has 3 rows
+        # table_content_start = text.find(R'\endhead', right_index_border) + len(R'\endhead')
+        else:
+            text = text[:lt_index] + '\\begin{framed}\n\n' + cur_header + '\n\n\\end{framed}\n\n' + \
+                text[lt_end_index + len('\\end{longtable}'):]
     return text
 
 
@@ -3892,4 +3940,42 @@ def date_today(text: str) -> str:
     This is case-sensitive.
     """
     # text = text.replace('\\date{Today}', '\\date{\\today}', 1)
+    return text
+
+
+def change_document_class(text: str, document_class: str) -> str:
+    """Change the document class of the entire document.
+        - text is the entire latex document.
+
+        Do nothing if document_class == ''.
+    """
+    if document_class == '':
+        return text
+    document_class_ind = text.find('\\documentclass')
+    end_of_doc_class_declaration = local_env_end(text, document_class_ind)
+    doc_class_text = '\\documentclass{' + document_class + '}'
+    text = text[:document_class_ind] + doc_class_text + text[end_of_doc_class_declaration + 1:]
+    return text
+
+
+def remove_comments_from_document(text: str) -> str:
+    """I want every single comment in this document gone
+    """
+    raise NotImplementedError
+
+
+def subsection_limit(text: str, section_limit: int, deepest_section: int = 6) -> str:
+    """Subsection fallback time.
+    Section limit is based on how they are numbered in MS Word.
+    Anything greater would be reduced to section limit
+
+    Preconditions:
+        - section_limit >= 1
+    """
+    if section_limit < 1:
+        raise ValueError
+    default_section = '\\' + (section_limit - 1) * 'sub' + 'section{'
+    for i in range(deepest_section, section_limit, -1):
+        section_kw = '\\' + (i - 1) * 'sub' + 'section{'
+        text = text.replace(section_kw, default_section)
     return text

@@ -7,6 +7,8 @@
       <excludeFolder url="file://$MODULE_DIR$/dist" />
       <excludeFolder url="file://$MODULE_DIR$/.pytest_cache" />
       <excludeFolder url="file://$MODULE_DIR$/.pytest_cache/v" />
+      <excludeFolder url="file://$MODULE_DIR$/out" />
+      <excludeFolder url="file://$MODULE_DIR$/images" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
