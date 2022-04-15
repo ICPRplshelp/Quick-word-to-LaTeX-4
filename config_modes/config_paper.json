@@ -1,5 +1,5 @@
 {
-  "preamble_path": "config_modes/preamble_jost.txt",
+  "preamble_path": "config_modes/preamble_paper.txt",
   "allow_proofs": true,
   "allow_citations": true,
   "allow_no_longtable": false,

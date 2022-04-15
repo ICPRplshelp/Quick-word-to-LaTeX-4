@@ -14,7 +14,6 @@ import helpers as dbl
 import alignments as w2l
 import cleanup
 
-
 USE_SUBPROCESSES = True
 
 TEMP_TEX_FILENAME = 'temp.tex'
@@ -271,7 +270,8 @@ class WordFile:
         if force:
             self.erase_pandoc_preamble = self.preferences.erase_pandoc_preamble
         else:
-            self.erase_pandoc_preamble = all([self.preferences.allow_no_longtable, self.preferences.erase_pandoc_preamble])
+            self.erase_pandoc_preamble = all(
+                [self.preferences.allow_no_longtable, self.preferences.erase_pandoc_preamble])
 
     def sequence(self) -> None:
         """Completely process and export the word file to tex."""
@@ -365,7 +365,7 @@ class WordFile:
         #    text = dbl.longtable_backslash_add_full(text)
 
         eqn_comment = {'comment_type': self.preferences.eqn_comment_mode, 'label_equations':
-                       self.preferences.label_equations}
+            self.preferences.label_equations}
         # if self.preferences.remove_spaces_from_eqns:
         #     # TODO: after text, prevent messing with commands
         #     text = dbl.bad_backslash_replacer(text)
@@ -375,8 +375,8 @@ class WordFile:
             while True:
                 max_line = self.preferences.max_line_length if self.preferences.max_line_align else -1
                 text, stat, labbs = w2l.replace_align_region(text, self.preferences.allow_proofs,
-                                                      self.preferences.autodetect_align_symbols,
-                                                      max_line, extra_info=eqn_comment)
+                                                             self.preferences.autodetect_align_symbols,
+                                                             max_line, extra_info=eqn_comment)
                 # print('stat')
                 labels_so_far.extend(labbs)
                 if stat:
@@ -394,7 +394,7 @@ class WordFile:
                 # the second time alignment replacement is used.
                 # this time, discard all labels.
                 text, stat, _ = w2l.replace_align_region(text, self.preferences.allow_proofs,
-                                                      self.preferences.autodetect_align_symbols)
+                                                         self.preferences.autodetect_align_symbols)
                 if stat:
                     break
         # use refs, which work in a very similar way to how it is implemented in tables
@@ -446,9 +446,9 @@ class WordFile:
                     # temp_text_here = temp_text_here[:bib_ind] + bib_final + \
                     #     temp_text_here[bib_ind:]
                     cite_properties = {'bibtex_def': self.preferences.bibtex_def, 'citation_kw':
-                                       self.preferences.citation_keyword}
+                        self.preferences.citation_keyword}
                     temp_text_here = temp_text_here[:bib_ind] + '\\medskip\n\\printbibliography' + \
-                                temp_text_here[bib_ind:]
+                                     temp_text_here[bib_ind:]
                     # then replace the citations
                     text = dbl.do_citations(temp_text_here, bib_data, self.preferences.citation_mode,
                                             self.preferences.citation_brackets, cite_properties)
@@ -463,7 +463,7 @@ class WordFile:
                     # check if we have used bibtex
                     # modify the preamble to add the bibtex module specified in the config
                     # if self.preferences.bibtex_def != '':
-                        # p_start = dbl.check_bibtex(p_start, self.preferences.bibtex_def)
+                    # p_start = dbl.check_bibtex(p_start, self.preferences.bibtex_def)
         # if self.preferences.allow_citations and self.citation_path \
         #         is not None and self.bib_path is not None:
         #     bib_data = open_file(self.bib_path)
@@ -477,16 +477,15 @@ class WordFile:
         text = dbl.verbatim_regular_quotes(text)
         text = text.replace('ò÷öæ🬵🬶	🬷', '').strip()
 
-
         if not self.preferences.exclude_preamble:  # if preamble is included
             text = w2l.deal_with_preamble(text=self.raw_text[:start],
-                                               has_bib_file=has_bib_file,
-                                               remove_default_font=self.preferences.replace_font,
-                                               preamble_path=p_start,
-                                               erase_existing_preamble=self.erase_pandoc_preamble,
-                                               omit_section_numbering=self.preferences.no_secnum) \
-                        + '\n' + self.preferences.start_of_doc_text + '\n' + text + '\n' + \
-                        self.raw_text[end:]
+                                          has_bib_file=has_bib_file,
+                                          remove_default_font=self.preferences.replace_font,
+                                          preamble_path=p_start,
+                                          erase_existing_preamble=self.erase_pandoc_preamble,
+                                          omit_section_numbering=self.preferences.no_secnum) \
+                   + '\n' + self.preferences.start_of_doc_text + '\n' + text + '\n' + \
+                   self.raw_text[end:]
         # else do nothing
         if self.preferences.document_class != '':
             text = dbl.change_document_class(text, self.preferences.document_class)

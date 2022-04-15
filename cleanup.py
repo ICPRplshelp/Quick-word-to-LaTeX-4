@@ -94,7 +94,10 @@ def __main() -> None:
     print(file_move_list)
     for file in file_move_list:
         logging.warning('REPLACED ' + file)
-        os.replace(file, new_folder_path + '\\' + file)
+        try:
+            os.replace(file, new_folder_path + '\\' + file)
+        except PermissionError:
+            pass
 
 
 def move_useless_files_away(file_name: str) -> None:
