@@ -24,6 +24,12 @@ if you want to make the most use of this program.
 Everything from this page should be placed in its own folder. This program is able to read and write files without any save-as dialogue.
 A good practice is to never drag anything directly into the folder where this program resides. You only really need to listen to this warning if you plan to drag `.pdf` or `.tex` files from this folder that were not created by this program by itself. 
 
+## Convents for creating MS Word documents that work well with this tool
+
+- Always use MS Word's built-in styles. Do not attempt to create fake headers by **bolding the text**.
+- Consider using the WordTeX template or the Pandoc docx template if you want inline or source code
+- Read the *common reasons for errors*
+
 ## Common reasons of errors
 If the program breaks midway without compiling the ``.tex`` file,
 it means something wrong happened when fixing the ``.tex`` file.
@@ -34,8 +40,7 @@ into a PDF, and the PDF compiler breaks midway, check to see
 if your `*.docx` has the following, because these prevent
 proper compilation:
 
-- Unicode characters not in equations, if the compiler is pdfLaTeX
+- Unicode characters not in equations
 - Equations in headings
-- Footnotes in tables, if the config is set to strict
+- Using **CTRL+B** or *CTRL+I* in the equation editor (please don't do that, use "quotation marks" to unbold things in equations)
 - Images that aren't inline
-- Underbars or any under-accent in equations
