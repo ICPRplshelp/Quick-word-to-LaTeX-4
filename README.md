@@ -24,7 +24,7 @@ if you want to make the most use of this program.
 Everything from this page should be placed in its own folder. This program is able to read and write files without any save-as dialogue.
 A good practice is to never drag anything directly into the folder where this program resides. You only really need to listen to this warning if you plan to drag `.pdf` or `.tex` files from this folder that were not created by this program by itself. 
 
-## Convents for creating MS Word documents that work well with this tool
+## Conventions for creating MS Word documents that work well with this tool
 
 - Always use MS Word's built-in styles. Do not attempt to create fake headers by **bolding the text**.
 - Consider using the WordTeX template or the Pandoc docx template if you want inline or source code
