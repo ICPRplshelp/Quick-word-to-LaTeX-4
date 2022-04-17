@@ -42,5 +42,5 @@ proper compilation:
 
 - Unicode characters not in equations
 - Equations in headings
-- Using **CTRL+B** or *CTRL+I* in the equation editor (please don't do that, use "quotation marks" to unbold things in equations)
+- Using **CTRL+B** or *CTRL+I* in the equation editor (please don't do that, use "quotation marks" to ``\text{...}`` things in equations)
 - Images that aren't inline
