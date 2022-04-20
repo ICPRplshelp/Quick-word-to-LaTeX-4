@@ -5,13 +5,15 @@ that pandoc produces.
 
 ## Usage
 Make sure Python 3.10 is installed on your computer.
-No external packages are required, but pandoc
+**No external packages are required,** but pandoc
 and LaTeX should be installed on your computer.
+I suggest using TeX Live. I cannot guarantee
+that this will work for any other LaTeX distributions.
 
-I've only tested this for Windows 10. I am unsure
+**I've only tested this for Windows 10.** I am unsure
 how this works for macOS.
 
-1. Run `main.py`.
+1. Run `main.py`. Either through your IDE or with python directly, by opening the `.py` file with python.
 2. Choose the Word file you want to convert when
 prompted to.
 3. The program will convert it and output
