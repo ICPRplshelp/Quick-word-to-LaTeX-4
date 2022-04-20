@@ -31,6 +31,7 @@ A good practice is to never drag anything directly into the folder where this pr
 - Always use MS Word's built-in styles. Do not attempt to create fake headers by **bolding the text**.
 - Consider using the WordTeX template or the Pandoc docx template if you want inline or source code
 - Read the *common reasons for errors*
+- 1x1 tables will automatically be `\begin{framed}` by this program, but you should avoid creating tables that are 2 or more columns long with only one row, due to how it will be formatted by this program.
 
 ## Common reasons of errors
 If the program breaks midway without compiling the ``.tex`` file,
