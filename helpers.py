@@ -1217,7 +1217,7 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
 
     # mid_fix = env_info.env_middlefix  # if braces else ''
     # assert braces or mid_fix == ''
-    dashes = {'- ', '– ', '— ', '--'}
+    dashes = {'- ', '– ', '— ', '--',}
     k_begin = R'\begin{' + env_info.env_name.lower() + '}'
     k_end = R'\end{' + env_info.env_name.lower() + '}'
     keyword = env_info.start_alt[0].upper() + env_info.start_alt[1:]
@@ -1225,25 +1225,61 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
     br = '{}' if braces else '[]'
     allowed_terms = [R'\begin{enumerate}', R'\begin{itemize}']
 
-    keyword_wrapper = '\\' + wrapper + '{' + keyword + ' '
+    keyword_wrapper = '\\' + wrapper + '{' + keyword
+
     # find nth: haystack, needle, n, starter = None
     n = 1  # skip
     while True:
         start = find_nth(text, keyword_wrapper, n)
         if start == -1:  # BASE CASE: we couldn't find an environment starter
             break
-        start_after = start + len(keyword_wrapper)  # index of the dash
-        if (text[start_after:start_after + 2] not in dashes) or text[start - 2:start] != '\n\n':
-            n += 1
-            continue
-        # otherwise
+        start_after = start + len(keyword_wrapper) + 1  # index of the dash
+        if (text[start_after:start_after + 2] not in dashes and text[start_after] != '(') or \
+                text[start - 2:start] != '\n\n':
+            # THIS WILL RUN INCASE OF FAILURE
+            def_after = start + len(keyword_wrapper)
+            if text[def_after:def_after + 2] == '.}' and text[start - 2:start] == '\n\n':
+                end_declare = def_after + 2  # the index after \textbf{Definition}
+                # extra_args_name = ''
+                end = end_declare
+                # term = extra_args_name
+                term = ''
+            elif text[def_after:].startswith('} ('):
+                # assume that no brackets are nested.
+                end_open = text.find(')', def_after + 3)
+                extra_args_name = text[def_after + 3:end_open]
+                # end_open + 1 is the period at \textbf{Definition} (Salt).
+                # However, the period is optional.
+                tbf_dot = '\\textbf{.}'
+                tbf_dot2 = '\\textbf{. }'
 
-        end = local_env_end(text, start)  # find_nth(text, '}', 1, start_after)
-        # find_endbrace(text, start_after)
-        term = text[start_after + 2:end]
-        if term[-1] == ':':
-            term = term[:-1]
-        term = term.strip()
+                # End_declare is the index after the period.
+                if text[end_open + 1] == '.':
+                    end_declare = end_open + 2
+                elif text[end_open + 1:].startswith(tbf_dot):
+                    end_declare = end_open + 1 + len(tbf_dot)
+                elif text[end_open + 1:].startswith(tbf_dot2):
+                    end_declare = end_open + 1 + len(tbf_dot2)
+                else:
+                    end_declare = end_open + 1
+                end = end_declare
+                term = extra_args_name.strip()
+                # A strip would occur anyway.
+            else:
+                # IF THE FALLBACK FAILS
+                n += 1
+                continue
+                # otherwise
+        else:
+            end = local_env_end(text, start)  # find_nth(text, '}', 1, start_after)
+            # find_endbrace(text, start_after)
+            temp_num = 1 if text[start_after] == '(' else 2
+            term = text[start_after + temp_num:end]
+            if term[-1] == ':':
+                term = term[:-1]
+            elif term.endswith(').'):
+                term = term[:-2]
+            term = term.strip()
         next_nl_skip = 1
         while True:  # intent: math regions don't break. Actual: Max of one math region.
             next_newline = find_nth(text, '\n\n', next_nl_skip, end + 1)
@@ -1254,16 +1290,17 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
 
             elif text[next_newline + 2:next_newline + 4] == R'\[' \
                     or text[next_newline + 2:next_newline + 3] in ALPHABET or any(
-                    text[next_newline + 2:].startswith(tx) for tx in allowed_terms):
+                text[next_newline + 2:].startswith(tx) for tx in allowed_terms):
                 next_nl_skip += 1
                 continue
             else:
                 break
 
-        extra_args = br[0] + term + br[1]
+        extra_args = br[0] + term + br[1] if term != '' else ''
 
         text = text[:start] + k_begin + extra_args + env_info.env_suffix + '\n' + text[
-                                                    end + 1:next_newline].strip() + '\n' + k_end + text[next_newline:]
+                                                                                  end + 1:next_newline].strip() + '\n' + k_end + text[
+                                                                                                                                 next_newline:]
     return text
 
 
