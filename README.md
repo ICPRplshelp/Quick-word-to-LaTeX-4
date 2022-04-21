@@ -1,7 +1,8 @@
 # Quick word to LaTeX
 A Microsoft Word to LaTeX converter which extends Pandoc 
 by adding a lot of useful features and removes quirks 
-that pandoc produces.
+that pandoc produces. The LaTeX document produced should look
+**very** similar to your MS Word document.
 
 ## Usage
 Make sure Python 3.10 is installed on your computer.
