@@ -106,7 +106,7 @@ def move_useless_files_away(file_name: str) -> None:
     """
     current_directory = os.getcwd()
     forbidden_filetypes = ['.aux', '.bcf', '.log', '.run.xml', '.bbl', '.blg', '.fdb_latexmk',
-                           '.fls', '.synctex.gz']
+                           '.fls', '.synctex.gz', '-blx.bib']
     folder_name = 'TRASH_LATEX_FILES'
     directory_files = os.listdir(current_directory)
     new_folder_path = new_folder(folder_name)

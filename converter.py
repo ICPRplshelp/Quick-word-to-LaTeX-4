@@ -93,10 +93,10 @@ class Preferences:
         - citation_mode: the citation mode.
     """
     preamble_path: Union[str, list[str]] = 'preamble.txt'  # path of the preamble.
-    allow_proofs: bool = False  # Enable the proofs module.
-    allow_citations: bool = False  # Enable the citation module.
+    allow_proofs: bool = True  # Enable the proofs module.
+    allow_citations: bool = True  # Enable the citation module.
     allow_no_longtable: bool = False  # convert all long tables to regular tables. Tables must be plain to work
-    allow_alignments: bool = False  # align equations.
+    allow_alignments: bool = True  # align equations.
     exclude_preamble: bool = False  # prevent the preamble from being included with the document. Blocks pdf exports
     citation_mode: str = 'apa2'  # changes how citations are typed. Should always be set to apa2.
     disallow_figures: bool = False  # prevent images and tables from being figured.
@@ -104,20 +104,20 @@ class Preferences:
     disable_repair: bool = False  # set to True if you just want this to be a latex compiler and nothing else
     hypertarget_remover: bool = True  # sections now look like real sections with this
     fix_vectors: bool = True  # make vectors work
-    dollar_sign_equations: bool = True  # equation wrappers are now $ instead of \[ and \(
+    dollar_sign_equations: bool = False  # equation wrappers are now $ instead of \[ and \(
     center_images: bool = True  # disabling this prevents figures
     fix_prime_symbols: bool = True  # prevents prime symbols from looking ugly
-    allow_environments: bool = False  # enable the environment module.
-    disable_legacy_environments: bool = False  # disable the legacy way to define environments.
+    allow_environments: bool = True  # enable the environment module.
+    disable_legacy_environments: bool = True  # disable the legacy way to define environments.
     prevent_pdf_exports: bool = False  # prevents compiling of the tex file this program generates
     fix_derivatives: bool = True  # prevents dy/dx from looking weird
-    replace_font: bool = False  # if True, you can change the font using preamble_0.txt
-    fix_unicode: bool = False  # prevents backslash text weirdness in equations
+    replace_font: bool = True  # if True, remove font declarations in the pandoc preamble
+    fix_unicode: bool = True  # prevents backslash text weirdness in equations
     autodetect_align_symbols: bool = True  # if False, &s are always put at the start for each align region
     pdf_engine: str = 'xelatex'  # what tex engine is used to combine
     max_line_length: int = 110  # max. relative length for equations. set this to a negative number to disable
     max_line_align: bool = True  # whether to enforce this in preexisting alignment envs
-    fix_texttt: bool = False  # whether to fix every quirk with inline code.
+    fix_texttt: bool = True  # whether to fix every quirk with inline code.
     combine_aligns: bool = True  # whether to combine separate align sections if nothing is between
     special_proofs: bool = False  # whether proofs use the tcolorbox environment
     start_of_doc_text: str = ''  # text to append at the start right after the document begins
@@ -138,7 +138,7 @@ class Preferences:
     # be active for this to work.
 
     replacement_mode: bool = False  # whether replacement mode is on or off.
-    environments: Optional[dict] = None  # information relating to environments.
+    environments: Optional[Union[dict, list[str]]] = None  # information relating to environments.
 
     eqn_comment_mode: str = 'tag'  # how comments in equations should be handled.
     label_equations: bool = True  # whether equations can be referenced
@@ -163,6 +163,8 @@ class Preferences:
     # if false, longtable eliminator and table labeling will not work.
     document_class: str = ''  # the document class, or '' if it should not be changed.
     subsection_limit: int = -1  # the subsection limit. anything deeper will fallback to the limit. -1 disable
+    bibliography_keyword: str = 'Bibliography'  # The first section with this name will be treated
+    # as the Bibliography.
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -255,7 +257,7 @@ class WordFile:
     def _demand_citations(self) -> None:
         """Ask for citations. Should only be called if we want citations.
         """
-        pass
+        # pass
 
         print('Opening the bib document file open box. If noting opens, consider re-running this program.')
         file_info = askopenfile(mode='r', title='Open the bib file you want to combine',
@@ -346,7 +348,7 @@ class WordFile:
         text, start, end = w2l.find_between(text, start, end)
         dict_info_hide_verb = {}
         if self.preferences.conceal_verbatims:
-            text, dict_info_hide_verb = dbl.hide_verbatims(text)
+            text, dict_info_hide_verb = dbl.hide_verbatims(text, self.preferences.bibliography_keyword)
         if self.preferences.hypertarget_remover:
             text = w2l.hypertarget_eliminator(text)
         if self.preferences.fix_vectors:
@@ -433,11 +435,20 @@ class WordFile:
         # text = text.replace('…', '...')  # only occurs in verbatim envs
         has_bib_file = False
         if self.preferences.allow_citations:  # if citations are allowed
-            proceed_citations, temp_text_here, bib_ind = dbl.detect_if_bib_exists(text)
+            proceed_citations, temp_text_here, bib_ind = dbl.detect_if_bib_exists(text,
+                                                                                  self.preferences.bibliography_keyword)
+            bib_text = dict_info_hide_verb.get('BIBLO', '')
             if proceed_citations:
-                self._demand_citations()
+                if bib_text == '':
+                    self._demand_citations()
+                else:
+                    self.bib_path = 'DO NOT OPEN!!!!?'
                 if self.bib_path is not None:
-                    bib_data = open_file(self.bib_path)
+                    if self.bib_path != 'DO NOT OPEN!!!!?':
+                        bib_data = open_file(self.bib_path)
+                    else:
+                        bib_data = bib_text
+                        self.bib_path = self.word_file_nosuffix + '-citations.bib'
                     # position the print bibilo first
                     # bib_style = 'unsrt'
                     # bib_final = '\\bibliographystyle{' + bib_style + '}\n\\medskip\n\\bibliography{' + \
@@ -454,9 +465,12 @@ class WordFile:
                                             self.preferences.citation_brackets, cite_properties)
                     last_dbl_backslash = self.bib_path.rfind('\\')
                     if last_dbl_backslash == -1:
-                        last_dbl_backslash -= 1
-                    has_bib_file: Union[bool, str] = self.bib_path[last_dbl_backslash + 1:]
+                        has_bib_file = self.bib_path
+                        # last_dbl_backslash -= 1
+                    else:
+                        has_bib_file: Union[bool, str] = self.bib_path[last_dbl_backslash + 1:]
                     self.citations_enabled = True
+                    assert has_bib_file.endswith('.bib')
                     # rewrite the bib file in the same directory as this .py file
                     # ensure that the bib file is written as well in the same location
                     write_file(bib_data, has_bib_file)
@@ -513,22 +527,26 @@ class WordFile:
 
                 # running biblatex on the file
                 # this is broken.
-                # if self.citations_enabled:
-                #     biblatex_command = ['biblatex', self.output_path]
-                #     print(biblatex_command)
-                #     subprocess.run(biblatex_command)
-                #     subprocess.run(latex_compile_command)
+
+                if self.citations_enabled:
+                    biblatex_command = ['bibtex8', '--wolfgang', self.output_path[:-4]]
+                    print(biblatex_command)
+                    subprocess.run(biblatex_command)
+
+                # export it a second time
+                subprocess.run(latex_compile_command)
 
                 # command_string_2 = latex_engine + ' "' + self.output_path + '"'
                 command_string_3 = '"' + self.output_path[:-4] + '.pdf' '"'
+                os.system(command_string_3)
                 # os.system(command_string_2)  # compile the pdf
 
                 # if citations are on OR (figures are on AND center images / long table eliminators are on)
-                if (self.preferences.allow_citations and self.bib_path is not None) or (
-                        not self.preferences.disallow_figures and (
-                        self.preferences.allow_no_longtable or self.preferences.center_images)):
-                    subprocess.run(latex_compile_command)
-                os.system(command_string_3)
+                # if (self.preferences.allow_citations and self.bib_path is not None) or (
+                #         not self.preferences.disallow_figures and (
+                #         self.preferences.allow_no_longtable or self.preferences.center_images)):
+                #     subprocess.run(latex_compile_command)
+
                 # subprocess.run(['open', latex_output_path])
             else:
                 command_string_4 = f'{dq}{self.output_path}{dq}'

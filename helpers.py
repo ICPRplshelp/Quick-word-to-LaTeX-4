@@ -285,8 +285,9 @@ def fix_texttt(text: str) -> str:
     text = text.replace('🬠', R'\$')
     text = text.replace('🬰', R'\{')
     text = text.replace('🭀', R'\}')
-    w_quote_remove = lambda s: s.replace('‘', "'").replace('’', "'")
-    text = w_quote_remove(text)
+    # w_quote_remove = lambda s: s.replace('‘', "'").replace('’', "'")
+    # text = w_quote_remove(text)
+    text = text.replace('‘', "'").replace('’', "'")
 
     # for i, char in enumerate(text):
     #     if prev_char in ALPHABET_ALL and char == '\\':
@@ -667,7 +668,7 @@ def rfind_nth(haystack: str, needle: str, n: int, starter: int = 0,
     return end
 
 
-def do_citations(text: str, bib_contents: str, mode: str = 'mla', brackets: bool = False,
+def do_citations(text: str, bib_contents: str, mode: str = 'apa', brackets: bool = False,
                  cite_properities: Optional[dict[str, Any]] = None) -> str:
     """Return text with converted citations.
     """
@@ -692,7 +693,7 @@ def citation_handler(text: str, citation_list: list[str], brackets: bool = False
         cite_src = '\\' + cite_properities['citation_kw'] + '{' + src + '}'
         if brackets:
             cite_src = ' (' + cite_src + ')'
-        text.replace(bracket_src, cite_src)
+        text = text.replace(bracket_src, cite_src)
     return text
 
 
@@ -820,8 +821,8 @@ def multi_cite_handler(text: str, cur_src: str, srcs: list[str],
                 if ending_author_ind != -1:
                     author_list.append(author)
         # updated text
-        text = text[:cite_ind] + '\\' + cite_properities['citation_kw'] + '{' + ','.join(author_list) + '}' + text[
-                                                                                                              next_parentheses + 1:]
+        text = text[:cite_ind] + '\\' + cite_properities['citation_kw'] + \
+            '{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
     return text
 
 
@@ -1251,7 +1252,8 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
                 return text
                 # break
 
-            elif text[next_newline + 2:next_newline + 4] == R'\[' or text[next_newline + 2:next_newline + 3] in ALPHABET or any(
+            elif text[next_newline + 2:next_newline + 4] == R'\[' \
+                    or text[next_newline + 2:next_newline + 3] in ALPHABET or any(
                     text[next_newline + 2:].startswith(tx) for tx in allowed_terms):
                 next_nl_skip += 1
                 continue
@@ -1312,7 +1314,7 @@ def environment_wrapper(text: str, env: str, start: str, end: str, env_info: Lat
         elif len(env_info.env_suffix) > 0:
             extra_args_choices = {'bracket': ('[', ']'), 'brace': ('{', '}')}
             brc = extra_args_choices.get(extra_args_type, ('[', ']'))
-            extra_text = brc[0] + brc[1]
+            # extra_text = brc[0] + brc[1]
             begin_env = begin_env + env_info.env_prefix + brc[0] + brc[1] + env_info.env_suffix
             # extra_env_args = (text[start_pos_2:start_pos_3].strip()).replace('\n', '')
             # if all(k in extra_env_args for k in {'{[}', '{]}'}) or all(k in extra_env_args for k in {'\\{', '\\}'}):
@@ -1737,7 +1739,7 @@ def calculate_eqn_length(text: str, disable: Optional[Iterable] = None) -> int:
             if ending_frac_index == 0:
                 break
             text = text[:frac_index] + seperate_fraction_block(text[frac_index:ending_frac_index]) + \
-                   text[ending_frac_index:]
+                text[ending_frac_index:]
 
     if 'matrix' not in disable:
         text = remove_matrices(text, 'matrix')
@@ -1758,7 +1760,7 @@ def calculate_eqn_length(text: str, disable: Optional[Iterable] = None) -> int:
 def remove_envs(text: str) -> str:
     """Remove everything between \\ up until it's not a letter
 
-    >>> temp_text = R'\lim(2+4)+\sum(3+6)'
+    >>> temp_text = '\\lim(2+4)+\\sum(3+6)'
     >>> remove_envs(temp_text)
     '(2+4)+(3+6)'
     """
@@ -2570,7 +2572,8 @@ def environment_fallback(text: str, target_env: str) -> str:
     #             continue
     #         elif closest_start < closest_end and closest_start <= section_from_start <= closest_end:
     #             # remove the proof starters and proof stoppers
-    #             text = text[:closest_start] + text[closest_start + len(env_str):] + text[:closest_end] + text[closest_end + len(env_end):]
+    #             text = text[:closest_start] + text[closest_start + len(env_str):] + text[:closest_end] + \
+    #             text[closest_end + len(env_end):]
     #         else:
     #             # closest end is before closest start so remove the proof closure
     #             text = text[:closest_end] + text[closest_end + len(env_end):]
@@ -2743,7 +2746,7 @@ def quote_to_environment(text: str, env: LatexEnvironment, has_extra_args: bool 
     return text
 
 
-def detect_if_bib_exists(text: str) -> tuple[bool, str, int]:
+def detect_if_bib_exists(text: str, bib_keyword: str) -> tuple[bool, str, int]:
     """Return True if there is an upper section named this:
 
     Bibliography
@@ -2753,15 +2756,24 @@ def detect_if_bib_exists(text: str) -> tuple[bool, str, int]:
     If True is returned, it will also return text with the bib section removed.
     It will also return the index where the original bibliography was.
     Otherwise, it will return text with no modifications.
+    It will also return the bib data if it was stated in the MS Word document.
 
     No works cited or references - we want Chicago style only.
     """
-    bib_section: str = '\\section{Bibliography}'
+    bib_section: str = '\\section{' + bib_keyword + '}'
     r_location = text.rfind(bib_section)
     if r_location == -1:
         return False, text, -1
     # else
     next_section = find_next_section(text, r_location + len(bib_section), max_depth=0)
+    # inside = text[r_location + len(bib_section):next_section]  # all the text within that
+
+    # vb = inside.find('\\begin{verbatim}')
+    # if vb != -1:
+    #     vb2 = inside.find('\\end{verbatim}')
+    #     bib_text = inside[vb + len('\\begin{verbatim}'):vb2]
+    # else:
+    #     bib_text = ''
     text = text[:r_location] + '\n\n\n' + text[next_section:]
     return True, text, r_location + 1
 
@@ -2797,13 +2809,39 @@ def verb_encryptor(count: int) -> str:
 #     print(tx)
 #     return tx
 
-def hide_verbatims(text: str) -> tuple[str, dict[str, str]]:
+
+def what_section_is_this(text: str, index: int) -> Optional[str]:
+    """Return the name of the section text at index is in.
+    It will only look for top-level indices.
+
+    Preconditions:
+        - index is not inside a section declaration
+    """
+    prev_section_location = text.rfind('\\section{', 0, index)
+    if prev_section_location == -1:
+        return None
+    else:
+        ps_end = local_env_end(text, prev_section_location)
+        section_name = text[prev_section_location + len('\\section{'):ps_end]
+        return section_name
+
+
+def hide_verbatims(text: str, track: str = 'Bibliography') -> tuple[str, dict[str, str]]:
     """Hide all verbatim stuff.
     Put them in a dictionary.
 
     Note: the begin and end verbatim calls will still be present in the document. It is merely
     the text contents that are being concealed.
     """
+    # if bibliography_keyword != '':
+    #     bib_section = '\\section{' + bibliography_keyword + '}'
+    #     bib_index = text.rfind(bib_section)
+    #     if bib_index != -1:
+    #         next_section = find_next_section(text, bib_index + len(bib_section), max_depth=0)
+    #         bib_indices = (bib_index + len(bib_section), next_section)
+
+    # else:
+    #     bib_section = 'INVALID'
     env = 'verbatim'
     envs_traversed = 1
     begin = R'\begin{' + env + '}'
@@ -2825,9 +2863,14 @@ def hide_verbatims(text: str) -> tuple[str, dict[str, str]]:
         during = text[start_pos_2:end_pos_1]
         after = text[end_pos_1:]
 
+        curr_section = what_section_is_this(text, start_pos_1)
+
         ve_value = verb_encryptor(i)
         dict_so_far[ve_value] = during
         during = ve_value
+
+        if curr_section.strip() == track:
+            dict_so_far['BIBLO'] = dict_so_far[ve_value]
 
         text = before + during + after
         envs_traversed += 1
@@ -3065,6 +3108,10 @@ def check_same_environment(text: str, index_1: int, index_2: int) -> bool:
     else:
         env_name = find_env_name_begin(text, closest_begin)
         proposed_env_end = find_env_end(text, closest_begin, env_name)
+
+        condition_1 = closest_begin < index_1 < proposed_env_end and closest_begin < index_2 < proposed_env_end
+        condition_2 = environment_depth(text, index_1) == environment_depth(text, index_2) == 0
+        return condition_1 and condition_2
 
 
 def verbatim_regular_quotes(text: str) -> str:

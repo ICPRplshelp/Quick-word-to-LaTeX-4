@@ -22,7 +22,7 @@
 
 \renewcommand\qedsymbol{$\blacksquare$}
 \usepackage{csquotes}
-\usepackage[backend=biber]{biblatex}
+\usepackage[backend=bibtex8]{biblatex}
 % bibtex is a bit broken right now, so
 % just copy everything to overleaf and recompile
 % \usepackage{mathptmx}

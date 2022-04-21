@@ -3,7 +3,7 @@
   "preamble_path": "config_modes/preamble.txt",
   "allow_proofs": true,
   "allow_citations": true,
-  "allow_no_longtable": true,
+  "allow_no_longtable": false,
   "allow_alignments": true,
   "exclude_preamble": false,
   "citation_mode": "apa2",
@@ -32,7 +32,7 @@
   "erase_pandoc_preamble": true,
   "verbatim_lang": "",
   "start_of_doc_text": "",
-  "citation_brackets": true,
+  "citation_brackets": false,
   "no_secnum": false,
   "environments": {
     "Theorem": {

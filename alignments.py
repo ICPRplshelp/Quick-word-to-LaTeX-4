@@ -9,7 +9,10 @@ import re
 import helpers as dbl
 
 import sys
+
 sys.setrecursionlimit(20000)
+
+
 # (   ]
 # 'aaa(aa]aa' to 'aaa[removed]aa[removed]aa'
 # import time
@@ -109,15 +112,27 @@ def prime_dealer(text: str) -> str:
     return text
 
 
+# Hardcoded text is to be used
+# when the pandoc preamble is not used.
+
+
 HARDCODED_TEXT = r"""\documentclass[fontsize=11pt]{article}  
 \usepackage{amsmath, amssymb}
-\usepackage{lmodern, iftex}  
+
+\usepackage{longtable,booktabs,array,calc,etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\usepackage{iftex}  
 \usepackage[utf8]{inputenc}  
-\usepackage{array}
 \usepackage{graphicx}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt plus 2pt minus 1pt}
-\usepackage{mathtools}
+"""
+
+HARDCODED_TEXT_POST = r"""
 """
 
 
@@ -135,12 +150,14 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
         # bib_file_name = input('What is your .bib file name? (Must include suffix .bib) ')
         # prestart = prestart + '\n\\addbibresource{' + bib_file_name + '}\n\n'
     elif isinstance(has_bib_file, str):  # type(has_bib_file) == type('string'):
-        prestart = prestart + '\n\\bibliography{' + has_bib_file + '}\n\n'
+        prestart = prestart + '\n\\addbibresource{' + has_bib_file + '}\n\n'
     section_num_text = '\\setcounter{secnumdepth}{-\\maxdimen} % remove section numbering' if not \
         omit_section_numbering else '% remove section numberinging'
-    pack_import_indicator = '\\usepackage{iftex}\n'
+    # pack_import_indicator = '\\usepackage{iftex}\n'
+    after_all = R'\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}'
+
     if not erase_existing_preamble:
-        processed_text = insert_after(text, pack_import_indicator, prestart)
+        processed_text = insert_after(text, after_all, prestart)
         processed_text = processed_text.replace(section_num_text, '\n')
         if remove_default_font:
             processed_text = processed_text.replace(R'\usepackage{lmodern}', '')
@@ -148,7 +165,8 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
     # for remove_instance in to_remove:
     #    processed_text = processed_text.replace(remove_instance, '', 1)
     else:
-        processed_text = HARDCODED_TEXT + prestart + dbl.retain_author_info(text) + '\n\\begin{document}'
+        processed_text = HARDCODED_TEXT + prestart + HARDCODED_TEXT_POST + dbl.retain_author_info(
+            text) + '\n\\begin{document}'
     # processed_text = dbl.date_today(processed_text)
     return processed_text
 
@@ -233,8 +251,6 @@ def fix_vectors_again(txt: str) -> str:
 
 def hypertarget_eliminator(txt: str) -> str:
     """Eliminate hypertargets. run once.
-
-    \\hypertarget{example-2-onto-but-not-one-to-one}{%\n\\subsubsection{Example 2: Onto but not\none-to-one}\\label{example-2-onto-but-not-one-to-one}}
     """
     # arg1 = "overset"
     # replace1 = "textbf"
@@ -279,9 +295,8 @@ def replace_align_region(text: str, proofs: bool = False,
     #     proof_line = '\n\\end{proof}\n'
     align_start = '\n\\begin{align*}\n' if not has_comment else '\n\\begin{align}\n'
     align_end = '\\end{align*}\n' if not has_comment else '\\end{align}\n'
-    end_result = text[
-                      :start_replace - 1] + align_start + replace_with.strip() + '\n' + align_end + \
-                      proof_line + text[end_replace:]
+    end_result = text[:start_replace - 1] + align_start + replace_with.strip() + \
+                 '\n' + align_end + proof_line + text[end_replace:]
     return end_result, False, labels_so_far
 
 
@@ -307,7 +322,6 @@ This is the text before
 This is the text after
 """
 
-
 TEST_EQN_AGAIN = r"""
 you are not \\[{9 + 10 = 21}{420 + 69 = 222}\\] real
 """
@@ -316,8 +330,8 @@ you are not \\[{9 + 10 = 21}{420 + 69 = 222}\\] real
 def detect_align_region(text: str) -> Optional[tuple[str, int, int]]:
     """Return isolate string, start index, end index + 1 for the first align region found in text.
     Return nothing if no align region found.
-    Detect an alignment region. An alignment region starts with \[ and ends with \],
-    but only if { follows \[. It will only detect if that happens for the first time.
+    Detect an alignment region. An alignment region starts with \\[ and ends with \\],
+    but only if { follows \\[. It will only detect if that happens for the first time.
     Return None if we can't do that.
 
     >>> string = 'you are not \\[{9 + 10 = 21}{420 + 69 = 222}\\] real'
@@ -404,12 +418,12 @@ def detect_align_region(text: str) -> Optional[tuple[str, int, int]]:
     if found:
         if special_region_info is None:
             captured_region = text[finished_region[0]:finished_region[1]]
-            print(captured_region)
+            # print(captured_region)
         else:
             captured_region = text[finished_region[0]:special_region_info[0]] + '{' + \
                               text[special_region_info[0]:special_region_info[1]] + '}' + \
                               text[special_region_info[1]:finished_region[1]]
-            print(captured_region)
+            # print(captured_region)
 
         return captured_region, finished_region[0], finished_region[1]
     else:
@@ -422,7 +436,7 @@ def process_align_region(txt: str, auto_align: bool = False, max_line_len: int =
     """Repairs all multiline equation environments.
 
     Preconditions:
-        - txt is the text inside \[ and \]
+        - txt is the text inside \\[ and \\]
         - txt must start with { and end with }
         - this must run AFTER the overset eliminator is conducted
     >>> process_align_region('{the reason why}{I have no idea}{please help}')
@@ -634,7 +648,7 @@ def align_expression(text: str, auto_align: bool = False, extra_info: Optional[d
 
 def bracket_region(text: str, opening_bracket: str, close: str) -> dict:
     """Bracket region.
-    \{ x+y \} means \\{ x+y \\}
+    \\{ x+y \\} means \\{ x+y \\}
     Preconditions:
         - len(open) = 1 and len(close) = 1
         - open != '\\' and close != '\\'
@@ -671,9 +685,9 @@ def bracket_region(text: str, opening_bracket: str, close: str) -> dict:
     return d
 
 
-def bracket_region_outer(text: str, open: str, close: str):
+def bracket_region_outer(text: str, opening: str, close: str):
     """Bracket region. Outer only. Skips backslash cases.
-    \{ x+y \} means \\{ x+y \\}
+    \\{ x+y \\} means \\{ x+y \\}
     Preconditions:
         - len(open) = 1 and len(close) = 1
         - open != '\\' and close != '\\'
@@ -692,7 +706,7 @@ def bracket_region_outer(text: str, open: str, close: str):
             backslash_state = True
         elif backslash_state:
             backslash_state = False
-        if c == open:
+        if c == opening:
             if not backslash_state:  # if the previous char isn't \\
                 istart.append(i)
             elif c != '\\':  # turn it back to false, UNLESS c == \\
@@ -726,7 +740,6 @@ def file_name_file_path(name: str) -> str:
     """
     name_list = name.split('\\')
     return name_list[-1]
-
 
 # def process_main(mode: int, directory_path: Optional[str]) -> None:
 #     """Single document branch
