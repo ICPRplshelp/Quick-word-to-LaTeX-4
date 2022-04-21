@@ -44,6 +44,8 @@ A good practice is to never drag anything directly into the folder where this pr
 - Using **CTRL+B** or *CTRL+I* in the equation editor (please don't do that, use "quotation marks" to ``\text{...}`` things in equations, and use `\funcapply` to unslant functions.)
 - **Nesting tables within other tables, or placing images within tables, UNLESS they are tables used to make environments.**
 
+Everything else shouldn't break this program.
+
 
 If the program breaks midway without compiling the ``.tex`` file,
 it means something wrong happened when fixing the ``.tex`` file.
