@@ -121,8 +121,8 @@ class Preferences:
     combine_aligns: bool = True  # whether to combine separate align sections if nothing is between
     special_proofs: bool = False  # whether proofs use the tcolorbox environment
     start_of_doc_text: str = ''  # text to append at the start right after the document begins
-    verbatim_lang: str = ''  # the language of every code block in the document. Blank for don't even try.
-    verbatim_plugin: str = 'lstlisting'  # the plugin used for verbatim syntax highlighting.
+    verbatim_lang: str = 'listings'  # the language of every code block in the document. Blank for don't even try.
+    verbatim_plugin: str = 'minted'  # the plugin used for verbatim syntax highlighting. minted or lstlisting
 
     replacement_marker: str = 'TODO'  # the replacement marker in when using replacement mode
 
@@ -164,6 +164,7 @@ class Preferences:
     document_class: str = ''  # the document class, or '' if it should not be changed.
     subsection_limit: int = -1  # the subsection limit. anything deeper will fallback to the limit. -1 disable
     bibliography_keyword: str = 'Bibliography'  # The first section with this name will be treated
+    hide_comments: bool = False  # hide comments in the preamble
     # as the Bibliography.
 
     def recalculate_invariants(self) -> None:
@@ -216,7 +217,7 @@ class WordFile:
         """Initialize a new WordFile object.
 
         Raise an InvalidFileTypeError if word_file_path is not a Microsoft word file.
-        Raise a SpaceError if word_file_path has a space character in it.
+        The only IO function allowed here is to open the Word file and create temp.tex
         """
         self.citations_enabled = False
         if word_file_path[-5:] != '.docx' and word_file_path[-4:] != '.tex':
@@ -253,6 +254,11 @@ class WordFile:
         #         print('You did not specify a bib path, so we\'re assuming you\'re not citing anything')
         if self.preferences.prevent_pdf_exports:
             self._disallow_pdf = True
+
+        # remove all spaces from document
+        self.word_file_path = self.word_file_path.replace(' ', '_')
+        self.word_file_nosuffix = self.word_file_nosuffix.replace(' ', '_')
+        self.output_path = self.output_path.replace(' ', '_')
 
     def _demand_citations(self) -> None:
         """Ask for citations. Should only be called if we want citations.
@@ -309,7 +315,8 @@ class WordFile:
 
             pdf_engine_str = '--pdf-engine=xelatex '
             # f'--pdf-engine={self.preferences.pdf_engine} ' if self.preferences.pdf_engine != 'pdflatex' else ''
-            command_string = f'pandoc {dquote}{media_path}{dquote} {filters_1} {dquote}{self.word_file_path}{dquote} {pdf_engine_str}-o {self._temp_tex_file}'
+            command_string = f'pandoc {dquote}{media_path}{dquote} {filters_1} {dquote}{self.word_file_path}{dquote} ' \
+                             f'{pdf_engine_str}-o {self._temp_tex_file}'
             os.system(command_string)
             return open_file(self._temp_tex_file)
         else:
@@ -429,7 +436,7 @@ class WordFile:
         # combines matrices. This is forced.
         text = dbl.aug_matrix_spacing(text)
         if self.preferences.verbatim_lang != '':
-            text = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang)
+            text = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang, self.preferences.verbatim_plugin)
             # I might have to change this if I ever decide to use auto
             # language detection
         # text = text.replace('…', '...')  # only occurs in verbatim envs
@@ -456,9 +463,10 @@ class WordFile:
 
                     # temp_text_here = temp_text_here[:bib_ind] + bib_final + \
                     #     temp_text_here[bib_ind:]
+                    bib_num = '[heading=bibnumbered]' if not self.preferences.no_secnum else ''
                     cite_properties = {'bibtex_def': self.preferences.bibtex_def, 'citation_kw':
                         self.preferences.citation_keyword}
-                    temp_text_here = temp_text_here[:bib_ind] + '\\medskip\n\\printbibliography' + \
+                    temp_text_here = temp_text_here[:bib_ind] + '\\medskip\n\\printbibliography' + bib_num + \
                                      temp_text_here[bib_ind:]
                     # then replace the citations
                     text = dbl.do_citations(temp_text_here, bib_data, self.preferences.citation_mode,
@@ -492,13 +500,18 @@ class WordFile:
         text = text.replace('ò÷öæ🬵🬶	🬷', '').strip()
 
         if not self.preferences.exclude_preamble:  # if preamble is included
-            text = w2l.deal_with_preamble(text=self.raw_text[:start],
-                                          has_bib_file=has_bib_file,
-                                          remove_default_font=self.preferences.replace_font,
-                                          preamble_path=p_start,
-                                          erase_existing_preamble=self.erase_pandoc_preamble,
-                                          omit_section_numbering=self.preferences.no_secnum) \
-                   + '\n' + self.preferences.start_of_doc_text + '\n' + text + '\n' + \
+
+            preamble = w2l.deal_with_preamble(text=self.raw_text[:start],
+                                              has_bib_file=has_bib_file,
+                                              remove_default_font=self.preferences.replace_font,
+                                              preamble_path=p_start,
+                                              erase_existing_preamble=self.erase_pandoc_preamble,
+                                              omit_section_numbering=self.preferences.no_secnum)
+
+            if self.preferences.hide_comments:
+                preamble = dbl.remove_comments_from_document(preamble)
+
+            text = preamble + '\n' + self.preferences.start_of_doc_text + '\n\n' + text + '\n\n' + \
                    self.raw_text[end:]
         # else do nothing
         if self.preferences.document_class != '':
@@ -520,8 +533,13 @@ class WordFile:
                 latex_engine = 'xelatex'
             dq = '"'
             write_file(self.text, self.output_path)
+
             if not self._disallow_pdf:
-                latex_compile_command = [latex_engine, self.output_path]
+                if '\\usepackage{minted}' in self.text:
+                    latex_compile_command = [latex_engine, '-shell-escape', self.output_path]
+                else:
+                    latex_compile_command = [latex_engine, self.output_path]
+
                 # latex_output_path = self.output_path[:-4] + '.pdf'
                 subprocess.run(latex_compile_command)
 

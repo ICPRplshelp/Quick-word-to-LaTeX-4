@@ -515,7 +515,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False) -> str:
     figures_so_far = []
     i = 1
 
-    figure_text_cap = 'Figure'
+    figure_text_cap = '\nFigure'
     while True:
         bl = '\n\\begin{figure}[h]\n\\centering\n'
         el = '\\end{figure}\n'
@@ -553,7 +553,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False) -> str:
                 figures_so_far.append(figure_num)
         else:
             bl = '\n\\begin{center}\n'
-            el = '\\end{center}\n'
+            el = '\n\\end{center}'
         text = before + bl + during + el + '\n' + after
         i += 1
     new_figures_so_far = ['\\ref{fig:p' + x + '}' for x in figures_so_far]
@@ -4007,8 +4007,12 @@ def change_document_class(text: str, document_class: str) -> str:
 
 def remove_comments_from_document(text: str) -> str:
     """I want every single comment in this document gone
+
+    Preconditions:
+        - verbatim concealed
     """
-    raise NotImplementedError
+    as_list = text.split('\n')
+    return '\n'.join([t.split('%')[0] for t in as_list])
 
 
 def subsection_limit(text: str, section_limit: int, deepest_section: int = 6) -> str:

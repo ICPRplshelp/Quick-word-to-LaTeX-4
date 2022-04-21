@@ -158,7 +158,8 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
 
     if not erase_existing_preamble:
         processed_text = insert_after(text, after_all, prestart)
-        processed_text = processed_text.replace(section_num_text, '\n')
+        processed_text = processed_text.replace(section_num_text, '\n').replace(R'\urlstyle{same} % '
+                                                                                R'disable monospaced font for URLs', '')
         if remove_default_font:
             processed_text = processed_text.replace(R'\usepackage{lmodern}', '')
     # to_remove = generate_text_to_remove()

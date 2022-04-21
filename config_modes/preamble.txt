@@ -1,4 +1,4 @@
-\usepackage[fontsize=12pt]{scrextend}
+\usepackage[fontsize=12pt]{scrextend}  % remove this if you don't want big text
 \usepackage[margin=0.75in]{geometry}
 \usepackage{amsthm}
 
@@ -20,12 +20,18 @@
 \newtheorem{problem}{Problem}[section]
 \newtheorem{example}{Example}[section]
 
-\renewcommand\qedsymbol{$\blacksquare$}
-\usepackage{csquotes}
-\usepackage[backend=bibtex8]{biblatex}
-% bibtex is a bit broken right now, so
-% just copy everything to overleaf and recompile
-% \usepackage{mathptmx}
+\renewcommand\qedsymbol{$\blacksquare$}  % set the QED symbol to a black square
+
+\usepackage[backend=bibtex8]{biblatex}  % change settings here to change the bibliography style
+
 \usepackage{mathtools}
 \usepackage{listings}
+\usepackage{csquotes}
 \usepackage{framed}
+% \usepackage{minted}  % uncomment this and set the code lang to activate
+
+\usepackage{color}
+\definecolor{bg}{rgb}{0.92, 0.92, 0.92}
+\usepackage{mdframed}
+\surroundwithmdframed[linewidth=0, backgroundcolor=bg]{minted}
+
