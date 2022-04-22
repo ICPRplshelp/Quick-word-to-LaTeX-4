@@ -7,6 +7,7 @@ out/
 images/
 
 
+
 testing.py
 build.py
 TRASH_LATEX_FILES/
@@ -279,3 +280,5 @@ TSWLatexianTemp*
 
 # standalone packages
 *.sta
+
+!Documentation/**

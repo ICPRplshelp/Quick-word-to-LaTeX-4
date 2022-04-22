@@ -59,6 +59,19 @@ def many_instances(old_tex: str, tex_file: str, todo_str: str) -> str:
     return tex_file
 
 
+def longtable_split_detector(text: str) -> str:
+    """Split the longtable.
+
+    Preconditions:
+        - text is an entire longtable environment.
+    """
+    header = find_not_in_any_env_tolerance(text, '\\endhead', depth_overlimit=2)
+    footer = find_not_in_any_env_tolerance(text, '\\bottomrule', depth_overlimit=2)
+    during, before, after = three_way_isolation(text, header + len('\\endhead'), footer)
+    during = longtable_splitter(during)
+    return '\n\n'.join([before, during, after])
+
+
 def longtable_eliminator(text: str, label: str = '', caption: str = '') -> str:
     """Instance - Here, everything is in a longtable.
     j is the number of times this has run starting from 0.
@@ -308,7 +321,7 @@ def three_way_isolation(text: str, left_index: int, right_index: int) -> tuple[s
 
 
 def eliminate_all_longtables(text: str, disallow_figures: bool = True,
-                             replace_longtable: bool = True) -> str:
+                             replace_longtable: bool = True, split_longtables: bool = False) -> str:
     """Eliminate all longtables.
     Upper function for the other
 
@@ -330,7 +343,9 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
             break
         during, before, after = three_way_isolation(text, lt_start_index, lt_end_index)
         if not disallow_figures and after[:len(table_text_cap)] == table_text_cap:
+
             end_figure_index = find_nth(after, '\n\n', 1)
+
             temp_figure_text = after[:end_figure_index]
             temp_figure_text_2 = temp_figure_text[len(table_text_cap) + 1:]
             end_of_numbering_1 = find_nth(temp_figure_text_2, ':', 1)
@@ -352,6 +367,8 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
             else:
                 fig_label = '\\label{table:p' + figure_num + '}\n'
                 tables_so_far.append(figure_num)
+            if split_longtables:
+                during = longtable_split_detector(during)
             if replace_longtable:
                 new_table_info = longtable_eliminator(during, fig_label, figure_caption)
             else:
@@ -359,6 +376,8 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
                 new_table_info = during
                 skip += 1
         else:
+            if split_longtables:
+                during = longtable_split_detector(during)
             if replace_longtable:
                 new_table_info = longtable_eliminator(during, '', '')
             else:
@@ -376,6 +395,24 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
     return text
 
 
+def replace_not_in_environment(text: str, depth: int, env: str, sub: str, sub2: str) -> str:
+    """Replace environment depth
+    """
+    skip_mode = False
+    if sub2 in sub or sub in sub2:
+        skip_mode = True
+    skip = 1
+    while True:
+        ind = find_not_in_environment_tolerance(text, sub, {env: depth}, 0, skip)
+        if ind == -1:
+            break
+        text = text[:ind] + sub2 + text[ind + len(sub):]
+        if skip_mode:
+            skip += 1
+    return text
+
+
+
 def bulk_labeling(text: str, label_tags: list[str], type_labeled: str,
                   ref_cmd: str = 'ref', ref_kw: Optional[str] = None) -> str:
     """Used for all your labelling needs.
@@ -388,7 +425,7 @@ def bulk_labeling(text: str, label_tags: list[str], type_labeled: str,
         - type_labeled != ''
     """
     type_upper = type_labeled[0].upper() + type_labeled[1:] + ' '
-    type_lower = type_labeled[0].lower() + type_labeled[0] + ' '
+    type_lower = type_labeled[0].lower() + type_labeled[1:] + ' '
     if ref_kw is None:
         ref_kw = type_labeled.lower().replace(' ', '')
     ref_cmd = '\\' + ref_cmd + '{' + ref_kw + ':'
@@ -517,9 +554,11 @@ def detect_include_graphics(text: str, disallow_figures: bool = False) -> str:
 
     figure_text_cap = '\nFigure'
     while True:
-        bl = '\n\\begin{figure}[h]\n\\centering\n'
+        bl = '\n\\begin{figure}[H]\n\\centering\n'
         el = '\\end{figure}\n'
         include_index = find_nth(text, '\\includegraphics', i)
+        in_table = check_in_environment(text, 'longtable', include_index) or \
+                   check_in_environment(text, 'tabular', include_index)
         if include_index == -1:
             break
         before = text[:include_index]
@@ -531,7 +570,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False) -> str:
 
         during = temp_after[:temp_after_index + 1]
         after = temp_after[temp_after_index + 2:]  # starts with \n
-        if not disallow_figures and after[:len(figure_text_cap)] == figure_text_cap:
+        if not disallow_figures and after[:len(figure_text_cap)] == figure_text_cap and not in_table:
             end_figure_index = find_nth(after, '\n\n', 1)
             temp_figure_text = after[:end_figure_index]
             temp_figure_text_2 = temp_figure_text[len(figure_text_cap) + 1:]
@@ -552,8 +591,8 @@ def detect_include_graphics(text: str, disallow_figures: bool = False) -> str:
             if valid_figure:
                 figures_so_far.append(figure_num)
         else:
-            bl = '\n\\begin{center}\n'
-            el = '\n\\end{center}'
+            bl = '\n\\begin{figure}[H]\n\\centering\n'
+            el = '\n\\end{figure}'
         text = before + bl + during + el + '\n' + after
         i += 1
     new_figures_so_far = ['\\ref{fig:p' + x + '}' for x in figures_so_far]
@@ -1500,17 +1539,26 @@ def bracket_layers(text: str, index: int,
         escape_char = False
     layer = 0
     prev_char = ''
+    esc = '\\' + opening_brace
+    esc2 = '\\' + closing_brace
+    if escape_char:
+        text = text.replace(esc, '🬍🬘').replace(esc2, '🬮🭕')
+        # replaces escape chars with something of same length
+
     for i, char in enumerate(text):
         if i < starting_index:
             continue
-        if escape_char and prev_char == '\\':
-            prev_char = ''
-            continue
+        # if escape_char and prev_char == '\\':
+        #     prev_char = ''
+        #     continue
         if char == opening_brace:
             layer += 1
         if char == closing_brace:
             layer -= 1
         if i == index:
+
+            # if escape_char:
+                # text = text.replace('🬍🬘', esc).replace('🬮🭕', esc2)
             return layer
 
         prev_char = char
@@ -1704,17 +1752,29 @@ def split_equation(text: str, max_len: int, list_mode: bool = False) -> Union[No
     """
     text = text.strip()
     eqn_len = calculate_eqn_length(text)  # split equal signs.
-    breaker_chars = ['<', '>', '\\leq', '\\geq', '=', '\\land', '\\lor',
-                     '\\subset', '\\subseteq', '\\not\\subset', '\\neq']
+    breaker_chars = ('<', '>', '\\leq', '\\geq', '=', '\\land', '\\lor',
+                     '\\subset', '\\subseteq', '\\not\\subset', '\\neq', '\\Rightarrow',
+                     '\\approx')
+    other_chars = ('+', '-', '\\times', '\\pm', '\\mp', '\\in')
     # breaker_chars_highest = max(len(x) for x in breaker_chars)
-    if eqn_len > max_len and any(x in text for x in breaker_chars):
+    if eqn_len > max_len and any(x in text for x in breaker_chars + other_chars):
         # everything goes down here
         equal_indexes = [0]  # the index where equal signs start.
         for i, char in enumerate(text):
             # if any(text[i:].startswith(x) for x in breaker_chars)
-            if text.startswith(tuple(breaker_chars), i) and \
-                    bracket_layers(text, i) == 0 and \
-                    any_layer(text, i, '\\left', '\\right') == 0 and environment_layer(text, i) == 0:
+            any_condition = any([
+                text.startswith(breaker_chars, i),
+                text.startswith(other_chars, i) and i - equal_indexes[-1] >= math.floor(max_len * 0.7)
+            ])
+            all_condition = all([
+                bracket_layers(text, i) == 0,
+                any_layer(text, i, '\\left', '\\right') == 0,
+                environment_layer(text, i) == 0
+            ])
+
+            if any_condition and all_condition:
+                # or if the difference of the last equal indices is greater than
+                # 0.7 times the line length limit
                 equal_indexes.append(i)
         lines_of_eqn = []
         if len(equal_indexes) == 1:
@@ -1736,7 +1796,9 @@ def split_equation(text: str, max_len: int, list_mode: bool = False) -> Union[No
         for eqn_line in lines_of_eqn:
             cur_line.append(eqn_line)
             cur_line_len = calculate_eqn_length(''.join(cur_line))
-            if cur_line_len > max_len and len(cur_line) >= 2:
+            # stack it up
+            if cur_line_len > math.floor(max_len * 0.35) and len(cur_line) >= 2:
+                # stack it down
                 cur_line.pop(-1)
                 master.append(cur_line)
                 cur_line = [eqn_line]
@@ -1760,6 +1822,10 @@ def calculate_eqn_length(text: str, disable: Optional[Iterable] = None) -> int:
     # list of defined functions:
     if disable is None:
         disable = []
+
+    replacement_dict = {'+': 'plu', '-': 'miu', '\\times': 'tie'}
+    text = replace_many(text, replacement_dict)
+
     text = text.lower()
     predetermined_functions = {'sin', 'cos', 'tan', 'csc', 'sec', 'cot', 'arcsin', 'arccos', 'arctan',
                                'log', 'ln', 'sqrt', 'sinh', 'cosh', 'tanh', 'coth'}
@@ -4067,3 +4133,112 @@ def subsection_limit(text: str, section_limit: int, deepest_section: int = 6) ->
         section_kw = '\\' + (i - 1) * 'sub' + 'section{'
         text = text.replace(section_kw, default_section)
     return text
+
+
+LTS_TEST = R"""
+A & B & C \\
+D & E & F \\
+G & H & I \\
+"""
+
+
+def longtable_splitter(text: str) -> str:
+    """Massively split the longtable.
+    I mean, actually split it. This means
+    to split up every & and \\.
+
+    Text must be the contents of the longtable
+    and may not include any headings.
+    """
+    escape_and = '⅘ↈ↋ↇ'
+    text = text.replace('\\&', escape_and)
+
+    target_characters = ('&', R'\\')
+
+    # spaced_and = 'Ⅻⅽ⅛Ⅿ'
+    for t_char in target_characters:
+        skip = 1
+
+        t_ind_so_far = []
+        # loop invariant: t_ind_so_far has no duplicate values
+        while True:
+            closest_and = find_not_in_any_env_tolerance(text, t_char, 0, 1, skip)
+            if closest_and == -1:
+                break
+            t_ind_so_far.append(closest_and)
+            skip += 1
+        for ind in reversed(t_ind_so_far):
+            text = text[:ind] + f'\n\n\n{t_char}\n\n\n' + text[ind + len(t_char):]
+    text = text.replace('\n ', '\n')
+    text = text.replace(escape_and, '\\&')
+    return '\n\n' + text + '\n\n'
+
+
+def replace_many(text: str, replace: dict[str, str]) -> str:
+    """Same as str.replace(...), but allows multiple
+    replacements to be made. Key is find, value is replace
+    """
+    for k, v in replace.items():
+        text = text.replace(k, v)
+    return text
+
+
+def abstract_wrapper(text: str) -> str:
+    """If there's an abstract, wrap it.
+    """
+    mt = '\\maketitle'
+    checker_text = text.strip()
+    if checker_text.startswith(mt):
+        checker_text = checker_text[len(mt):].strip()
+    if checker_text.startswith('Abstract'):
+        text = text.replace('Abstract', '\\begin{abstract}\n\n', 1)
+        next_section = find_next_section(text, 0, 6)
+        text = text[:next_section] + '\n\n\\end{abstract}\n\n' + text[next_section:]
+        return text
+    else:
+        return text
+
+
+def local_env_layer_bulk(text: str, index: int, envs: list[str]) -> int:
+    """local_env_layer, but accepts multiple local environment layers.
+    Always return the HIGHEST of what was returned.
+    """
+    highest_env_so_far = 0
+    for le in envs:
+        lsf = local_env_layer(text, index, le)
+        if lsf > highest_env_so_far:
+            highest_env_so_far = lsf
+    return highest_env_so_far
+
+
+def latexing(text: str) -> str:
+    """Latex all LaTeX.
+
+    We need to update local env layer to allow the detection of params.
+    """
+    all_bad_envs = ['texttt', 'includegraphics', 'label', 'ref']
+    ltx = '◚LT◞X◩◩'
+    location = len(text)
+    while True:
+        latex = 'LaTeX'
+
+        location = text.rfind(latex, 0, location)
+        if location == -1:
+            break
+        in_env = local_env_layer_bulk(text, location, all_bad_envs) > 0
+        in_eqn = check_in_equation(text, location)
+        if not (in_env or in_eqn):
+            text = text[:location] + ltx + text[location + len(latex):]
+    return text.replace(ltx, '\\LaTeX')
+
+
+def check_in_equation(text: str, index: int) -> bool:
+    """Return whether text[index] is inside any equation.
+
+    Must be ran before alignment regions are processed.
+    """
+    l1 = any_layer(text, index, '\\[', '\\]')
+    if l1 == 1:
+        return True
+    l2 = any_layer(text, index, '\\(', '\\)')
+    return l2 == 1

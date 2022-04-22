@@ -102,7 +102,8 @@ class Preferences:
     disallow_figures: bool = False  # prevent images and tables from being figured.
     forbid_images: bool = False  # prevent any images from appearing.
     disable_repair: bool = False  # set to True if you just want this to be a latex compiler and nothing else
-    hypertarget_remover: bool = True  # sections now look like real sections with this
+    hypertarget_remover: bool = True  # sections now look like real sections with this. Also prevents
+    # some modules from breaking.
     fix_vectors: bool = True  # make vectors work
     dollar_sign_equations: bool = False  # equation wrappers are now $ instead of \[ and \(
     center_images: bool = True  # disabling this prevents figures
@@ -166,6 +167,8 @@ class Preferences:
     bibliography_keyword: str = 'Bibliography'  # The first section with this name will be treated
     hide_comments: bool = False  # hide comments in the preamble
     # as the Bibliography.
+    allow_abstract: bool = True  # determine whether abstracts are allowed.
+    latexing: bool = False  # LaTeX to \LaTeX
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -256,9 +259,9 @@ class WordFile:
             self._disallow_pdf = True
 
         # remove all spaces from document
-        self.word_file_path = self.word_file_path.replace(' ', '_')
-        self.word_file_nosuffix = self.word_file_nosuffix.replace(' ', '_')
-        self.output_path = self.output_path.replace(' ', '_')
+        self.word_file_path = self.word_file_path.replace(' ', '_')  # .replace('LaTeX', 'Latex')
+        self.word_file_nosuffix = self.word_file_nosuffix.replace(' ', '_')  # .replace('LaTeX', 'Latex')
+        self.output_path = self.output_path.replace(' ', '_')  # .replace('LaTeX', 'Latex')
 
     def _demand_citations(self) -> None:
         """Ask for citations. Should only be called if we want citations.
@@ -362,7 +365,10 @@ class WordFile:
             text = w2l.fix_vectors(text)
             text = w2l.fix_vectors_again(text)
             text = dbl.fix_accents(text)
-
+        if self.preferences.allow_abstract:
+            text = dbl.abstract_wrapper(text)
+        if self.preferences.latexing:
+            text = dbl.latexing(text)
         if self.preferences.allow_environments and self.preferences.environments is not None:
             text = dbl.framed(text)
             text = dbl.work_with_environments(text, self.preferences.environments,
@@ -406,6 +412,11 @@ class WordFile:
                                                          self.preferences.autodetect_align_symbols)
                 if stat:
                     break
+
+        if self.preferences.modify_tables:  # LONGTABLE ELIMINATOR
+            disallow_tab_f = self.preferences.disable_table_figuring or self.preferences.disallow_figures
+            text = dbl.eliminate_all_longtables(text, disallow_tab_f,
+                                                self.preferences.allow_no_longtable)
         # use refs, which work in a very similar way to how it is implemented in tables
         if self.preferences.label_equations:
             text = dbl.bulk_labeling(text, labels_so_far, 'equation', 'ref', 'eq')
@@ -420,10 +431,7 @@ class WordFile:
             text = w2l.prime_dealer(text)
         if self.preferences.fix_derivatives:
             text = dbl.dy_fixer(text)
-        if self.preferences.modify_tables:
-            disallow_tab_f = self.preferences.disable_table_figuring or self.preferences.disallow_figures
-            text = dbl.eliminate_all_longtables(text, disallow_tab_f,
-                                                self.preferences.allow_no_longtable)
+
         if self.preferences.dollar_sign_equations:
             text = w2l.dollar_sign_equations(text)
         if self.preferences.fix_unicode:

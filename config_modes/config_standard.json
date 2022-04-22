@@ -15,7 +15,7 @@
   "allow_environments": true,
   "fix_derivatives": true,
   "replace_font": true,
-  "pdf_engine": "pdflatex",
+  "pdf_engine": "xelatex",
   "max_line_length": 110,
   "max_line_align": true,
   "fix_texttt": true,
