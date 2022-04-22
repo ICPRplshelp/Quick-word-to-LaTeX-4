@@ -28,6 +28,7 @@ def __obtain_files_to_move() -> list[str]:
     current_directory = os.getcwd()
     suffixes = [
         '.aux',
+        '.idx',
         '.lof',
         '.log',
         '.lot',
@@ -59,7 +60,7 @@ def __obtain_files_to_move() -> list[str]:
                 '(Type YES in all caps to do so, or anything else to NOT): ')
     if ipt == 'YES':
         suffixes.extend(additional_suffixes)
-    prefixes = ['TEXIMAGEF_', 'TEXIMAGE_', 'latex_images_']
+    prefixes = ['TEXIMAGEF_', 'TEXIMAGE_', 'latex_images_', '_minted-']
     directory_files = os.listdir(current_directory)
     passing_files = [file for file in directory_files
                      if __filter_suffix(file, suffixes) ^ __filter_prefix(file, prefixes)]

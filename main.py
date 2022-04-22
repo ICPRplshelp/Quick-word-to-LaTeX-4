@@ -68,7 +68,9 @@ if __name__ == '__main__':
 
     current_directory = os.getcwd()
     cfg_modes = current_directory + '\\config_modes'
-    mt = open_file('mode.txt').strip()
+    mt = open_file('mode.txt', True).strip()
+    if mt == '':
+        mt = ' '
     cur_config = mt.split('/')[-1]
     directory_files = os.listdir(cfg_modes)
 

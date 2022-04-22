@@ -5,7 +5,7 @@
   "big_text": true,
   "small_margins": true,
   "headings": true,
-  "verbatim_lang": "python",
+  "verbatim_lang": "",
   "verbatim_plugin": "minted",
   "allow_proofs": true,
   "allow_citations": true,
@@ -27,6 +27,7 @@
   "citation_keyword": "cite",
   "no_secnum": false,
   "erase_pandoc_preamble": false,
+  "image_float": "H",
   "start_of_doc_text": "",
   "environments": ["Theorem", "Lemma", "Corollary", "Proposition", "Conjecture", "Remark", "Note", "Claim", "Definition", "Condition", "Problem", "Example"]
 }

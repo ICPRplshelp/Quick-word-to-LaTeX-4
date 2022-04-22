@@ -352,6 +352,7 @@ class WordFile:
                 ('-s', True),
                 (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level != 0),
                 ('--toc', self.preferences.table_of_contents),
+                # ('--top-level-division=chapter', self.preferences.document_class in ['book', 'tufte-book']),
                 (self.word_file_path, True),  # FILTERS END HERE
                 ('--pdf-engine=xelatex', False),
                 ('-o', True),
@@ -374,6 +375,8 @@ class WordFile:
         end = '\\end{document}'
         text, start, end = w2l.find_between(text, start, end)
         dict_info_hide_verb = {}
+        if 'book' in self.preferences.document_class:
+            text = dbl.make_chapter(text)
         if self.preferences.conceal_verbatims:
             text, dict_info_hide_verb = dbl.hide_verbatims(text, self.preferences.bibliography_keyword)
         if self.preferences.hypertarget_remover:

@@ -12,6 +12,14 @@
       <excludeFolder url="file://$MODULE_DIR$/_minted-A1111222" />
       <excludeFolder url="file://$MODULE_DIR$/_minted-Quick_word_to_LaTeX_documentation" />
       <excludeFolder url="file://$MODULE_DIR$/latex_images_Quick_word_to_LaTeX_documentation" />
+      <excludeFolder url="file://$MODULE_DIR$/_minted-Sequences_9" />
+      <excludeFolder url="file://$MODULE_DIR$/_minted-WordTeX_Template_Version_223" />
+      <excludeFolder url="file://$MODULE_DIR$/latex_images_ACRTH" />
+      <excludeFolder url="file://$MODULE_DIR$/latex_images_Evaluate_this_no_mpre" />
+      <excludeFolder url="file://$MODULE_DIR$/latex_images_I_HATE_AVERAGE_CASE_ANALYSIS" />
+      <excludeFolder url="file://$MODULE_DIR$/latex_images_limx" />
+      <excludeFolder url="file://$MODULE_DIR$/latex_images_Sequences_9" />
+      <excludeFolder url="file://$MODULE_DIR$/latex_images_This_is" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

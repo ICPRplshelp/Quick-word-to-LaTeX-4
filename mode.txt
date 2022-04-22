@@ -1,1 +1,0 @@
-config_modes/config_tufte.json

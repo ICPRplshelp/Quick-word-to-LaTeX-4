@@ -33,9 +33,10 @@
   "no_secnum": false,
   "subsection_limit": 2,
   "erase_pandoc_preamble": true,
-  "image_float": "H",
-  "document_class": "tufte-handout",
+  "image_float": "h",
+  "document_class": "tufte-book",
   "start_of_doc_text": "",
+  "hide_sty_cls_files": true,
   "environments": ["Theorem", "Lemma", "Corollary", "Proposition", "Conjecture", "Remark", "Note", "Claim", "Definition", "Condition", "Problem", "Example"],
   "sty_cls_files": ["config_modes/sty_cls_files/tufte.bst", "config_modes/sty_cls_files/tufte-book.cls", "config_modes/sty_cls_files/tufte-common.def", "config_modes/sty_cls_files/tufte-handout.cls"]
 }

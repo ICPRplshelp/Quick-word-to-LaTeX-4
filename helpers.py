@@ -590,7 +590,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False, float_typ
             if valid_figure:
                 figures_so_far.append(figure_num)
         else:
-            bl = '\n\\begin{figure}[H]\n\\centering\n'
+            bl = '\n\\begin{figure}[' + float_type + ']\n\\centering\n'
             el = '\n\\end{figure}'
         text = before + bl + during + el + '\n' + after
         i += 1
@@ -2771,8 +2771,11 @@ def find_next_section(text: str, min_index: int, max_depth: int = 6) -> int:
     lowest_start = len(text)
     if max_depth < 0:
         max_depth = 0
-    for i in range(max_depth, -1, -1):
-        section_keyword = '\\' + 'sub' * i + 'section' + '{'
+    for i in range(max_depth, -2, -1):
+        if i != -2:
+            section_keyword = '\\' + 'sub' * i + 'section' + '{'
+        else:
+            section_keyword = '\\chapter{'
         # print(f'looking for {section_keyword}')
         s_start = text.find(section_keyword, min_index)
         if s_start == -1:
@@ -4288,3 +4291,14 @@ def weak_equality(left: Union[str, int, bool], right: Union[str, int, bool]) -> 
     """A weak equality.
     """
     return str(left) == str(right)
+
+
+def make_chapter(text: str, depth: int = 6) -> str:
+    """Shift everything to the left by 1.
+    Must be done before anything that messes with the sections.
+    """
+    for i in range(0, depth):
+        st = '\\' + 'sub' * i + 'section{'
+        st2 = '\\chapter{' if i == 0 else '\\' + 'sub' * (i - 1) + 'section{'
+        text = text.replace(st, st2)
+    return text
