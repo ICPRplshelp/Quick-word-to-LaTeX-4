@@ -1,5 +1,5 @@
 {
-  "preamble_description": "Similar to config_standard, but minimizes the length of the preamble.",
+  "description": "Similar to config_standard, but minimizes the length of the preamble.",
   "preamble_path": "config_modes/preamble.txt",
   "allow_proofs": true,
   "allow_citations": true,

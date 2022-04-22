@@ -412,7 +412,6 @@ def replace_not_in_environment(text: str, depth: int, env: str, sub: str, sub2: 
     return text
 
 
-
 def bulk_labeling(text: str, label_tags: list[str], type_labeled: str,
                   ref_cmd: str = 'ref', ref_kw: Optional[str] = None) -> str:
     """Used for all your labelling needs.
@@ -545,7 +544,7 @@ def remove_images(text: str) -> str:
     return '\n'.join(all_lines_2)
 
 
-def detect_include_graphics(text: str, disallow_figures: bool = False) -> str:
+def detect_include_graphics(text: str, disallow_figures: bool = False, float_type: str = 'H') -> str:
     """Center all images.
     """
     # if True:  # WHEN YOU CAN'T COMMENT OUT LINES
@@ -554,7 +553,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False) -> str:
 
     figure_text_cap = '\nFigure'
     while True:
-        bl = '\n\\begin{figure}[H]\n\\centering\n'
+        bl = '\n\\begin{figure}[' + float_type + ']\n\\centering\n'
         el = '\\end{figure}\n'
         include_index = find_nth(text, '\\includegraphics', i)
         in_table = check_in_environment(text, 'longtable', include_index) or \
@@ -861,7 +860,7 @@ def multi_cite_handler(text: str, cur_src: str, srcs: list[str],
                     author_list.append(author)
         # updated text
         text = text[:cite_ind] + '\\' + cite_properities['citation_kw'] + \
-            '{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
+               '{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
     return text
 
 
@@ -1256,7 +1255,7 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
 
     # mid_fix = env_info.env_middlefix  # if braces else ''
     # assert braces or mid_fix == ''
-    dashes = {'- ', '– ', '— ', '--',}
+    dashes = {'- ', '– ', '— ', '--', }
     k_begin = R'\begin{' + env_info.env_name.lower() + '}'
     k_end = R'\end{' + env_info.env_name.lower() + '}'
     keyword = env_info.start_alt[0].upper() + env_info.start_alt[1:]
@@ -1556,9 +1555,8 @@ def bracket_layers(text: str, index: int,
         if char == closing_brace:
             layer -= 1
         if i == index:
-
             # if escape_char:
-                # text = text.replace('🬍🬘', esc).replace('🬮🭕', esc2)
+            # text = text.replace('🬍🬘', esc).replace('🬮🭕', esc2)
             return layer
 
         prev_char = char
@@ -1654,7 +1652,7 @@ def remove_local_environment(text: str, env: Union[str, list[str]]) -> str:
             ending_index = local_env_end(text, starting_index)
             # the local environment is always destroyed everytime this is run.
             text = text[:starting_index] + text[starting_index + len(env_start):ending_index] + \
-                text[ending_index + 1:]
+                   text[ending_index + 1:]
     return text
 
 
@@ -1842,7 +1840,7 @@ def calculate_eqn_length(text: str, disable: Optional[Iterable] = None) -> int:
             if ending_frac_index == 0:
                 break
             text = text[:frac_index] + seperate_fraction_block(text[frac_index:ending_frac_index]) + \
-                text[ending_frac_index:]
+                   text[ending_frac_index:]
 
     if 'matrix' not in disable:
         text = remove_matrices(text, 'matrix')
@@ -3266,7 +3264,7 @@ def framed(text: str) -> str:
         # table_content_start = text.find(R'\endhead', right_index_border) + len(R'\endhead')
         else:
             text = text[:lt_index] + '\\begin{framed}\n\n' + cur_header + '\n\n\\end{framed}\n\n' + \
-                text[lt_end_index + len('\\end{longtable}'):]
+                   text[lt_end_index + len('\\end{longtable}'):]
     return text
 
 
@@ -4242,3 +4240,51 @@ def check_in_equation(text: str, index: int) -> bool:
         return True
     l2 = any_layer(text, index, '\\(', '\\)')
     return l2 == 1
+
+
+def conditional_preamble(text: str, keys: dict[str, Union[bool, int, str]]) -> str:
+    """This is the CONDITIONAL PREAMBLE module. SYNTAX:
+    % CONDITION: var1|True
+    When a line in the preamble is conditional,
+    only show if it is true. If false, then discard.
+
+    text is a preamble.
+    """
+    as_list = text.split('\n')
+    added_back = []
+    for line in as_list:
+        components = line.split('%')
+        if len(components) >= 2:
+            comment = components[1]
+            valid_comment_expression = check_valid_comment_expression(comment)
+            if valid_comment_expression is not None:
+                key, value = valid_comment_expression
+                left_side = keys.get(key, None)
+                # SUCCESSFUL BRANCH
+                if left_side is not None and (isinstance(left_side, str) or isinstance(left_side, bool)
+                                              or isinstance(left_side, int)):
+                    state = weak_equality(left_side, value)
+                    if state:
+                        added_back.append(components[0])
+                    continue
+                # END OF SUCCESSFUL BRANCH
+        added_back.append(components[0])
+    return '\n'.join(added_back)
+
+
+def check_valid_comment_expression(text: str) -> Optional[tuple[str, str]]:
+    """Check if a comment is valid. If so, return the expression.
+    """
+    text = text.strip()
+    spl2 = text.split('==', 1)
+    if len(spl2) == 2:
+        spl3 = (spl2[0].strip(), spl2[1].strip())
+        return spl3
+    else:
+        return None
+
+
+def weak_equality(left: Union[str, int, bool], right: Union[str, int, bool]) -> bool:
+    """A weak equality.
+    """
+    return str(left) == str(right)

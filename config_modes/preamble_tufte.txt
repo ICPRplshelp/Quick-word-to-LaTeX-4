@@ -1,3 +1,10 @@
+
+\usepackage{array}
+% \usepackage{graphicx}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+\usepackage{mathtools}
+
 \usepackage[T1]{fontenc}
 \usepackage{babel}
 
@@ -13,29 +20,6 @@
 \newtheorem{definition}{Definition}  % remove this to prevent sections from appearing
 \renewcommand\qedsymbol{$\blacksquare$}
 
-
-
-% all the needed ones
-
-% \title[JOST \LaTeX\ Template] %short margin title should not be more than half width of page
-% {\LaTeX\ Template for the Journal of Systems Thinking} % [header short title] {Full title}
-
-
-%\subsection{Typefaces}\label{sec:typefaces} %If the Palatino, \textsf{Helvetica}, and \texttt{Bera Mono} typefaces are installed, this style will use them automatically.  Otherwise, we'll fall back on the Computer Modern typefaces.
-
-
-%\author{\noindent{Author 1}\\[3mm] \noindent{Author2}\\[3mm]}
-
-%\author{
-%\and
-%  {Derek Cabrera \thanks{dog}}
-%\and
-%  Laura Cabrera
-%}
-%\author[The Tufte-LaTeX Developers]{Author}
-%\date{28 March 2010} % without \date command, current date is supplied
-
-%\geometry{showframe} % display margins for debugging page layout
 
 \usepackage{graphicx} % allow embedded images
   \setkeys{Gin}{width=\linewidth,totalheight=\textheight,keepaspectratio}
@@ -184,3 +168,4 @@ pics/circles/.style args={#1#2#3#4}{
 \newcommand{\sout}[1]{\emph{#1}}
 
 \newcommand{\emptyfig}{\includegraphics[width=.3\textwidth]{example-image-a}}  % stops overlap of objects in sidebar
+\usepackage{float}

@@ -5,7 +5,7 @@ vnev/
 out/
 
 images/
-
+latex_images_*/
 
 
 testing.py

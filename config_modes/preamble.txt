@@ -1,5 +1,8 @@
-\usepackage[fontsize=12pt]{scrextend}  % remove this if you don't want big text
-\usepackage[margin=0.75in]{geometry}
+\usepackage[fontsize=12pt]{scrextend}  % big_text==True
+\usepackage[includeheadfoot,margin=0.75in]{geometry}  % headings==True
+\usepackage[includeheadfoot,margin=0.75in]{geometry}  % headings==False
+% Alternatively, take advantage of small_margins
+
 \usepackage{amsthm}
 
 \theoremstyle{plain}
@@ -28,7 +31,7 @@
 \usepackage{listings}
 \usepackage{csquotes}
 \usepackage{framed}
-% \usepackage{minted}  % uncomment this and set the code lang to activate
+\usepackage{minted}  % _has_lang==True
 
 \usepackage{color}
 \definecolor{bg}{rgb}{0.92, 0.92, 0.92}
@@ -36,3 +39,11 @@
 \surroundwithmdframed[linewidth=0, backgroundcolor=bg]{minted}
 \usepackage{float}
 
+\usepackage{fancyhdr} % headings==True
+\pagestyle{fancy} % headings==True
+\fancyhf{} % headings==True
+\rhead{\leftmark} % headings==True
+\lhead{\rightmark} % headings==True
+\rfoot{Page \thepage} % headings==True
+
+% \renewcommand{\arraystretch}{2}

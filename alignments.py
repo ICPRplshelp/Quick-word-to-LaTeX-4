@@ -117,19 +117,20 @@ def prime_dealer(text: str) -> str:
 
 
 HARDCODED_TEXT = r"""\documentclass[fontsize=11pt]{article}  
-\usepackage{amsmath, amssymb}
+\usepackage{amsmath}
+\usepackage{amssymb}
 
 \usepackage{longtable,booktabs,array,calc,etoolbox}
-\makeatletter
 \patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
-\makeatother
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 
-\usepackage{iftex}  
+\providecommand{\href}[1]{\url{#1}}
+\usepackage{iftex}
 \usepackage[utf8]{inputenc}  
 \usepackage{graphicx}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt plus 2pt minus 1pt}
+\usepackage[normalem]{ulem}
 """
 
 HARDCODED_TEXT_POST = r"""

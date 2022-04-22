@@ -3,7 +3,7 @@ Move all useless files to a new folder
 """
 import os
 import logging
-from typing import Iterable
+from typing import Iterable, Optional
 
 
 def new_folder(folder_name: str) -> str:
@@ -100,18 +100,24 @@ def __main() -> None:
             pass
 
 
-def move_useless_files_away(file_name: str) -> None:
+def move_useless_files_away(file_name: str, additional_files: Optional[list[str]] = None) -> None:
     """Move all temp. tex related files into the trash folder.
     This does overwrite!!
     """
+    if additional_files is None:
+        additional_files = []
     current_directory = os.getcwd()
     forbidden_filetypes = ['.aux', '.bcf', '.log', '.run.xml', '.bbl', '.blg', '.fdb_latexmk',
                            '.fls', '.synctex.gz', '-blx.bib']
     folder_name = 'TRASH_LATEX_FILES'
+    # image_directory = 'latex_images_'
     directory_files = os.listdir(current_directory)
     new_folder_path = new_folder(folder_name)
     # logging.warning('TARGET FOLDER IS' + new_folder_path)
     files_to_move = [file_name + x for x in forbidden_filetypes if file_name + x in directory_files]
+    # if image_directory + file_name in directory_files:
+    #     files_to_move.append(image_directory + file_name)
+    files_to_move.extend(additional_files)
     for fm in files_to_move:
         # logging.warning('REPLACED ' + fm)
         os.replace(fm, new_folder_path + '\\' + fm)

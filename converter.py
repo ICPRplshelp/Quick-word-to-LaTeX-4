@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import time
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, asdict
 
 from tkinter.filedialog import askopenfile
 from typing import Optional, Union
@@ -122,7 +122,7 @@ class Preferences:
     combine_aligns: bool = True  # whether to combine separate align sections if nothing is between
     special_proofs: bool = False  # whether proofs use the tcolorbox environment
     start_of_doc_text: str = ''  # text to append at the start right after the document begins
-    verbatim_lang: str = 'listings'  # the language of every code block in the document. Blank for don't even try.
+    verbatim_lang: str = ''  # the language of every code block in the document. Blank for don't even try.
     verbatim_plugin: str = 'minted'  # the plugin used for verbatim syntax highlighting. minted or lstlisting
 
     replacement_marker: str = 'TODO'  # the replacement marker in when using replacement mode
@@ -165,10 +165,19 @@ class Preferences:
     document_class: str = ''  # the document class, or '' if it should not be changed.
     subsection_limit: int = -1  # the subsection limit. anything deeper will fallback to the limit. -1 disable
     bibliography_keyword: str = 'Bibliography'  # The first section with this name will be treated
-    hide_comments: bool = False  # hide comments in the preamble
+    hide_comments: bool = True  # hide comments in the preamble
     # as the Bibliography.
     allow_abstract: bool = True  # determine whether abstracts are allowed.
+    small_margins: bool = True  # whether big margins should be used.
     latexing: bool = False  # LaTeX to \LaTeX
+    headings: bool = False  # Whether headings should be included
+
+    conditional_preamble: bool = True  # whether to enable the conditional preamble.
+    big_text: bool = True  # whether text should be large.
+    _has_lang: bool = False  # private; do not modify.
+    sty_cls_files: Optional[list[str]] = None
+    hide_sty_cls_files: bool = False
+    image_float: str = 'H'
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -177,6 +186,10 @@ class Preferences:
         if self.auto_numbering:  # auto numbering disallows comments
             self.label_equations = True
             self.eqn_comment_mode = 'hidden'
+        if self.verbatim_lang != '' and self.verbatim_plugin == 'minted':
+            self._has_lang = True
+        if self.sty_cls_files is None:
+            self.sty_cls_files = []
 
 
 DEFAULT_PREF = Preferences('preamble_0.txt', False, False, False, False, False)
@@ -222,6 +235,7 @@ class WordFile:
         Raise an InvalidFileTypeError if word_file_path is not a Microsoft word file.
         The only IO function allowed here is to open the Word file and create temp.tex
         """
+
         self.citations_enabled = False
         if word_file_path[-5:] != '.docx' and word_file_path[-4:] != '.tex':
             raise InvalidFileTypeError
@@ -233,6 +247,7 @@ class WordFile:
             starter_name_directory_index = 0
         self.word_file_nosuffix = word_file_path[starter_name_directory_index:-5]
         self.preferences = preferences
+        self.preferences.recalculate_invariants()
         self._temp_tex_file = TEMP_TEX_FILENAME
         export_suffix = self.preferences.export_file_name_suffix + '.tex'
         self.output_path = self.word_file_nosuffix + export_suffix
@@ -296,7 +311,8 @@ class WordFile:
         """Return tex code of WordFile."""
         using_command_prompt = not USE_SUBPROCESSES
         if using_command_prompt:
-            media_path = '--extract-media=' + self.preferences.media_folder_name + self.word_file_nosuffix
+            media_path = '--extract-media=' + self.preferences.media_folder_name + \
+                         self.word_file_nosuffix.replace(' ', '_')
             dquote = '"'
             # toc = '--toc'
             # these are writer options
@@ -323,7 +339,8 @@ class WordFile:
             os.system(command_string)
             return open_file(self._temp_tex_file)
         else:
-            media_path = '--extract-media=' + self.preferences.media_folder_name + self.word_file_nosuffix
+            media_path = '--extract-media=' + self.preferences.media_folder_name + \
+                         self.word_file_nosuffix.replace(' ', '_')
             # dquote = '"'
             # toc = '--toc'
             # these are writer options
@@ -426,7 +443,7 @@ class WordFile:
             text = dbl.remove_images(text)
             logging.warning('Removing images')
         elif self.preferences.center_images:
-            text = dbl.detect_include_graphics(text, self.preferences.disallow_figures)
+            text = dbl.detect_include_graphics(text, self.preferences.disallow_figures, self.preferences.image_float)
         if self.preferences.fix_prime_symbols:
             text = w2l.prime_dealer(text)
         if self.preferences.fix_derivatives:
@@ -507,6 +524,14 @@ class WordFile:
         text = dbl.verbatim_regular_quotes(text)
         text = text.replace('ò÷öæ🬵🬶	🬷', '').strip()
 
+        if self.preferences.conditional_preamble:  # if this is off, everything shows up.
+            dataclass_dict = asdict(self.preferences)
+            # for the conditional preamble module,
+            # if a value is not detected then it is
+            # always true by default. it will
+            # not show up if it is false.
+            p_start = dbl.conditional_preamble(p_start, dataclass_dict)
+
         if not self.preferences.exclude_preamble:  # if preamble is included
 
             preamble = w2l.deal_with_preamble(text=self.raw_text[:start],
@@ -536,6 +561,11 @@ class WordFile:
             # except FileExistsError:
             #     pass
             # self.output_path = 'export\\' + self.output_path
+            if self.preferences.hide_sty_cls_files:
+                sty_cls = move_sty_cls_files(self.preferences.sty_cls_files)
+            else:
+                move_sty_cls_files(self.preferences.sty_cls_files)
+                sty_cls = []
             latex_engine = self.preferences.pdf_engine
             if latex_engine not in ALLOWED_LATEX_COMPILERS:
                 latex_engine = 'xelatex'
@@ -583,8 +613,10 @@ class WordFile:
             assert self.output_path[-4:] == '.tex'
             if self.preferences.cleanup:
                 print('removing all unneeded files')
+                time.sleep(10)
                 output_nameless = self.output_path[:-4]
-                cleanup.move_useless_files_away(output_nameless)
+                cleanup.move_useless_files_away(output_nameless, sty_cls)
+
         else:
             # try:
             #     os.mkdir('export')
@@ -701,6 +733,38 @@ def open_multiple_files(files: Union[list[str], str]) -> str:
     return prestart
 
 
+def move_sty_cls_files(files: list[str]) -> list[str]:
+    """Copy all files specified in the list of files to
+    the same directory as this .py file.
+
+    Copy means literally taking the text contents of the file.
+    """
+    files_moved = []
+    for file in files:
+        f_contents = open_file(file)
+
+        last_dbl = file.rfind('\\')
+        last_b = file.rfind('/')
+        if last_dbl == -1 and last_b == -1:
+            target = -1
+        elif last_dbl == -1 and last_b != -1:
+            target = last_b
+        elif last_dbl != -1 and last_b == -1:
+            target = last_dbl
+        else:
+            assert last_dbl != -1 and last_b != -1
+            target = max(last_dbl, last_b)
+        file_name = file[target + 1:]
+        allowed_extensions = ['.sty', '.cls', '.def', '.bst']
+        if not any(file.endswith(x) for x in allowed_extensions):
+            raise ValueError('sty-cls files can ONLY end with .sty, .cls, .bst, or .def.')
+        else:
+            print(f_contents + ' ' + file_name)
+            # write_file(f_contents, file_name)
+            files_moved.append(file_name)
+    return files_moved
+
+
 def check_config(json_path: str) -> tuple[Preferences, bool]:
     """Return Preferences based on configurations.
     """
@@ -717,7 +781,7 @@ def check_config(json_path: str) -> tuple[Preferences, bool]:
     return cur_prefs, data["replacement_mode"]
 
 
-def main() -> None:
+def main(config: str = '') -> None:
     """Run this file.
     """
     try:
@@ -729,7 +793,10 @@ def main() -> None:
             print('You didn\'t select anything')
             exit()
         print(path_mfn)
-        json_dir_mfn = open_file('mode.txt')
+        if config == '':
+            json_dir_mfn = open_file('mode.txt')
+        else:
+            json_dir_mfn = config
         prefs_mfn, replacement_mode_mfn = check_config(json_dir_mfn.strip())
         if replacement_mode_mfn:
             print('We are in replacement mode')
@@ -752,16 +819,16 @@ if __name__ == '__main__':
         path = main_file.name.replace("/", "\\") if main_file is not None else None
         if path is None:
             print('You didn\'t select anything')
-            exit()
-        print(path)
-        json_dir = open_file('mode.txt')
-        prefs, replacement_mode = check_config(json_dir.strip())
-        if replacement_mode:
-            print('We are in replacement mode')
-            word_file = WordFileCombo(path, prefs)
         else:
-            word_file = WordFile(path, prefs)
-        word_file.sequence()
+            print(path)
+            json_dir = open_file('mode.txt')
+            prefs, replacement_mode = check_config(json_dir.strip())
+            if replacement_mode:
+                print('We are in replacement mode')
+                word_file = WordFileCombo(path, prefs)
+            else:
+                word_file = WordFile(path, prefs)
+            word_file.sequence()
     finally:
         print('Ending program. If a PDF was never compiled, it means something\'s wrong with'
               ' the file you\'ve chosen.')
