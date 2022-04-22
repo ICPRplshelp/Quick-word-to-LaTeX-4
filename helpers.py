@@ -1795,7 +1795,7 @@ def split_equation(text: str, max_len: int, list_mode: bool = False) -> Union[No
             cur_line.append(eqn_line)
             cur_line_len = calculate_eqn_length(''.join(cur_line))
             # stack it up
-            if cur_line_len > math.floor(max_len * 0.35) and len(cur_line) >= 2:
+            if cur_line_len > math.floor(max_len * 0.50) and len(cur_line) >= 2:
                 # stack it down
                 cur_line.pop(-1)
                 master.append(cur_line)
@@ -2237,6 +2237,7 @@ def any_layer(text: str, index: int, start: str, end: str) -> int:
     >>> any_layer(text_t, 19, start_t, end_t)
     1
     """
+    bsq = start.startswith('\\') or end.startswith('\\')
     n1 = 1
     starting_ind = []
     while True:
@@ -2244,7 +2245,13 @@ def any_layer(text: str, index: int, start: str, end: str) -> int:
         if temp_ind == -1:
             break
         else:
-            starting_ind.append(temp_ind)
+            if bsq:
+                if not text[temp_ind + len(start)].isalpha():
+                    # prevents mistaking \rightarrow
+                    starting_ind.append(temp_ind)
+            else:
+                starting_ind.append(temp_ind)
+
             n1 += 1
     n2 = 1
     ending_ind = []
@@ -2253,7 +2260,11 @@ def any_layer(text: str, index: int, start: str, end: str) -> int:
         if temp_ind2 == -1:
             break
         else:
-            ending_ind.append(temp_ind2)
+            if bsq:
+                if not text[temp_ind2 + len(end)].isalpha():
+                    ending_ind.append(temp_ind2)
+            else:
+                ending_ind.append(temp_ind2)
             n2 += 1
     start_depth = lst_smaller_index(index, starting_ind)
     ending_depth = lst_smaller_index(index, ending_ind)
