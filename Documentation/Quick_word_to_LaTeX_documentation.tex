@@ -1,0 +1,1064 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Quick-Word-To-LaTeX Documentation},
+  pdfauthor={ICPR},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\usepackage[normalem]{ulem}
+% Avoid problems with \sout in headers with hyperref
+\pdfstringdefDisableCommands{\renewcommand{\sout}{}}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}\usepackage[fontsize=12pt]{scrextend}  % remove this if you don't want big text
+\usepackage[margin=0.75in]{geometry}
+\usepackage{amsthm}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\newtheorem{conjecture}{Conjecture}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+\newtheorem{note}{Note}
+\newtheorem{claim}{Claim}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]  % remove this to prevent sections from appearing
+\newtheorem{condition}{Condition}
+\newtheorem{problem}{Problem}[section]
+\newtheorem{example}{Example}[section]
+
+\renewcommand\qedsymbol{$\blacksquare$}  % set the QED symbol to a black square
+
+\usepackage[backend=bibtex8]{biblatex}  % change settings here to change the bibliography style
+
+\usepackage{mathtools}
+\usepackage{listings}
+\usepackage{csquotes}
+\usepackage{framed}
+% \usepackage{minted}  % uncomment this and set the code lang to activate
+
+\usepackage{color}
+\definecolor{bg}{rgb}{0.92, 0.92, 0.92}
+\usepackage{mdframed}
+\surroundwithmdframed[linewidth=0, backgroundcolor=bg]{minted}
+\usepackage{float}
+
+
+\addbibresource{Quick_word_to_LaTeX_documentation-citations.bib}
+
+
+
+
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Quick-Word-To-LaTeX Documentation}
+\author{ICPR}
+\date{April 2022}
+
+\begin{document}
+
+
+\maketitle
+
+\begin{abstract}
+
+
+
+This is the abstract of this document. What you type here will be put in
+the abstract. If you want this document as a template, you should save
+it as a \texttt{.dotx}, and place it in the Custom Office Templates in
+your documents folder, assuming you're using Windows. You can also save
+this as a new style set in \textbf{Design.}
+
+Keep in mind that the abstract title, the bolded ``\textbf{Abstract}'',
+must use the \emph{Abstract Title} style (or is unbolded), and must say
+\texttt{Abstract} exactly, word-for-word, and is case sensitive.
+Abstracts must be positioned at the start of the document, after the
+title, date, author, and so on. \uline{The abstract ends at the
+\textbf{next} section. It doesn't matter if the abstract is in the
+\emph{Abstract} style or not.}
+
+
+
+
+\end{abstract}
+
+\section{Introduction}
+
+This document serves as documentation for some modules provided by the
+\texttt{Quick-word-to-LaTeX} program, which uses Pandoc. The output by
+the program should look \textbf{very similar} to how the content appears
+in Microsoft Word. I've uploaded the \texttt{.docx}, \texttt{.pdf}, and
+\texttt{.tex} files for this document. For the PDF, I've uploaded the
+one generated from Microsoft Word and LaTeX.
+
+To quickly switch font styles if you're on Windows, use
+\texttt{CTRL+SHIFT+S}, type the style name, and press enter. There are
+shortcut keywords for some styles, such as \texttt{H1,\ H2,} and so on.
+For Mac OS users, just press \texttt{COMMAND-OPTION-1} to switch to
+heading 1, \texttt{COMMAND-OPTION-2} to switch to heading 2, and so on.
+
+
+\section{Caveats}
+
+Pandoc isn't perfect, and so is \texttt{Quick-word-to-LaTeX}. If you put
+some things in MS Word that tend to break LaTeX, the document can't be
+converted properly. The following things in this list are the things you
+should \textbf{avoid.}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3334}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3334}}@{}}
+\toprule
+\begin{minipage}[b]{\linewidth}\raggedright
+What is it
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Why doesn't it work?
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Chances of breaking the converter
+\end{minipage} \\
+\midrule
+\endhead
+Tables inside tables (UNLESS the table inside is used to define an
+environment, like \emph{framed,} and vice versa) & LaTeX does not like
+nested tables, and nested tables that aren't used to define environments
+will confuse the converter. & Always \\
+Not using inline mode for images & This can break Pandoc,
+\texttt{Quick-word-to-LaTeX}, and the LaTeX compiler. & Most of the
+time \\
+Using the inline code style to write source code & Inline code is
+analogous to \texttt{\textbackslash{}texttt}. Source code is analogous
+to the verbatim environment. & Most of the time \\
+Using CTRL+B or \emph{CTRL+I} in the equation editor & Doing so may
+confuse Pandoc. Sometimes, when you type something like \texttt{sin}
+into MS Word's equation editor and decide to erase it. If, for some
+reason, you didn't press CTRL+I and what you're typing in the equation
+editor is forced upright, just retype the entire equation or delete what
+you think is causing it. & Sometimes \\
+Creating fake headers by using bolded text, instead of using headers in
+the style sheet & It works, but it looks ugly, and it won't be
+recognized as a header. & Does not break the converter, but it looks
+ugly \\
+Placing Microsoft Word's built-in table of contents into the document &
+Don't do that. Enable table of contents in the configuration file if you
+want to do that. & Does not break the converter, but it looks ugly \\
+Making source or inline code lines too long & This creates overfull
+H-boxes. It's also very bad practice to make code lines extra-long. &
+Does not break the converter, but it looks ugly. \\
+Changing the font of the MS Word document by using CTRL+A, and changing
+the font from HOME & This is one way to make the fonts very inconsistent
+in a Microsoft Word document. The better way to change fonts is by doing
+to Design \textgreater{} Fonts. & Has nothing to do with
+\texttt{Quick-word-to-LaTeX}. This is just good practice. \\
+\bottomrule
+\end{longtable}
+
+You may notice that the table contains bolded text on the left, due to
+the fact that I selected a preset in the table design tab. If a design
+causes some parts of the table text to be formatted \textbf{bold} or
+\emph{slanted}, that formatting will \textbf{not} carry over to the
+LaTeX file.
+
+
+\section{Equations}
+
+There are three types of equations you can write in Microsoft Word.
+Equations are created with the \texttt{ALT+=} shortcut:
+
+\begin{itemize}
+\item
+  \textbf{Inline math.} For example, \(y = mx + b\) is an inline
+  equation.
+\item
+  \textbf{Display math.} Math that is placed on a new paragraph. The
+  equation below is display math:
+\end{itemize}
+
+\[ax^{2} + bx + c\]
+
+\begin{itemize}
+\item
+  \textbf{Aligned / stacked math.} Display math equations stacked on top
+  of each other using \texttt{SHIFT+ENTER}. I'll call them aligned math
+  because \texttt{Quick-word-to-LaTeX} will automatically align them,
+  regardless of how they appear in Microsoft Word.
+\end{itemize}
+
+\begin{align*}
+&\int_{}^{}{\sin^{3}(x)\text{d}x} \\
+&\int_{}^{}{\sin(x) \cdot \sin^{2}(x)\text{d}x} \\
+&\int_{}^{}{\sin(x)\left( 1 - \cos^{2}(x) \right)\text{d}x} \\
+u &= \cos(x) \\
+du &= \sin(x)\text{d}x \\
+&\int_{}^{}{\left( 1 - u^{2} \right)\text{d}u} \\
+&u - \frac{1}{3}u^{3} \\
+&\cos(x) - \frac{1}{3}\cos^{3}(x)
+\end{align*}
+
+
+When at least two equations are stacked on top of each other with
+\texttt{SHIFT+ENTER}, they will be aligned. If you want to have more
+control over alignments, you can try using matrices as equation arrays.
+
+
+\subsection{Long equations}
+
+A long equation is any equation that is over 110 characters long (by
+default). This is about the horizontal length of a page. If fractions
+are used, only the longer part of the fraction will count towards the
+equation character count. In Microsoft word, long equations will likely
+be broken automatically.
+
+\begin{align*}
+&a + b + c + d + e + f + g + h + i + j + k + l + m + n + o  \\
+&= q + r + s + t + u + v + w + x + y + z + a + b + c + d + e + f + g + h
+\end{align*}
+
+
+Because LaTeX can't automatically break equations, I've given the
+ability for \texttt{Quick-word-to-LaTeX} to break long equations apart.
+The characters that can split equations are:
+
+\[< ,\  > ,\  \leq ,\  \geq ,\  = ,\  \land ,\  \vee ,\  \subset ,\  \subseteq ,\  \Rightarrow\]
+
+However, if these characters don't appear for a while, then these
+characters can also split equations:
+
+\[+ ,\  - ,\  \times\]
+
+Meaning when equations are split, the second line onwards will always
+start with one of those above. This is done for \textbf{both}
+display-style and aligned / stacked equations.
+
+
+\subsection{Equation tips}
+
+You should check this article out:
+\href{https://github.com/ICPRplshelp/Quick-word-to-LaTeX-4/wiki/Microsoft-Word-Equation-Syntax}{https://github.com/ICPRplshelp/Quick-word-to-LaTeX-4/wiki/Microsoft-Word-Equation-Syntax/}.
+
+Here are some tips extracted from that article:
+
+\begin{itemize}
+\item
+  Bracket sizing is done automatically.
+\item
+  Most things done in braces in LaTeX equations are done with
+  parentheses in Microsoft Word.
+\item
+  Common functions like
+  \(\sin(x),\cos(x),\tan(x),\min(x,\ y),\max(x,\ y)\) are recognized
+  functions and will not be slanted. Alternatively, you can use
+  \texttt{\textbackslash{}funcapply} after typing the words of a
+  function to unslant the text. For example:
+  \texttt{samplefunction\textbackslash{}funcapply(...)}.
+\item
+  Accents and vectors are done like this: \(\mathbf{a}\) and
+  \(\overrightarrow{a}\). To type this, do the following keystrokes:
+  \texttt{a\textbackslash{}vec} then press space twice (to get the one
+  on the right). To get \(\mathbf{a}\), read the article I linked
+  above.
+\item
+  The syntax for matrices is
+  \texttt{{[}\textbackslash{}matrix(@@\&\&){]}} for a \(3 \times 3\)
+  matrix. Pressing space afterwards will give you a \(3 \times 3\) blank
+  matrix for you to work in.
+\item
+  Equation arrays are matrices without brackets.
+\item
+  Systems of equations are matrices only with visible braces on the
+  left. Here's an example of how to make one:
+  \texttt{\{\textbackslash{}matrix(x+2@x+4)\textbackslash{}close}. Note
+  that Microsoft Word's \texttt{\textbackslash{}close} is like LaTeX's
+  \texttt{\textbackslash{}right.} with the period.
+\item
+  Math blackboard fonts like \(\mathbb{Z}\) must be created using
+  \(\mathbb{Z}\). If you want to add this to the equation autocorrect,
+  read the article I linked above. For \texttt{mathcal}, it's
+  \texttt{\textbackslash{}scriptO} for \(\mathcal{O}\).
+\item
+  Fractions are done automatically, like how Desmos handles them.
+\item
+  When writing integrals, always hit space twice after typing
+  \texttt{\textbackslash{}int} if you want to create a double integral,
+  otherwise Microsoft word will see what you typed as just another
+  crowbar.
+\item
+  When creating limits, integrals, summations,
+  parentheses/brackets/braces, or some recognized functions, beware of
+  what is inside it or not. See the figure below.
+\end{itemize}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.26316in,height=0.63514in]{latex_images_Quick word to LaTeX documentation/media/image1.png}
+\end{figure}
+
+\begin{itemize}
+\item
+  The equation box on the top has \(324xdx\) in the integral, but the
+  equation box on the bottom has \(324xdx + 333\) in the integral. Use
+  the right arrow key to leave integral bounds.
+\item
+  Sometimes, Microsoft word will glitch out and force you to type
+  equation boxes at the bottom of the document. To fix this, copy
+  regular text to the bottom of the document to get you out of this
+  glitch.
+\item
+  You can set up equation autocorrect entries. Look at the link above to
+  figure out how to.
+\end{itemize}
+
+
+\subsection{Equation fonts}
+
+If you don't like MS Word's default math font, Cambria Math, I strongly
+recommend using
+\href{https://ctan.org/pkg/tex-gyre-math-termes?lang=en}{TeX Gyre Termes
+Math.} Remember that fonts with the name ``Math'' at the end are the
+only fonts that support equations. To change the default font for
+equations, set it up in the equation options in Equations (your cursor
+must be inside an equation) \textgreater{} The extra settings within
+conversions \textgreater{} check the image:
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.64328in,height=2.75344in]{latex_images_Quick word to LaTeX documentation/media/image2.png}
+\end{figure}
+
+TexGyreTermes looks a lot like Times New Roman. It is also the least
+buggiest out of all the other Microsoft Word math fonts other than
+Cambria Math.
+
+\textbf{As a warning, if you use custom fonts, always export MS Word
+documents using ``Microsoft Print to PDF.'' Otherwise, if you export as
+PDF from File \textgreater{} Export, issues can arise, namely fonts not
+being properly embedded.}
+
+
+\section{Inline and Source code}
+
+If you want \texttt{inline} or source code in a Word document, consider
+using the WordTeX template or the Pandoc template. You should be able to
+google both.
+
+This document makes use of the
+\href{https://www.youtube.com/watch?v=jlX_pThh7z8/}{WordTeX} template,
+so you can use this document as a template.
+
+You can either save this document as a template and put it in the MS
+Word templates folder, \textbf{or} you can save this document's style by
+going to \textbf{Design,} opening the list of style sets, and saving the
+style set for this document.
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=6.49089in,height=2.84196in]{latex_images_Quick word to LaTeX documentation/media/image3.png}
+\end{figure}
+
+After opening one of the templates / styles sets that support code
+blocks, you can initiate a code block by choosing it from the styles
+pane.
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=3.68403in,height=0.77778in]{latex_images_Quick word to LaTeX documentation/media/image4.png}
+\end{figure}
+
+Alternatively, you can use \texttt{CTRL+SHIFT+S} (Windows only) and type
+``Inline code'' to change the style to code blocks. Or you can use
+macros. You can press \texttt{CTRL+SPACE} to revert back to normal text
+when typing Inline code, or by switching the style back to normal.
+
+\texttt{CTRL+SHIFT+S} is useful if you want to quickly
+type headings. The WordTeX template, which this document is based on,
+has shortcuts: You can type \texttt{H1} in the style bar to apply the
+heading 1 style very quickly. You can create footnotes with
+\texttt{ALT+CTRL+F}.\footnote{Footnote.}
+
+For source code, on a new paragraph, set the style to source code. You
+can then paste in your code, \textbf{which must be formatted as plain
+text.}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.70764in,height=0.71944in]{latex_images_Quick word to LaTeX documentation/media/image5.png}
+\end{figure}
+
+\textbf{Pandoc does not recognize TABS used in Word documents, so always
+use four spaces to indent code.} To revert back from source code to
+normal text, switch the style back to normal using \texttt{CTRL+SHIFT+S}
+(type ``Normal'' and press enter. This shortcut is Windows only; Mac OS
+users must set this up themselves). \texttt{CTRL+SPACE} does not work
+for source code because the paragraph's style is set to source code.
+
+\textbf{Note: You may safely type LaTeX-like code in source code -- it
+will not break.}
+
+Here's an example:
+
+\begin{verbatim}
+def open_file(file: str, allow_exceptions: bool = False) -> str:
+    """Return file contents of any plain text file in the directory file.
+    """
+    if not allow_exceptions:
+        with open(file, encoding='UTF-8') as f:
+            file_text = f.read()
+        return file_text
+    else:
+        try:
+            with open(file, encoding='UTF-8') as f:
+                file_text = f.read()
+            return file_text
+        except FileNotFoundError:
+            return ''
+\end{verbatim}
+
+
+\section{Figure Numbering and
+Labels}
+
+This module is when you want to reference figures, tables, or equations
+in a document. You can label the following things:
+
+\begin{itemize}
+\item
+  Display-style equations
+\item
+  Images
+\item
+  Tables
+\end{itemize}
+
+\texttt{SHIFT+ENTER} is not used on this document other than in
+display-style equations.
+
+
+\subsection{Labeling Display-style
+equations}
+
+To number an equation, enter the equation followed by a \#, followed by
+the equation numbering. For example, the following keystrokes produce
+the equation below: \texttt{9+10\#(10)}
+
+
+\begin{equation}
+1 + 12\tag{1} \label{eq:1}
+\end{equation}
+
+
+You can number equations however you like, but it is good practice to
+wrap them around a bracket. If you do, then the equation number is the
+text you've entered within the brackets. In this case, the equation
+number is \texttt{1}. If you don't, then the equation number is the text
+you've added to the equation comment.
+
+If I want to reference this equation, I will type ``equation \ref{eq:1}'' or
+``Equation \ref{eq:1}.'' The program will search for all instances of the phrase
+``equation \ref{eq:1}'' and make the 1 clickable.
+
+You should not have any duplicate labels. This means each equation's
+number must be unique. \texttt{Quick-word-to-LaTeX} will try to make
+equations \textbf{look exactly how they appear in Microsoft Word.}
+
+As a warning, equation labels should be alphanumeric with decimals. The
+same goes for all other labels. Failing to do so will remove the label
+from the equation. For example, \(\left( \frac{4}{3} \right)\) as a
+label is unacceptable, and the label will be discarded (treated as if it
+were never there). Note that if an equation is numbered in Microsoft
+Word, it will stop having automatic line breaks, so avoid excessively
+long single-line equations if you decide to label them.
+
+\textbf{Long equations will have their numberings / labeling dropped
+before being split, because Microsoft Word does not give automatic line
+breaks to long equations. If ``overfull h-boxes'' appear in Microsoft
+Word, it means that you'll have to change something.}
+
+Equation labeling also works for aligned equations. For example:
+
+\begin{align*}
+&1 + 2 + 8\tag{2} \label{eq:2} \\
+&3 + 4 + 4\tag{3} \label{eq:3} \\
+&4 + 5 + 3 \\
+&7 + 8 + 2\tag{4} \label{eq:4}
+\end{align*}
+
+
+To show that labeling works, I'll type the following: equation \ref{eq:2},
+equation \ref{eq:3}, and equation \ref{eq:4}. Note that issues like these can appear:
+
+\begin{align*}
+&1 + 2 + 3\tag{5} \label{eq:5} \\
+&4 + 6 + 7 \\
+&8 + 9 + 10\tag{6} \label{eq:6}
+\end{align*}
+
+
+If that happens, select the equations that are flushed left and align
+them to the center (\texttt{CTRL+E}) for Windows users, or COMMAND-E for
+Mac OS users.
+
+
+\subsection{Labeling Images}
+
+To add a label to an image, do the following:
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=3.65169in,height=2.48767in]{latex_images_Quick word to LaTeX documentation/media/image6.png}
+\caption{This is an image.}
+\label{fig:p1}
+\end{figure}
+
+
+
+To reference this image, type ``figure \ref{fig:p1}.'' ``Figure \ref{fig:p1}'' also works.
+References work like equations. The image caption is
+\texttt{This\ is\ an\ image.} Denote the end of an image caption by
+creating a new paragraph. You should always caption images (however, the
+program will not crash if you don't).
+
+You should not have any duplicate labels. This means multiple figures
+with the same label are not allowed.
+
+Labels to images are optional. As a warning, image labels should be
+alphanumeric with decimals. The same goes for all other labels. Failing
+to do so will result in the label not being read.
+
+It does not matter whether the image is centered or not. The same
+applies to the caption. Pandoc cannot tell the difference between
+center-aligned text and left-aligned text.
+
+\emph{``Figure \ref{fig:p1}: This is an image'' should be below the image. No other
+text should be interrupting it, but you may press ``enter'' as many
+times as you want below the image before typing ``Figure \ref{fig:p1}: This is an
+image.'' All that matters is that no other text is placed between. Also,
+\textbf{do not format the figure numbering in any way (other than
+coloring it).}}
+
+
+\subsection{Labeling tables}
+
+Suppose I want to label this table.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3334}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3334}}@{}}
+\caption{This is a table.}\label{table:p1}
+\\\toprule
+\begin{minipage}[b]{\linewidth}\raggedright
+Trial
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Variable 1
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Variable 2
+\end{minipage} \\
+\midrule
+\endhead
+1 & 3 & 5 \\
+2 & 4 & 6 \\
+\bottomrule
+\end{longtable}
+
+
+
+To reference this table, type ``table \ref{table:p1}.'' ``Table \ref{table:p1}'' also work.
+References work like equations and images. Denote the end of a table
+caption by creating a new paragraph. You should always caption tables
+(however, the program will not crash if you don't).
+
+You should not have any duplicate labels. This means multiple tables
+with the same label are not allowed.
+
+Labels to tables are optional. Labels to images are optional. As a
+warning, image labels should be alphanumeric with decimals. The same
+goes for all other labels. Failing to do so will result in the label not
+being read.
+
+\emph{``Table \ref{table:p1}: This is a table'' should be below the image. No other
+text should be interrupting it, but you may press ``enter'' as many
+times as you want below the image before typing Table \ref{table:p1}: This is a
+table'' All that matters is that no other text is placed between. Also,
+\textbf{do not format the table numbering in any way (other than
+coloring it).}}
+
+
+\subsection{Summary}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3332}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3336}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}@{}}
+\toprule
+\begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Labelable object}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{How to label it (declaration)}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{How to reference it}
+\end{minipage} \\
+\midrule
+\endhead
+Equation & \(\begin{matrix}
+\int_{}^{}{f(x)\text{d}x}\#(2) \\
+\end{matrix}\)
+
+Note that equations won't be labeled properly if placed in tables, so
+this one will look weird in the LaTeX file. It's not good practice to do
+this. & By typing ``equation \ref{eq:2}''. \\
+Image / Figure & {[}IMAGE{]}
+
+Image 2: This is an image. & By typing ``figure 2''. \\
+Table & {[}TABLE{]}
+
+Table 2: This is the table. & By typing ``table 2''. \\
+\bottomrule
+\end{longtable}
+
+CTRL+F the words in quotation marks to see what will be affected.
+
+
+\section{Environments}
+
+Environments (mostly theorems) can be mimicked using Word or can be
+written in a way that it will be recognized by
+\texttt{Quick-word-to-LaTeX}.
+
+
+\subsection{Tables}
+
+You can use tables to mimic LaTeX environments. For the purposes of this
+document, we'll be using theorem-like environments. The following table
+will be translated to the following LaTeX code, assuming you're using
+the standard config:
+
+\begin{theorem}[The name of the theorem]
+
+The text that goes in the theorem
+\end{theorem}
+
+Produces the following code:
+
+\begin{verbatim}
+\begin{theorem}[The name of the theorem]
+    The text that goes in the theorem
+\end{theorem}
+\end{verbatim}
+
+The text is color-coded here so you'll know exactly what maps to where.
+Also, it does not matter if the word ``\textbf{Theorem}'' is
+\textbf{bolded} or \emph{slanted.}
+
+The following
+
+\begin{theorem}
+
+The text that goes in the theorem
+\end{theorem}
+
+Produces the following code:
+
+\begin{verbatim}
+\begin{theorem}
+    The text that goes in the theorem
+\end{theorem}
+\end{verbatim}
+
+The following environments are supported by default (NOT
+case-sensitive):
+
+\begin{itemize}
+\item
+  Theorem
+\item
+  Lemma
+\item
+  Corollary
+\item
+  Proposition
+\item
+  Conjecture
+\item
+  Remark
+\item
+  Note
+\item
+  Claim
+\item
+  Definition
+\item
+  Condition
+\item
+  Problem
+\item
+  Example
+\end{itemize}
+
+You can define other environments in the configuration file. However,
+that is very advanced. Any table that does not use any of the
+environments in the list, unless specified in the config, will not be
+converted to an environment.
+
+You can nest environments in other environments, or environments in
+tables.
+
+
+\subsection{Framing}
+
+Any 1x1 table will be converted to a \texttt{framed} environment. This
+means the following table will appear as the following code:
+
+\begin{framed}
+
+This text is framed. I can also frame equations:
+
+\[33 + 43 = 99\]
+
+\end{framed}
+
+
+
+Produces the following code:
+
+\begin{verbatim}
+\begin{framed}
+    This text is framed. I can also frame equations:
+    \[33+43=99\]
+\end{framed}
+\end{verbatim}
+
+
+\subsection{Proofs}
+
+You can type proofs like how they appear in LaTeX. Here's an example:
+
+\begin{proof} Left to the reader. 
+\end{proof}
+
+The substring ``\emph{Proof.}'' Indicates the start of a proof, and the
+box \(\blacksquare\) indicates the end of a proof. The substring
+``\emph{Proof.}'' \textbf{MUST} be at the start of a new paragraph. (The
+word ``\emph{Proof.}'' \textbf{must} be slanted, but it can be in the
+Normal style.)
+
+The box \(\blacksquare\) \textbf{MUST} be the QED symbol \textbf{inside}
+an equation. It must be this specific Unicode character, found here:
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.99873in,height=0.97409in]{latex_images_Quick word to LaTeX documentation/media/image7.png}
+\end{figure}
+
+There is no default math autocorrect for this box. You should add it
+yourself into the equation autocorrect. Select and copy this black
+square, go to the equations tab in MS Word (your cursor must be within
+an equation for the equations tab to show), click the bottom right of
+``conversions,'' and add the black box to the equation autocorrect.
+
+You may nest proofs in \texttt{framed} environments or other theorems,
+but I don't see any reason why to. Proofs may not be placed inside
+tables that are not used to create environments.
+
+\emph{After a proof starts, this program looks for the nearest equation
+with a black square and ends the proof after that equation, and also
+removes the black square it detected. Multiple equations stacked with
+SHIFT+ENTER will be treated as one equation. If it cannot detect a black
+square, then it will end the proof at the next header or the end of the
+current environment; whichever comes first. For example, if you begin a
+proof in a framed environment, the proof will always end at the end of
+the framed environment if there are no black squares stopping it.}
+
+\emph{Standalone black squares will just show up like regular black
+squares.}
+
+
+\subsection{LaTeX-like Theorems}
+
+The following text from MS Word in the frame produces the following
+LaTeX code:
+
+\begin{framed}
+
+\begin{definition}[The term of the definition]
+This is the text
+within the definition.
+
+\[1 + 2 = 3\]
+
+this is some text within the definition.
+\end{definition}
+
+This text is no longer in the definition.
+
+\end{framed}
+
+
+
+\begin{verbatim}
+\begin{definition}[The term of the definition]
+    This is the text within the definition.
+    \[1 + 2 = 3\]
+    this is some text within the definition.
+\end{definition}
+
+This text is no longer in the definition.
+\end{verbatim}
+
+The syntax is
+
+\begin{framed}
+
+\textbf{Env (Arguments).} Description
+
+\end{framed}
+
+
+
+The body of the environment (``Description'', in this case)
+\textbf{cannot start as bolded text}. This will mess with the
+environment detection.
+
+The end of the environment will be positioned
+
+\begin{itemize}
+\item
+  On the next paragraph, \textbf{only if:}
+
+  \begin{itemize}
+  \item
+    First character of the next paragraph is uppercase
+  \end{itemize}
+\end{itemize}
+
+Equations will not cause an environment defined like this to end. Also,
+lists and equations will not break these types of environments (even if
+the first letter in them is capital).
+
+The dash may be the dash that is typed (-) or the emdash (--).
+
+Also, these syntaxes are also supported:
+
+\begin{framed}
+
+\begin{definition}[Term]
+Text within the environment (bold
+period at the end).
+\end{definition}
+
+\begin{definition}[Term]
+Text within the environment (all bold).
+\end{definition}
+
+\begin{definition}[Term]
+Text within the environment (no bold).
+\end{definition}
+
+\begin{definition}
+Text within the environment (plain).
+\end{definition}
+
+\begin{definition}[Term]
+Text within the environment.
+\end{definition}
+
+\end{framed}
+
+
+
+Don't worry if spaces are bolded -- if a space character is adjacent to
+\textbf{both} a \textbf{bolded} character and a normal character, the
+space will be considered a normal character.
+
+You cannot define these environments inside
+
+\begin{itemize}
+\item
+  Lists like these.
+\end{itemize}
+
+However, you can define them in any table.
+
+
+\subsection{Quote}
+
+Quote environments can be placed using Microsoft Word's built in Quote
+(specifically this one) style:
+
+\begin{quote}
+This is a quote.
+\end{quote}
+
+Note: if you're not using this template, you may find the quote style to
+be slanted by default. The text will not be slanted in the LaTeX file
+that is output by \texttt{Quick-word-to-LaTeX}. If the text in the quote
+is not slanted by default, then \emph{slanting} specific parts of the
+quote will slant only the parts you slanted in the LaTeX file. The same
+applies to default styling caused by using Microsoft Word's tables.
+
+
+\section{Citations}
+
+Citations can be typed such that it will be recognized by
+\texttt{Quick-word-to-LaTeX}. The bibliography style is default, but you
+can always change it in the preamble.
+
+
+\subsection{Setting up the
+bibliography}
+
+You can set up the bibliography in \textbf{either} of the two ways. Both
+ways require a level 1 heading named \texttt{Bibliography} in the
+document, with no bolding or \emph{slanting}:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  Copy-pasting what you would put in the \texttt{.bib} file inside the
+  bibliography region (\textbf{must be named} \texttt{Bibliography}
+  \textbf{word-for-word, with no formatting, and must be a level 1
+  header)} in the Microsoft Word document, \textbf{which must be
+  formatted as source code, and the formatting must be continuous
+  (format may not change back to Normal mid-way)}. You can see this done
+  in the document if you scroll down to the bibliography section.
+\item
+  Having a \texttt{.bib} file ready. The program will prompt you to
+  select one if:
+
+  \begin{enumerate}
+  \def\labelenumii{\alph{enumii}.}
+  \item
+    You did not enter the bibliography entries in the Microsoft
+    Document, as stated above in bold, and
+  \item
+    There is a level 1 heading named \texttt{Bibliography} with no
+    formatting. Then, everything in the bibliography section will be
+    erased (up until the next level 1 heading).
+  \end{enumerate}
+\end{enumerate}
+
+
+\subsection{In-text citations}
+
+To do an in-text citation assuming you have the bibliography set up,
+there are three ways to do so. Note that the author tag is
+\texttt{sampleArticle} in these examples. The text I've highlighted in
+orange is considered variable text -- text not highlighted in orange
+must remain as-is.
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  \textbf{Citing the author only.} For example: ``LaTeX is a software
+  system for document preparation'' \cite{sampleArticle}. The syntax is the
+  author tag surrounded by parentheses.
+\item
+  \textbf{Citing the author and the page number.} For example: ``LaTeX
+  is a software system for document preparation''\cite[1]{sampleArticle}.
+  The syntax is the author tag surrounded by parentheses, but after the
+  author tag, place a comma, a space, the lowercase letter \texttt{p}
+  followed by a period, another space, and the page number.
+\item
+  \textbf{Citing multiple authors.} For the purposes of this document,
+  we'll be citing the same author multiple times: ``LaTeX is a software
+  system for document preparation'' \cite{sampleArticle,sampleArticle}. Page numbers are not supported here. The syntax is
+  multiple author tags in the region surrounded by parentheses, each
+  separated by a comma \textbf{and} precisely one space character.
+\end{enumerate}
+
+
+
+\medskip
+\printbibliography[heading=bibnumbered]
+
+\section{Further readings}
+
+Here are some readings that I find particularly useful:
+
+\begin{itemize}
+\item
+  \url{https://www.andrew.cmu.edu/user/twildenh/wordtex/WordTeXPaper.pdf}
+\item
+  \url{https://www.youtube.com/watch?v=jlX_pThh7z8/}
+\item
+  \url{https://unicode.org/notes/tn28/UTN28-PlainTextMath-v3.pdf}
+\item
+  \url{https://en.wikibooks.org/wiki/Typing_Mathematics_in_Microsoft_Word}
+\item
+  \url{https://support.microsoft.com/en-us/office/linear-format-equations-using-unicodemath-and-latex-in-word-2e00618d-b1fd-49d8-8cb4-8d17f25754f8}
+\end{itemize}
+
+\end{document}
