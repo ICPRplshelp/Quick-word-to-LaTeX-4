@@ -388,7 +388,8 @@ class WordFile:
         if 'book' in self.preferences.document_class:
             text = dbl.make_chapter(text)
         if self.preferences.conceal_verbatims:
-            text, dict_info_hide_verb = dbl.hide_verbatims(text, self.preferences.bibliography_keyword)
+            text, dict_info_hide_verb = dbl.hide_verbatims(text, self.preferences.bibliography_keyword,
+                                                           self.preferences.verbatim_plugin)
         if self.preferences.hypertarget_remover:
             text = w2l.hypertarget_eliminator(text)
         if self.preferences.fix_vectors:
@@ -446,7 +447,8 @@ class WordFile:
         if self.preferences.modify_tables:  # LONGTABLE ELIMINATOR
             disallow_tab_f = self.preferences.disable_table_figuring or self.preferences.disallow_figures
             text = dbl.eliminate_all_longtables(text, disallow_tab_f,
-                                                self.preferences.allow_no_longtable)
+                                                self.preferences.allow_no_longtable,
+                                                float_type=self.preferences.image_float)
         # use refs, which work in a very similar way to how it is implemented in tables
         if self.preferences.label_equations:
             text = dbl.bulk_labeling(text, labels_so_far, 'equation', 'ref', 'eq')
@@ -473,7 +475,7 @@ class WordFile:
             text = dbl.combine_environments(text, 'align*')
         # combines matrices. This is forced.
         text = dbl.aug_matrix_spacing(text)
-        if self.preferences.verbatim_lang != '':
+        if self.preferences.verbatim_plugin in ('lstlisting', 'minted'):
             text = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang, self.preferences.verbatim_plugin)
             # I might have to change this if I ever decide to use auto
             # language detection

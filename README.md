@@ -43,6 +43,7 @@ A good practice is to never drag anything directly into the folder where this pr
 - If the compiler is pdfLaTeX, Unicode characters not in equations
 - Using **CTRL+B** or *CTRL+I* in the equation editor (please don't do that, use "quotation marks" to ``\text{...}`` things in equations, and use `\funcapply` to unslant functions.)
 - **Nesting tables within other tables, or placing images within tables, UNLESS they are tables used to make environments.**
+- Placing aligned equations in tables not used for environments
 
 Everything else shouldn't break this program.
 

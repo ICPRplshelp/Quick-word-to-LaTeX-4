@@ -15,7 +15,29 @@ PREAMBLE_PATH = ('preamble.txt', 'preamble_LTable.txt', 'preamble_light.txt')
 APA_MODE = True
 ALPHABET = 'abcdefghijklmnopqrstuvwxyz'
 ALPHABET_ALL = ALPHABET + ALPHABET.upper() + '1234567890-+.,*/?!='
-MAX_PAGE_LENGTH = 32
+MAX_PAGE_LENGTH = 40
+ALLOW_SPACES_IN_LANGUAGES = True
+MINTED_LANGUAGES = {'cucumber', 'abap', 'ada', 'ahk', 'antlr', 'apacheconf', 'applescript', 'as', 'aspectj', 'autoit',
+                    'asy', 'awk', 'basemake', 'bash', 'bat', 'bbcode', 'befunge', 'bmax', 'boo', 'bro',
+                    'bugs', 'c', 'ceylon', 'cfm', 'cfs', 'cheetah', 'clj', 'cmake', 'cobol', 'cl', 'console', 'control',
+                    'coq', 'cpp', 'croc', 'csharp', 'css', 'cuda', 'cyx', 'd', 'dg', 'diff', 'django', 'dpatch', 'duel',
+                    'dylan', 'ec', 'erb', 'evoque', 'fan', 'fancy', 'fortran', 'gas', 'genshi', 'glsl', 'gnuplot', 'go',
+                    'gosu', 'groovy', 'gst', 'haml', 'haskell', 'hxml', 'html', 'http', 'hx', 'idl', 'irc', 'ini',
+                    'java', 'jade', 'js', 'json', 'jsp', 'kconfig', 'koka', 'lasso', 'livescrit', 'llvm', 'logos',
+                    'lua', 'mako', 'mason', 'matlab', 'minid', 'monkey', 'moon', 'mxml', 'myghty', 'mysql', 'nasm',
+                    'newlisp', 'newspeak', 'numpy', 'ocaml', 'octave', 'ooc', 'perl', 'php', 'plpgsql', 'postgresql',
+                    'postscript', 'pot', 'prolog', 'psql', 'puppet', 'python', 'qml', 'ragel', 'raw', 'ruby', 'rhtml',
+                    'sass', 'scheme', 'smalltalk', 'sql', 'ssp', 'tcl', 'tea', 'tex', 'text', 'vala', 'vgl', 'vim',
+                    'xml', 'xquery', 'yaml'}
+
+LISTING_LANGUAGES = {'ABAP', 'ACSL', 'Ada', 'Algol', 'Ant', 'Assembler', 'Awk', 'bash', 'Basic', 'C', 'C++', 'Caml',
+                     'CIL', 'Clean', 'Cobol', 'Comal', '80', 'command.com', 'Comsol', 'csh', 'Delphi', 'Eiffel', 'Elan',
+                     'erlang', 'Euphoria', 'Fortran', 'GCL', 'Gnuplot', 'Haskell', 'HTML', 'IDL', 'inform', 'Java',
+                     'JVMIS', 'ksh', 'Lingo', 'Lisp', 'Logo', 'make', 'Mathematica', 'Matlab', 'Mercury', 'MetaPost',
+                     'Miranda', 'Mizar', 'ML', 'Modula-2', 'MuPAD', 'NASTRAN', 'Oberon-2', 'OCL', 'Octave', 'Oz',
+                     'Pascal', 'Perl', 'PHP', 'PL/I', 'Plasm', 'PostScript', 'POV', 'Prolog', 'Promela', 'PSTricks',
+                     'Python', 'R', 'Reduce', 'Rexx', 'RSL', 'Ruby', 'S', 'SAS', 'Scilab', 'sh', 'SHELXL', 'Simula',
+                     'SPARQL', 'SQL', 'tcl', 'TeX', 'VBScript', 'Verilog', 'VHDL', 'VRML', 'XML', 'XSLT'}
 
 
 class MinipageInLongtableError(Exception):
@@ -72,27 +94,36 @@ def longtable_split_detector(text: str) -> str:
     return '\n\n'.join([before, during, after])
 
 
-def longtable_eliminator(text: str, label: str = '', caption: str = '') -> str:
+def longtable_eliminator(text: str, label: str = '', caption: str = '', float_type: str = 'h') -> str:
     """Instance - Here, everything is in a longtable.
     j is the number of times this has run starting from 0.
     text is a longtable instance.
     """
+    band = 'GfªsBDÜG'
+
+    tab_start = '\\endhead'
+    tab_end = '\\bottomrule'
+    tab_s_index = find_not_in_any_env_tolerance(text, tab_start, 0, 2, 1) + len(tab_start)
+    tab_e_index = find_not_in_any_env_tolerance(text, tab_end, 0, 2, 1)
+
     headers_so_far = []
     left_border = '\\begin{minipage}[b]{\\linewidth}\\raggedright\n'
-    right_border = '\\end{minipage}'  # leading \n only
+    # right_border = '\\end{minipage}'  # leading \n only
     i = 1
+    # highest_index = 0
+    env_dict = {'longtable': 2}
+
     while True:
-        left_index = find_nth(text, left_border, i) + len(left_border)
-        right_index = find_nth(text, right_border, i)
+        left_index = find_not_in_environment_tolerance(text, left_border, env_dict, 0, i) + len(left_border)
+        right_index = find_env_end(text, left_index - len(left_border), 'minipage')
         if right_index == -1:
+            # we need to change how base cases are detected.
             break
+        # highest_index = right_index
         cur_header = text[left_index:right_index].strip()
         headers_so_far.append(cur_header)
         i += 1
-    tab_start = '\\endhead'
-    tab_end = '\\bottomrule'
-    tab_s_index = find_nth(text, tab_start, 1) + len(tab_start)
-    tab_e_index = find_nth(text, tab_end, 1)
+
     if tab_s_index != tab_e_index:
         tab_data = text[tab_s_index:tab_e_index].strip()
         # tab_data = table_minipage_cleaner(tab_data)
@@ -100,7 +131,7 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '') -> str:
         tab_data = ''
     first_row = '& '.join(headers_so_far)
     if '\\begin{minipage}' in first_row:
-        raise MinipageInLongtableError
+        pass  # raise MinipageInLongtableError
 
     header_count = len(headers_so_far)
     # a table can have up to 3 headers until we start splitting up the tables.
@@ -113,17 +144,28 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '') -> str:
     vertical_line = '|'
     table_width = ((vertical_line + seperator) * header_count) + vertical_line
     if tab_data != '':
-        tab_data = '\n\\hline\n' + first_row + '\\\\ \\hline\n' + tab_data + '\n\\hline\n'
+        fbd_env = ['align', 'align*', 'tabular', 'table', 'longtable', 'minipage']
+        tab_data = tab_data.replace('\\&', band)
+        split_data = str_split_not_in_env(tab_data, R'\\', fbd_env)
+        columns = []  # [[a, b, c, d], [e, f, g, h]]
+        for roow in split_data:
+            cols = str_split_not_in_env(roow, '&', fbd_env)
+            cols = [minipage_remover(x.strip()) for x in cols]
+            columns.append(cols)
+        rows_stage_2 = [' & '.join(x) for x in columns]
+        tab_data = ' \\\\ \\hline\n'.join(rows_stage_2)
+        tab_data = '\n\\hline\n' + first_row + '\\\\ \\hline\n' + tab_data + '\n\\\\\\hline\n'
     else:
         tab_data = '\n\\hline\n' + first_row + '\n\\hline'
     if caption != '':
         caption_info = '\\caption{' + caption + '}\n'
     else:
         caption_info = ''
-    table_start = '\\begin{table}[h]\n\\centering\n' + label + '\n\\begin{tabular}{' + table_width + '}\n'
+    table_start = '\\begin{table}[' + float_type + ']\n\\centering\n' + label + '\n\\begin{tabular}{' + table_width \
+                  + '}\n'
     table_end = '\\end{tabular}\n' + '\n' + caption_info + '\\end{table}\n'
     if '\\begin{minipage}' in tab_data:
-        raise MinipageInLongtableError
+        pass  # raise MinipageInLongtableError
     new_table = table_start + tab_data + table_end
     new_table = new_table.replace(R'\[', R'\(')  # all math in tables are inline math
     new_table = new_table.replace(R'\]', R'\)')
@@ -300,7 +342,7 @@ def fix_texttt(text: str) -> str:
     text = text.replace('🭀', R'\}')
     # w_quote_remove = lambda s: s.replace('‘', "'").replace('’', "'")
     # text = w_quote_remove(text)
-    text = text.replace('‘', "'").replace('’', "'")
+    text = text.replace('‘', "'").replace('’', "'").replace('“', '"').replace('”', '"')
 
     # for i, char in enumerate(text):
     #     if prev_char in ALPHABET_ALL and char == '\\':
@@ -321,7 +363,8 @@ def three_way_isolation(text: str, left_index: int, right_index: int) -> tuple[s
 
 
 def eliminate_all_longtables(text: str, disallow_figures: bool = True,
-                             replace_longtable: bool = True, split_longtables: bool = False) -> str:
+                             replace_longtable: bool = True, split_longtables: bool = False,
+                             float_type: str = 'h') -> str:
     """Eliminate all longtables.
     Upper function for the other
 
@@ -370,7 +413,7 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
             if split_longtables:
                 during = longtable_split_detector(during)
             if replace_longtable:
-                new_table_info = longtable_eliminator(during, fig_label, figure_caption)
+                new_table_info = longtable_eliminator(during, fig_label, figure_caption, float_type)
             else:
                 during = add_label_to_longtable(during, figure_caption, fig_label)
                 new_table_info = during
@@ -379,7 +422,7 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
             if split_longtables:
                 during = longtable_split_detector(during)
             if replace_longtable:
-                new_table_info = longtable_eliminator(during, '', '')
+                new_table_info = longtable_eliminator(during, '', '', float_type)
             else:
                 new_table_info = during
                 skip += 1
@@ -2198,23 +2241,63 @@ def retain_author_info(text: str) -> str:
     return author_text
 
 
-def verbatim_to_listing(text: str, lang: str, plugin: str = 'lstlisting') -> str:
+def verbatim_to_listing(text: str, lang: str, plugin: str = '') -> str:
     """Converts all verbatim environments to the language in question.
     No language detection is done.
     Language must be in this list:
     https://www.overleaf.com/learn/latex/Code_listing
     """
-    if plugin == 'minted':
-        params = ''
-        command_start = '\\begin{minted}' + params + '{' + lang + '}'
-        command_end = '\\end{minted}'
-    else:
-        command_start = '\\begin{lstlisting}[language=' + lang + ']'
-        command_end = '\\end{lstlisting}'
+    if plugin not in ('minted', 'lstlisting'):
+        return text
 
-    text = text.replace(R'\begin{verbatim}', command_start)
-    text = text.replace(R'\end{verbatim}', command_end)
+    language_dir = MINTED_LANGUAGES if lang == 'minted' else LISTING_LANGUAGES
+
+    skip = 1
+    bv = R'\begin{verbatim}'
+    ev = R'\end{verbatim}'
+    while True:
+        closest_verb = find_nth(text, bv, skip)
+        if closest_verb == -1:
+            break
+        # look for the end
+        ending_verb = find_env_end(text, closest_verb, 'verbatim')
+        before = text[:closest_verb]
+        during = '\n' + text[closest_verb + len(bv):ending_verb].strip() + '\n'
+        after = text[ending_verb + len(ev):]
+
+        language = ''
+        for lan in language_dir:
+            if lan.lower() in during.lower():
+                language = lan
+                break
+
+        assert language in language_dir or lang == ''
+        if language == '':
+            language = lang  # lang is the default language
+        # if it is still empty, then:
+        if language == '':
+            skip += 1
+            continue
+        # otherwise, it must have a language.
+        if plugin == 'minted':
+            params = ''
+            command_start = '\\begin{minted}' + params + '{' + language + '}'
+            command_end = '\\end{minted}'
+        else:
+            command_start = '\\begin{lstlisting}[language=' + language + ']'
+            command_end = '\\end{lstlisting}'
+
+        text = before + command_start + during + command_end + after
     return text
+
+
+def first_upper(text: str) -> str:
+    """Capitalize the first letter.
+    """
+    if len(text) > 0:
+        return text[0].upper() + text[1:]
+    else:
+        return text
 
 
 def any_layer(text: str, index: int, start: str, end: str) -> int:
@@ -2893,14 +2976,14 @@ def detect_if_bib_exists(text: str, bib_keyword: str) -> tuple[bool, str, int]:
     return True, text, r_location + 1
 
 
-def verb_encryptor(count: int) -> str:
+def verb_encryptor(count: int, lang: str = '') -> str:
     """This was a list of verb encryptors, but
     we wouldn't list everything
 
     Preconditions:
         - count >= 0
     """
-    return f'🬟{count}⚋⚌⚍⚎⚏🬯'
+    return f'ｗｗBLｗ{count}⚋⚌⚍⚎⚏ｗ{lang}ｗ' if lang != '' else f'ｗBTｗ{count}⚋⚌⚍⚎⚏ｗｗｗ'
 
 
 # def check_verbatims() -> str:
@@ -2941,7 +3024,7 @@ def what_section_is_this(text: str, index: int) -> Optional[str]:
         return section_name
 
 
-def hide_verbatims(text: str, track: str = 'Bibliography') -> tuple[str, dict[str, str]]:
+def hide_verbatims(text: str, track: str = 'Bibliography', verb_plugin: str = '') -> tuple[str, dict[str, str]]:
     """Hide all verbatim stuff.
     Put them in a dictionary.
 
@@ -2975,19 +3058,23 @@ def hide_verbatims(text: str, track: str = 'Bibliography') -> tuple[str, dict[st
             break
 
         before = text[:start_pos_2]
-        during = text[start_pos_2:end_pos_1]
+        during = text[start_pos_2:end_pos_1].replace('“', '"').replace('”', '"').replace("’", "'").replace("‘", "'")
         after = text[end_pos_1:]
 
-        curr_section = what_section_is_this(text, start_pos_1)
+        code_lang, during = identify_language(during, verb_plugin)
 
-        ve_value = verb_encryptor(i)
+        curr_section = what_section_is_this(text, start_pos_1)
+        if curr_section is None:
+            curr_section = 'NO<T A<P<<<<P>>>LICAB<LE AT THIS T<<IME'
+
+        ve_value = verb_encryptor(i, code_lang)
         dict_so_far[ve_value] = during
         during = ve_value
 
         if curr_section.strip() == track:
             dict_so_far['BIBLO'] = dict_so_far[ve_value]
 
-        text = before + during + after
+        text = before + '\n' + during + '\n' + after
         envs_traversed += 1
         i += 1
     return text, dict_so_far
@@ -2999,6 +3086,67 @@ def show_verbatims(text: str, verb_info: dict[str, str]) -> str:
     for key, value in verb_info.items():
         text = text.replace(key, value)
     return text
+
+
+def identify_language(text: str, verb_plugin: str = '') -> tuple[str, str]:
+    """Return the language of the
+    text. Return the text with the language removed.
+
+    Strip text
+    Ignore the first instances of //, #, or -- (one of the three)
+    Strip text
+    Next word has to declare the language
+    If so, then return the language and delete what
+    declared the language
+    Strip text
+
+    EXAMPLES:
+    >>> test_temp_text = 'python def foo(bar): # function body'
+    >>> identify_language(test_temp_text)
+    ('python', 'def foo(bar): # function body')
+
+    >>> test_temp_text = '# python def foo(bar): # function body'
+    >>> identify_language(test_temp_text)
+    ('python', 'def foo(bar): # function body')
+
+    >>> test_temp_text = 'def foo(bar): # function body'
+    >>> identify_language(test_temp_text)
+    ('', 'def foo(bar): # function body')
+
+
+    Preconditions:
+        - text was in a verbatim environment
+    """
+    if verb_plugin not in ('minted', 'lstlisting'):
+        return '', text
+
+    lang_list = MINTED_LANGUAGES if verb_plugin == 'minted' else LISTING_LANGUAGES
+
+    text = text.strip()
+    hold = text
+    comment_chars = ('//', '--')
+    if text.startswith(comment_chars):
+        text = text[2:].strip()
+    elif text.startswith('#'):
+        text = text[1:].strip()
+    next_nl = text.find('\n')
+    if ALLOW_SPACES_IN_LANGUAGES:
+        next_space = text.find(' ')
+    else:
+        next_space = -1
+    if next_nl == -1 and next_space == -1:
+        return '', hold
+    elif next_nl != 1 and next_space == -1:
+        breaker = next_nl
+    elif next_nl == -1 and next_space != -1:
+        breaker = next_space
+    else:
+        breaker = min(next_nl, next_space)
+    text, language = text[breaker + 1:].strip('\n'), text[:breaker].strip().lower()
+    if language in [x.lower() for x in lang_list]:
+        return language, text
+    else:
+        return '', hold
 
 
 def count_outer(text: str, key: str, avoid_escape_char: bool = True) -> int:
@@ -3403,10 +3551,10 @@ def str_split_not_in_env(text: str, sep: str, env: Union[str, list[str]]) -> lis
     the specified environment.
     """
     lst_so_far = []
-    curr_index = -1  # index of the last sep.
+    curr_index = -len(sep)  # index of the last sep.
     while True:
         prev_index = curr_index + len(sep)  # the char after sep
-        curr_index = find_not_in_environment(text, sep, env, curr_index + 1)  # char at sep
+        curr_index = find_not_in_environment(text, sep, env, curr_index + len(sep))  # char at sep
         if curr_index == -1:
             if not lst_so_far:
                 prev_index = 0

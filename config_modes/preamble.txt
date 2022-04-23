@@ -31,7 +31,7 @@
 \usepackage{listings}
 \usepackage{csquotes}
 \usepackage{framed}
-\usepackage{minted}  % _has_lang==True
+\usepackage{minted}  % verbatim_plugin==minted
 
 \usepackage{color}
 \definecolor{bg}{rgb}{0.92, 0.92, 0.92}
