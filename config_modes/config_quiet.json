@@ -28,7 +28,7 @@
   "combine_aligns": true,
   "table_of_contents": false,
   "special_proofs": false,
-  "forbid_images": true,
+  "forbid_images": false,
   "erase_pandoc_preamble": true,
   "verbatim_lang": "",
   "start_of_doc_text": "",

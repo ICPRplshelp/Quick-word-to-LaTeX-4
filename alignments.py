@@ -123,7 +123,7 @@ HARDCODED_TEXT = r"""\documentclass[fontsize=11pt]{article}
 \usepackage{longtable,booktabs,array,calc,etoolbox}
 \patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-
+\usepackage{hyperref}
 \providecommand{\href}[1]{\url{#1}}
 \usepackage{iftex}
 \usepackage[utf8]{inputenc}  

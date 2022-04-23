@@ -21,7 +21,7 @@ REPLAC = {'α': R'\alpha', 'β': R'\beta', 'γ': R'\gamma', 'δ': R'\delta', 'ϵ
           'λ': R'\lambda', 'θ': R'\theta', 'ϑ': R'vartheta', 'π': R'\pi', 'Ω': R'\Omega', 'ε': R'\varepsilon',
           'Λ': R'\Lambda', 'Δ': R'\Delta', 'μ': R'\mu', 'ν': R'\nu', 'ξ': R'\xi', 'ρ': R'\rho'}
 # REPLAC = {'α'}
-ALLOWED_LATEX_COMPILERS = {'pdflatex', 'xelatex'}
+ALLOWED_LATEX_COMPILERS = {'pdflatex', 'xelatex', 'luatex'}
 
 
 def open_file(file: str, allow_exceptions: bool = False) -> str:
@@ -162,22 +162,32 @@ class Preferences:
     # no matter what.
     modify_tables: bool = True  # determine whether tables should be modified.
     # if false, longtable eliminator and table labeling will not work.
-    document_class: str = ''  # the document class, or '' if it should not be changed.
+    document_class: str = ''  # the document class, or '' if it should not be changed. Either
+    # the name of the document class, or the document class command (it's a command if it has a
+    # backslash.)
     subsection_limit: int = -1  # the subsection limit. anything deeper will fallback to the limit. -1 disable
     bibliography_keyword: str = 'Bibliography'  # The first section with this name will be treated
     hide_comments: bool = True  # hide comments in the preamble
     # as the Bibliography.
     allow_abstract: bool = True  # determine whether abstracts are allowed.
     small_margins: bool = True  # whether big margins should be used.
-    latexing: bool = False  # LaTeX to \LaTeX
-    headings: bool = False  # Whether headings should be included
+    latexing: bool = False  # LaTeX to \LaTeX. This is very buggy and should be kept off.
+    headings: bool = False  # Whether headings should be included. This is redundant.
 
     conditional_preamble: bool = True  # whether to enable the conditional preamble.
     big_text: bool = True  # whether text should be large.
     _has_lang: bool = False  # private; do not modify.
-    sty_cls_files: Optional[list[str]] = None
-    hide_sty_cls_files: bool = False
-    image_float: str = 'H'
+    sty_cls_files: Optional[list[str]] = None  # a list of paths to .sty, .cls, .bst, or .def files,
+    # relative to main.py. This is only needed if these files exist in a sub-folder. If a config
+    # uses a preamble that requires custom sty, cls, bst, or def files, you should
+    # state them here.
+    hide_sty_cls_files: bool = False  # If sty_cls_files has entries, and this is set to true,
+    # get rid of the sty, cls, bst, and def files after compiling the LaTeX document.
+    image_float: str = 'H'  # the specifier used to place images. Remember that if this is
+    # 'H', then \usepackage{float} is mandatory in your preamble.
+    default_date: str = ''  # the default date, if none is stated. Empty if none.
+    default_author: str = ''  # the default author, if none is stated. Empty if none.
+
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -552,6 +562,10 @@ class WordFile:
         # else do nothing
         if self.preferences.document_class != '':
             text = dbl.change_document_class(text, self.preferences.document_class)
+        if self.preferences.default_date != '':
+            text = text.replace('\\date{}', '\\date{' + self.preferences.default_date + '}', 1)
+        if self.preferences.default_author != '':
+            text = text.replace('\\author{}', '\\author{' + self.preferences.default_author + '}', 1)
         self.text = text
 
     def export(self) -> None:
@@ -768,13 +782,16 @@ def move_sty_cls_files(files: list[str]) -> list[str]:
     return files_moved
 
 
-def check_config(json_path: str) -> tuple[Preferences, bool]:
+def check_config(json_path: str, overrides: dict) -> tuple[Preferences, bool]:
     """Return Preferences based on configurations.
     """
     with open(json_path) as json_file:
         data = json.load(json_file)
     try:
         # temp_data = dict(data)
+
+        for t_key, t_value in overrides.values():
+            data[t_key] = t_value
         field_names = set(f.name for f in fields(Preferences))
         cur_prefs = Preferences(**{k: v for k, v in data.items() if k in field_names})
         # this works perfectly
@@ -784,9 +801,11 @@ def check_config(json_path: str) -> tuple[Preferences, bool]:
     return cur_prefs, data["replacement_mode"]
 
 
-def main(config: str = '') -> None:
+def main(config: str = '', overrides: Optional[dict] = None) -> None:
     """Run this file.
     """
+    if overrides is None:
+        overrides = {}
     try:
         print('Opening the word document file open box. If noting opens, consider re-running this program.')
         main_file_mfn = askopenfile(mode='r', title='Open the word file you want to convert',
@@ -800,7 +819,7 @@ def main(config: str = '') -> None:
             json_dir_mfn = open_file('mode.txt')
         else:
             json_dir_mfn = config
-        prefs_mfn, replacement_mode_mfn = check_config(json_dir_mfn.strip())
+        prefs_mfn, replacement_mode_mfn = check_config(json_dir_mfn.strip(), overrides)
         if replacement_mode_mfn:
             print('We are in replacement mode')
             word_file_mfn = WordFileCombo(path_mfn, prefs_mfn)

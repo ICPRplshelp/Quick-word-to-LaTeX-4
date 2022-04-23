@@ -4115,7 +4115,10 @@ def change_document_class(text: str, document_class: str) -> str:
         return text
     document_class_ind = text.find('\\documentclass')
     end_of_doc_class_declaration = local_env_end(text, document_class_ind)
-    doc_class_text = '\\documentclass{' + document_class + '}'
+    if '\\' not in document_class:
+        doc_class_text = '\\documentclass{' + document_class + '}'
+    else:
+        doc_class_text = document_class
     text = text[:document_class_ind] + doc_class_text + text[end_of_doc_class_declaration + 1:]
     return text
 

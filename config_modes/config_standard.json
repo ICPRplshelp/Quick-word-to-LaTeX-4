@@ -4,6 +4,8 @@
   "auto_numbering": false,
   "big_text": true,
   "small_margins": true,
+  "default_date": "",
+  "default_author": "",
   "headings": true,
   "verbatim_lang": "",
   "verbatim_plugin": "minted",
