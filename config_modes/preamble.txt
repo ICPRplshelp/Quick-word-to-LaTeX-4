@@ -1,10 +1,18 @@
 \usepackage[fontsize=12pt]{scrextend}  % big_text==True
 \usepackage[includeheadfoot,margin=0.75in]{geometry}  % headings==True
-\usepackage[includeheadfoot,margin=0.75in]{geometry}  % headings==False
+\usepackage[margin=0.75in]{geometry}  % headings==False
 % Alternatively, take advantage of small_margins
 
-\usepackage{amsthm}
+% NOTE: comments with [param]==[condition] means that the line will only
+% be shown if [param], a varable in the config, matches [condition].
+% the equality is weak, so typing does not matter.
+% if [param] is not a supported value in the config, then it will
+% default to True.
 
+\usepackage{amsthm}
+\usepackage{float}
+
+% IF allow_environments==True
 \theoremstyle{plain}
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{lemma}{Lemma}
@@ -22,28 +30,50 @@
 \newtheorem{condition}{Condition}
 \newtheorem{problem}{Problem}[section]
 \newtheorem{example}{Example}[section]
+% ENDIF
 
-\renewcommand\qedsymbol{$\blacksquare$}  % set the QED symbol to a black square
+\renewcommand\qedsymbol{$\blacksquare$}  % allow_proofs==True
+% set the QED symbol to a black square
 
-\usepackage[backend=bibtex8]{biblatex}  % change settings here to change the bibliography style
+\usepackage[backend=bibtex8]{biblatex}  % _citations_enabled==True
+% change settings here to change the bibliography style
 
 \usepackage{mathtools}
 \usepackage{listings}
 \usepackage{csquotes}
 \usepackage{framed}
-\usepackage{minted}  % verbatim_plugin==minted
 
+% IF pdf_engine==NOTSETUP
+% \usepackage{fontspec}
+% \setmainfont{Times New Roman}
+
+\usepackage{unicode-math}
+\setmainfont{STIX Two Text}
+\setmathfont{STIX Two Math}
+\setmathfont[range={\mathcal,\mathbfcal},StylisticSet=1]{STIX Two Math}
+
+\setmonofont[Color={0019D4}]{JetBrains Mono}
+% ENDIF
+
+% IF verbatim_plugin==minted
+\usepackage{minted}
 \usepackage{color}
 \definecolor{bg}{rgb}{0.92, 0.92, 0.92}
 \usepackage{mdframed}
 \surroundwithmdframed[linewidth=0, backgroundcolor=bg]{minted}
-\usepackage{float}
+% ENDIF
 
-\usepackage{fancyhdr} % headings==True
-\pagestyle{fancy} % headings==True
-\fancyhf{} % headings==True
-\rhead{\leftmark} % headings==True
-\lhead{\rightmark} % headings==True
-\rfoot{Page \thepage} % headings==True
+
+% IF headings==True
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\leftmark}
+\lhead{\rightmark}
+\rfoot{Page \thepage}
+% ENDIF
 
 % \renewcommand{\arraystretch}{2}
+
+% \usepackage{setspace}
+% \doublespacing

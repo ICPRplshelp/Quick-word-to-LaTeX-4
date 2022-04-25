@@ -2,6 +2,7 @@ import json
 import os
 import tkinter
 from typing import Any
+import pygments
 
 import converter as conv
 from tkinter import Button, Label, StringVar, OptionMenu, Tk, BooleanVar, Checkbutton

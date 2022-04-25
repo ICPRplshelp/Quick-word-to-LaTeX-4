@@ -152,7 +152,7 @@ class Preferences:
     conceal_verbatims: bool = True  # prevent verbatim environments from being affected,
     # unless a module specifically affects verbatim environments.
     citation_brackets: bool = False  # whether brackets should wrap citations. Default for APA citations.
-    bibtex_def: str = '\\usepackage{biblatex}'  # bibtex def.
+    bibtex_def: str = '\\usepackage{biblatex}'  # this is useless.
     citation_keyword: str = 'cite'  # the citation keyword, with no backslash at the end.
     # \usepackage[style=verbose-ibid,backend=bibtex]{biblatex}
     # there is something a bit off with the citations' module.
@@ -162,7 +162,7 @@ class Preferences:
     # no matter what.
     modify_tables: bool = True  # determine whether tables should be modified.
     # if false, longtable eliminator and table labeling will not work.
-    document_class: str = ''  # the document class, or '' if it should not be changed. Either
+    document_class: str = '\\documentclass[12pt]{article}'  # the document class, or '' if it should not be changed. Either
     # the name of the document class, or the document class command (it's a command if it has a
     # backslash.)
     subsection_limit: int = -1  # the subsection limit. anything deeper will fallback to the limit. -1 disable
@@ -187,7 +187,8 @@ class Preferences:
     # 'H', then \usepackage{float} is mandatory in your preamble.
     default_date: str = ''  # the default date, if none is stated. Empty if none.
     default_author: str = ''  # the default author, if none is stated. Empty if none.
-
+    verbatim_options: str = ''  # options passed to minted and lstlisting used for
+    # code blocks
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -235,6 +236,7 @@ class WordFile:
     original_tex: bool
     erase_pandoc_preamble: bool  # erase the pandoc preamble.
     citations_enabled: bool
+    contains_longtable: bool
 
     _temp_tex_file: str
     _disallow_pdf: bool
@@ -245,7 +247,7 @@ class WordFile:
         Raise an InvalidFileTypeError if word_file_path is not a Microsoft word file.
         The only IO function allowed here is to open the Word file and create temp.tex
         """
-
+        self.contains_longtable = False
         self.citations_enabled = False
         if word_file_path[-5:] != '.docx' and word_file_path[-4:] != '.tex':
             raise InvalidFileTypeError
@@ -360,7 +362,7 @@ class WordFile:
                 ('pandoc', True),
                 (media_path, True),
                 ('-s', True),
-                (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level != 0),
+                (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level >= 1),
                 ('--toc', self.preferences.table_of_contents),
                 # ('--top-level-division=chapter', self.preferences.document_class in ['book', 'tufte-book']),
                 (self.word_file_path, True),  # FILTERS END HERE
@@ -375,6 +377,7 @@ class WordFile:
     def latex_repair(self) -> None:
         """Repair generated latex file.
         """
+        dataclass_dict = {}
         p_start = open_multiple_files(self.preferences.preamble_path)
 
         text = self.text
@@ -385,8 +388,8 @@ class WordFile:
         end = '\\end{document}'
         text, start, end = w2l.find_between(text, start, end)
         dict_info_hide_verb = {}
-        if 'book' in self.preferences.document_class:
-            text = dbl.make_chapter(text)
+        if -2 <= self.preferences.header_level <= -1:
+            text = dbl.make_chapter(text, depth=self.preferences.header_level)
         if self.preferences.conceal_verbatims:
             text, dict_info_hide_verb = dbl.hide_verbatims(text, self.preferences.bibliography_keyword,
                                                            self.preferences.verbatim_plugin)
@@ -476,7 +479,8 @@ class WordFile:
         # combines matrices. This is forced.
         text = dbl.aug_matrix_spacing(text)
         if self.preferences.verbatim_plugin in ('lstlisting', 'minted'):
-            text = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang, self.preferences.verbatim_plugin)
+            text = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang, self.preferences.verbatim_plugin,
+                                           self.preferences.verbatim_options)
             # I might have to change this if I ever decide to use auto
             # language detection
         # text = text.replace('…', '...')  # only occurs in verbatim envs
@@ -539,8 +543,13 @@ class WordFile:
         text = dbl.verbatim_regular_quotes(text)
         text = text.replace('ò÷öæ🬵🬶	🬷', '').strip()
 
+        if '\\begin{longtable}' in text:  # check if text has a longtable
+            self.contains_longtable = True  # and set contains longtable to true.
+
         if self.preferences.conditional_preamble:  # if this is off, everything shows up.
             dataclass_dict = asdict(self.preferences)
+            dataclass_dict['_citations_enabled'] = self.citations_enabled
+            dataclass_dict['_contains_longtable'] = self.contains_longtable
             # for the conditional preamble module,
             # if a value is not detected then it is
             # always true by default. it will
@@ -554,7 +563,8 @@ class WordFile:
                                               remove_default_font=self.preferences.replace_font,
                                               preamble_path=p_start,
                                               erase_existing_preamble=self.erase_pandoc_preamble,
-                                              omit_section_numbering=self.preferences.no_secnum)
+                                              omit_section_numbering=self.preferences.no_secnum,
+                                              dataclass_dict=dataclass_dict)
 
             if self.preferences.hide_comments:
                 preamble = dbl.remove_comments_from_document(preamble)
@@ -846,7 +856,7 @@ if __name__ == '__main__':
         else:
             print(path)
             json_dir = open_file('mode.txt')
-            prefs, replacement_mode = check_config(json_dir.strip())
+            prefs, replacement_mode = check_config(json_dir.strip(), {})
             if replacement_mode:
                 print('We are in replacement mode')
                 word_file = WordFileCombo(path, prefs)

@@ -4,10 +4,24 @@ by adding a lot of useful features and removes quirks
 that pandoc produces. The LaTeX document produced should look
 **very** similar to your MS Word document.
 
+## Requirements and Dependencies
+- Make sure Python 3.10 is installed on your computer.
+The best place to install python is through the
+Python official website.
+- You should also have Pandoc and LaTeX installed
+on your computer. I strongly recommend using
+**TeX Live** as your LaTeX distribution - search
+it up.
+- You also need some Python packages. Run
+these commands once Python is installed:
+
+```
+pip install pygments
+```
+
 ## Usage
 Make sure Python 3.10 is installed on your computer.
-**No external packages are required,** but pandoc
-and LaTeX should be installed on your computer.
+Pandoc and LaTeX should be installed on your computer.
 I suggest using TeX Live. I cannot guarantee
 that this will work for any other LaTeX distributions.
 

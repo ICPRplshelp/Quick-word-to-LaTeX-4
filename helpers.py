@@ -28,7 +28,7 @@ MINTED_LANGUAGES = {'cucumber', 'abap', 'ada', 'ahk', 'antlr', 'apacheconf', 'ap
                     'newlisp', 'newspeak', 'numpy', 'ocaml', 'octave', 'ooc', 'perl', 'php', 'plpgsql', 'postgresql',
                     'postscript', 'pot', 'prolog', 'psql', 'puppet', 'python', 'qml', 'ragel', 'raw', 'ruby', 'rhtml',
                     'sass', 'scheme', 'smalltalk', 'sql', 'ssp', 'tcl', 'tea', 'tex', 'text', 'vala', 'vgl', 'vim',
-                    'xml', 'xquery', 'yaml'}
+                    'xml', 'xquery', 'yaml', 'ts'}
 
 LISTING_LANGUAGES = {'ABAP', 'ACSL', 'Ada', 'Algol', 'Ant', 'Assembler', 'Awk', 'bash', 'Basic', 'C', 'C++', 'Caml',
                      'CIL', 'Clean', 'Cobol', 'Comal', '80', 'command.com', 'Comsol', 'csh', 'Delphi', 'Eiffel', 'Elan',
@@ -37,7 +37,7 @@ LISTING_LANGUAGES = {'ABAP', 'ACSL', 'Ada', 'Algol', 'Ant', 'Assembler', 'Awk', 
                      'Miranda', 'Mizar', 'ML', 'Modula-2', 'MuPAD', 'NASTRAN', 'Oberon-2', 'OCL', 'Octave', 'Oz',
                      'Pascal', 'Perl', 'PHP', 'PL/I', 'Plasm', 'PostScript', 'POV', 'Prolog', 'Promela', 'PSTricks',
                      'Python', 'R', 'Reduce', 'Rexx', 'RSL', 'Ruby', 'S', 'SAS', 'Scilab', 'sh', 'SHELXL', 'Simula',
-                     'SPARQL', 'SQL', 'tcl', 'TeX', 'VBScript', 'Verilog', 'VHDL', 'VRML', 'XML', 'XSLT'}
+                     'SPARQL', 'SQL', 'tcl', 'TeX', 'VBScript', 'Verilog', 'VHDL', 'VRML', 'XML', 'XSLT', 'ts'}
 
 
 class MinipageInLongtableError(Exception):
@@ -2241,7 +2241,7 @@ def retain_author_info(text: str) -> str:
     return author_text
 
 
-def verbatim_to_listing(text: str, lang: str, plugin: str = '') -> str:
+def verbatim_to_listing(text: str, lang: str, plugin: str = '', minted_params: str = '') -> str:
     """Converts all verbatim environments to the language in question.
     No language detection is done.
     Language must be in this list:
@@ -2249,8 +2249,8 @@ def verbatim_to_listing(text: str, lang: str, plugin: str = '') -> str:
     """
     if plugin not in ('minted', 'lstlisting'):
         return text
-
-    language_dir = MINTED_LANGUAGES if lang == 'minted' else LISTING_LANGUAGES
+    language_dir = {'minted': MINTED_LANGUAGES, 'lstlisting': LISTING_LANGUAGES}[plugin]
+    # MINTED_LANGUAGES if lang.strip().lower() == 'minted' else LISTING_LANGUAGES
 
     skip = 1
     bv = R'\begin{verbatim}'
@@ -2280,11 +2280,14 @@ def verbatim_to_listing(text: str, lang: str, plugin: str = '') -> str:
             continue
         # otherwise, it must have a language.
         if plugin == 'minted':
-            params = ''
+            params = minted_params if minted_params.startswith('[') and minted_params.endswith(']') else \
+                '[' + minted_params + ']'
             command_start = '\\begin{minted}' + params + '{' + language + '}'
             command_end = '\\end{minted}'
         else:
-            command_start = '\\begin{lstlisting}[language=' + language + ']'
+            params = minted_params[1:-1] if minted_params.startswith('[') and minted_params.endswith(']') else \
+                minted_params
+            command_start = '\\begin{lstlisting}[language=' + language + ', ' + params + ']'
             command_end = '\\end{lstlisting}'
 
         text = before + command_start + during + command_end + after
@@ -3120,7 +3123,7 @@ def identify_language(text: str, verb_plugin: str = '') -> tuple[str, str]:
     if verb_plugin not in ('minted', 'lstlisting'):
         return '', text
 
-    lang_list = MINTED_LANGUAGES if verb_plugin == 'minted' else LISTING_LANGUAGES
+    lang_list = {'minted': MINTED_LANGUAGES, 'lstlisting': LISTING_LANGUAGES}[verb_plugin]
 
     text = text.strip()
     hold = text
@@ -3144,6 +3147,8 @@ def identify_language(text: str, verb_plugin: str = '') -> tuple[str, str]:
         breaker = min(next_nl, next_space)
     text, language = text[breaker + 1:].strip('\n'), text[:breaker].strip().lower()
     if language in [x.lower() for x in lang_list]:
+        if language == 'ts':
+            language = 'js'  # swap the language
         return language, text
     else:
         return '', hold
@@ -4409,7 +4414,7 @@ def check_in_equation(text: str, index: int) -> bool:
 
 def conditional_preamble(text: str, keys: dict[str, Union[bool, int, str]]) -> str:
     """This is the CONDITIONAL PREAMBLE module. SYNTAX:
-    % CONDITION: var1|True
+    % CONDITION: var1==True
     When a line in the preamble is conditional,
     only show if it is true. If false, then discard.
 
@@ -4417,24 +4422,49 @@ def conditional_preamble(text: str, keys: dict[str, Union[bool, int, str]]) -> s
     """
     as_list = text.split('\n')
     added_back = []
+
+    force_hide = False
+
     for line in as_list:
         components = line.split('%')
-        if len(components) >= 2:
-            comment = components[1]
-            valid_comment_expression = check_valid_comment_expression(comment)
-            if valid_comment_expression is not None:
-                key, value = valid_comment_expression
-                left_side = keys.get(key, None)
-                # SUCCESSFUL BRANCH
-                if left_side is not None and (isinstance(left_side, str) or isinstance(left_side, bool)
-                                              or isinstance(left_side, int)):
-                    state = weak_equality(left_side, value)
-                    if state:
+        if not force_hide:
+            if len(components) >= 2:
+                comment = components[1]
+                if not comment.strip().startswith('IF'):
+                    # Default
+                    if condition_checker(comment, keys):
                         added_back.append(components[0])
-                    continue
-                # END OF SUCCESSFUL BRANCH
-        added_back.append(components[0])
+                    else:
+                        pass
+                else:
+                    # IF statement detected at the start
+                    # If an expression is invalid, the default is TRUE
+                    comment = comment.strip()[2:].strip()
+                    if not condition_checker(comment, keys):
+                        force_hide = True
+            else:  # If there isn't a comment, the default is TRUE
+                added_back.append(components[0])
+        else:
+            if len(components) >= 2 and components[1].strip().startswith('ENDIF'):
+                force_hide = False
+    added_back = remove_consecutive_empty_entries(added_back)
     return '\n'.join(added_back)
+
+
+def condition_checker(comment: str, keys: dict[str, Union[bool, int, str]],
+                      default: bool = True) -> bool:
+    """Input comment and keys. Check if True should be returned.
+    """
+    valid_comment_expression = check_valid_comment_expression(comment)
+    if valid_comment_expression is not None:
+        key, value = valid_comment_expression
+        left_side = keys.get(key, None)
+        # SUCCESSFUL BRANCH
+        if left_side is not None and (isinstance(left_side, str) or isinstance(left_side, bool)
+                                      or isinstance(left_side, int)):
+            state = weak_equality(left_side, value)
+            return state
+    return default
 
 
 def check_valid_comment_expression(text: str) -> Optional[tuple[str, str]]:
@@ -4455,12 +4485,59 @@ def weak_equality(left: Union[str, int, bool], right: Union[str, int, bool]) -> 
     return str(left) == str(right)
 
 
-def make_chapter(text: str, depth: int = 6) -> str:
-    """Shift everything to the left by 1.
+CH_TEST = R"""
+Please
+
+\section{h}
+
+\subsection{h}
+
+\subsubsection{h}
+
+\subsubsubsection{h}
+
+\subsubsubsubsection{h}
+
+"""
+
+
+def make_chapter(text: str, depth: int = 8, shift: int = -1) -> str:
+    """Shift everything to the left by the number stated in shift.
     Must be done before anything that messes with the sections.
+
+    Preconditions:
+        - -2 <= parts <= 0
     """
+    secs = ['part', 'chapter'] + [k * 'sub' + 'section' for k in range(depth + 2)]
+    # add 2 to secs for fairness
+    decrease = shift
     for i in range(0, depth):
-        st = '\\' + 'sub' * i + 'section{'
-        st2 = '\\chapter{' if i == 0 else '\\' + 'sub' * (i - 1) + 'section{'
+        # print(secs[i+2])
+        # print(secs[i+2+decrease])
+        st = '\\' + secs[i + 2] + '{'  # '\\' + 'sub' * i + 'section{'
+        st2 = '\\' + secs[i + 2 + decrease] + '{'
         text = text.replace(st, st2)
     return text
+
+
+def remove_consecutive_empty_entries(lst: list[str]) -> list[str]:
+    """If more than one empty entry occurs in a row, remove them.
+    """
+    new_list = []
+    last_empty = False
+    for item in lst:
+        if item != '':
+            new_list.append(item)
+            last_empty = False
+        elif not last_empty:
+            new_list.append(item)
+            last_empty = True
+        else:
+            pass  # do nothing
+    return new_list
+
+
+def has_longtable(text: str) -> bool:
+    """Return whether text has a longtable.
+    """
+    return '\\begin{longtable}' in text

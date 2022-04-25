@@ -120,9 +120,14 @@ HARDCODED_TEXT = r"""\documentclass[fontsize=11pt]{article}
 \usepackage{amsmath}
 \usepackage{amssymb}
 
-\usepackage{longtable,booktabs,array,calc,etoolbox}
+\usepackage{booktabs}
+\usepackage{array}
+% IF _contains_longtable==True
+\usepackage{longtable,calc,etoolbox}
 \patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+% ENDIF
+
 \usepackage{hyperref}
 \providecommand{\href}[1]{\url{#1}}
 \usepackage{iftex}
@@ -139,11 +144,16 @@ HARDCODED_TEXT_POST = r"""
 
 def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
                        remove_default_font: bool = False, preamble_path: str = '',
-                       erase_existing_preamble: bool = False, omit_section_numbering: bool = False) -> str:
+                       erase_existing_preamble: bool = False, omit_section_numbering: bool = False,
+                       dataclass_dict: Optional[dict] = None) -> str:
     """Deal with the preamble
     text is ALL the text within the preamble.
     """
+    if dataclass_dict is None:
+        dataclass_dict = {}
     # prestart = ''
+
+
 
     prestart = preamble_path
     if isinstance(has_bib_file, bool) and has_bib_file is True:
@@ -167,7 +177,9 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
     # for remove_instance in to_remove:
     #    processed_text = processed_text.replace(remove_instance, '', 1)
     else:
-        processed_text = HARDCODED_TEXT + prestart + HARDCODED_TEXT_POST + dbl.retain_author_info(
+        hc_text_pre = dbl.conditional_preamble(HARDCODED_TEXT, dataclass_dict)
+        hc_text_pos = dbl.conditional_preamble(HARDCODED_TEXT_POST, dataclass_dict)
+        processed_text = hc_text_pre + prestart + hc_text_pos + dbl.retain_author_info(
             text) + '\n\\begin{document}'
     # processed_text = dbl.date_today(processed_text)
     return processed_text
