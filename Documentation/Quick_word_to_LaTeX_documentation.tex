@@ -113,7 +113,7 @@ should \textbf{avoid.}
 \centering
 
 
-\begin{tabular}{|m{13em}|m{13em}|m{13em}|}
+\begin{tabular}{|m{11em}|m{11em}|m{11em}|}
 
 \hline
 What is it& Why doesn't it work?& Chances of breaking the converter\\ \hline
@@ -557,7 +557,7 @@ Suppose I want to label this table.
 
 \label{table:p1}
 
-\begin{tabular}{|m{13em}|m{13em}|m{13em}|}
+\begin{tabular}{|m{11em}|m{11em}|m{11em}|}
 
 \hline
 Trial& Variable 1& Variable 2\\ \hline
@@ -597,23 +597,29 @@ coloring it).}}
 \centering
 
 
-\begin{tabular}{|m{13em}|m{13em}|m{13em}|}
+\begin{tabular}{|m{11em}|m{11em}|m{11em}|}
 
 \hline
 \textbf{Labelable object}& \textbf{How to label it (declaration)}& \textbf{How to reference it}\\ \hline
-Equation & \(\begin{matrix}
-\int_{}^{}{f(x)\text{d}x}\#(2) \\ \hline
-\end{matrix}\)
+Equation & 
+\begin{equation}
+\int_{}^{}{f(x)\text{d}x}\tag{2} \label{eq:2}
+\end{equation}
 
-Note that equations won't be labeled properly if placed in tables, so
-this one will look weird in the LaTeX file. It's not good practice to do
-this. & By typing ``equation \ref{eq:2}''. \\ \hline
+
+Equation numbering can't always be put in tables. It will depend on what
+types of tables are used -- regular tables support them. & By typing
+``equation \ref{eq:2}''. \\ \hline
 Image / Figure & {[}IMAGE{]}
 
-Image 2: This is an image. & By typing ``figure 2''. \\ \hline
+Image 2: This is an image.
+
+Note that images should not be placed in tables unless they're being
+used for environments. & By typing ``figure 2''. \\ \hline
 Table & {[}TABLE{]}
 
-Table 2: This is the table. & By typing ``table 2''.
+Table 2: This is the table. Don't nest tables unless they're within
+tables being used for environments. & By typing ``table 2''.
 \\\hline
 \end{tabular}
 

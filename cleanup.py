@@ -6,6 +6,9 @@ import logging
 from typing import Iterable, Optional
 
 
+REMOVE_IMAGES = False
+
+
 def new_folder(folder_name: str) -> str:
     """Create a new directory in the same directory as this .py file, and return its path.
     """
@@ -111,17 +114,25 @@ def move_useless_files_away(file_name: str, additional_files: Optional[list[str]
     forbidden_filetypes = ['.aux', '.bcf', '.log', '.run.xml', '.bbl', '.blg', '.fdb_latexmk',
                            '.fls', '.synctex.gz', '-blx.bib']
     folder_name = 'TRASH_LATEX_FILES'
-    # image_directory = 'latex_images_'
+
+    image_directory = 'latex_images_'
+    minted_directory = '_minted-'
+
     directory_files = os.listdir(current_directory)
     new_folder_path = new_folder(folder_name)
     # logging.warning('TARGET FOLDER IS' + new_folder_path)
     files_to_move = [file_name + x for x in forbidden_filetypes if file_name + x in directory_files]
-    # if image_directory + file_name in directory_files:
-    #     files_to_move.append(image_directory + file_name)
+    if REMOVE_IMAGES and image_directory + file_name in directory_files:
+        files_to_move.append(image_directory + file_name)
+    if minted_directory + file_name in directory_files:
+        files_to_move.append(minted_directory + file_name)
     files_to_move.extend(additional_files)
     for fm in files_to_move:
         # logging.warning('REPLACED ' + fm)
-        os.replace(fm, new_folder_path + '\\' + fm)
+        try:
+            os.replace(fm, new_folder_path + '\\' + fm)
+        except PermissionError:
+            print(f'Cannot move file {fm}')
 
 
 WARNING_STR = f"""

@@ -121,7 +121,7 @@ def click() -> None:
     preamble_changes = {'forbid_images': zero_one_tf(hide_images_state.get()),
                         'pdf_engine': options[rd.get()]}
     print(preamble_changes)
-    conv.main(np)
+    conv.main(np, preamble_changes)
 
 
 def zero_one_tf(num: int) -> bool:

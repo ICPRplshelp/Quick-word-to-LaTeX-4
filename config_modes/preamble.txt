@@ -40,7 +40,7 @@
 
 \usepackage{mathtools}
 \usepackage{listings}
-\usepackage{csquotes}
+
 \usepackage{framed}
 
 % IF pdf_engine==NOTSETUP
@@ -77,3 +77,5 @@
 
 % \usepackage{setspace}
 % \doublespacing
+
+\usepackage{csquotes}

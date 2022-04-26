@@ -20,6 +20,7 @@
       <excludeFolder url="file://$MODULE_DIR$/latex_images_limx" />
       <excludeFolder url="file://$MODULE_DIR$/latex_images_Sequences_9" />
       <excludeFolder url="file://$MODULE_DIR$/latex_images_This_is" />
+      <excludeFolder url="file://$MODULE_DIR$/_minted-NUMBERING_IN_TABLES_2" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

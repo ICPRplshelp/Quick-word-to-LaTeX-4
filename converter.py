@@ -140,10 +140,12 @@ class Preferences:
     replacement_marker: str = 'TODO'  # the replacement marker in when using replacement mode
 
     table_of_contents: bool = False  # whether to include a table of contents.
-    header_level: int = 0  # headers to shift by. 0 means no, 1 means L1 -> L2, -1 means L2 -> L1
+    header_level: int = 0  # headers to shift by. 0 means no, 1 means L1 -> L2, -1 means L2 -> L1.
+    # Keep in mind htat header level 4s in the Word Document are always paragraphs and will
+    # not be affected by this setting.
     export_file_name_suffix: str = ''  # name of the exported tex and pdf file; no suffix
     media_folder_name: str = 'latex_images_'  # name of the image folder if any images are present
-
+    # This should always be set to 'latex_images_' to prevent bugs.
     override_title: bool = True  # override the title in the replacement mode by the title in the Word doc
     override_author: bool = True  # override the author in the replacement mode by the author in the Word doc
     # to define an author in a Word doc it must be defined in the style "author".
@@ -162,14 +164,13 @@ class Preferences:
 
     no_secnum: bool = False  # omit section numbering. This may affect how environments are numbered.
     conceal_verbatims: bool = True  # prevent verbatim environments from being affected,
-    # unless a module specifically affects verbatim environments.
+    # unless a module specifically affects verbatim environments. This should always
+    # be kept on.
     citation_brackets: bool = False  # whether brackets should wrap citations. Default for APA citations.
     bibtex_def: str = '\\usepackage{biblatex}'  # this is useless.
     citation_keyword: str = 'cite'  # the citation keyword, with no backslash at the end.
-    # \usepackage[style=verbose-ibid,backend=bibtex]{biblatex}
-    # there is something a bit off with the citations' module.
     cleanup: bool = True  # whether aux, bcf, log, and run.xml files should be removed only if
-    # a successful export occurs
+    # a successful export occurs. Image files will not be removed.
     disable_table_figuring: bool = False  # if set to true, prevents tables from being figured
     # no matter what.
     modify_tables: bool = True  # determine whether tables should be modified.
@@ -177,7 +178,8 @@ class Preferences:
     document_class: str = '\\documentclass[12pt]{article}'  # the document class, or '' if it should not be changed. Either
     # the name of the document class, or the document class command (it's a command if it has a
     # backslash.)
-    subsection_limit: int = -1  # the subsection limit. anything deeper will fallback to the limit. -1 disable
+    subsection_limit: int = -1  # the subsection limit. anything deeper will fallback to the limit.
+    # -1 disable
     bibliography_keyword: str = 'Bibliography'  # The first section with this name will be treated
     hide_comments: bool = True  # hide comments in the preamble
     # as the Bibliography.
@@ -201,6 +203,8 @@ class Preferences:
     default_author: str = ''  # the default author, if none is stated. Empty if none.
     verbatim_options: str = ''  # options passed to minted and lstlisting used for
     # code blocks
+    max_page_length: int = 35  # for use with the longtable eliminator module, how long
+    # a page is, in EM units.
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -411,6 +415,10 @@ class WordFile:
                                                            self.preferences.verbatim_plugin)
         if self.preferences.hypertarget_remover:
             text = w2l.hypertarget_eliminator(text)
+        if self.preferences.forbid_images:
+            logging.warning('About to remove images')
+            text = dbl.remove_images(text)
+
         if self.preferences.fix_vectors:
             text = w2l.fix_vectors(text)
             text = w2l.fix_vectors_again(text)
@@ -433,7 +441,8 @@ class WordFile:
             disallow_tab_f = self.preferences.disable_table_figuring or self.preferences.disallow_figures
             text = dbl.eliminate_all_longtables(text, disallow_tab_f,
                                                 self.preferences.allow_no_longtable,
-                                                float_type=self.preferences.image_float)
+                                                float_type=self.preferences.image_float,
+                                                max_page_len=self.preferences.max_page_length)
 
         eqn_comment = {'comment_type': self.preferences.eqn_comment_mode, 'label_equations':
             self.preferences.label_equations}
@@ -476,8 +485,7 @@ class WordFile:
             text = dbl.bulk_labeling(text, labels_so_far, 'equation', 'ref', 'eq')
         if self.original_tex:
             text, self._disallow_pdf = dbl.truncate_path(text, self._disallow_pdf)
-        if self.preferences.forbid_images:
-            text = dbl.remove_images(text)
+
             logging.warning('Removing images')
         elif self.preferences.center_images:
             text = dbl.detect_include_graphics(text, self.preferences.disallow_figures, self.preferences.image_float)
@@ -660,8 +668,8 @@ class WordFile:
             print('Finished!')
             assert self.output_path[-4:] == '.tex'
             if self.preferences.cleanup:
-                print('removing all unneeded files')
-                time.sleep(10)
+                print('removing all unneeded files in 5 seconds')
+                time.sleep(5)
                 output_nameless = self.output_path[:-4]
                 cleanup.move_useless_files_away(output_nameless, sty_cls)
 
@@ -821,7 +829,7 @@ def check_config(json_path: str, overrides: dict) -> tuple[Preferences, bool]:
     try:
         # temp_data = dict(data)
 
-        for t_key, t_value in overrides.values():
+        for t_key, t_value in overrides.items():
             data[t_key] = t_value
         field_names = set(f.name for f in fields(Preferences))
         cur_prefs = Preferences(**{k: v for k, v in data.items() if k in field_names})

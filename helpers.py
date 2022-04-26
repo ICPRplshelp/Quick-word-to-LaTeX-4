@@ -97,7 +97,8 @@ def longtable_split_detector(text: str) -> str:
     return '\n\n'.join([before, during, after])
 
 
-def longtable_eliminator(text: str, label: str = '', caption: str = '', float_type: str = 'h') -> str:
+def longtable_eliminator(text: str, label: str = '', caption: str = '', float_type: str = 'h',
+                         max_page_len: int = MAX_PAGE_LENGTH) -> str:
     """Instance - Here, everything is in a longtable.
     j is the number of times this has run starting from 0.
     text is a longtable instance.
@@ -136,7 +137,7 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
         tab_data = ''
 
     header_count = len(headers_so_far)
-    em_length = MAX_PAGE_LENGTH // header_count
+    em_length = max_page_len // header_count
     # a table can have up to 3 headers until we start splitting up the tables.
 
     headers_so_far = [process_equations_in_table_header(x, em_length) for x in headers_so_far]
@@ -383,7 +384,7 @@ def three_way_isolation(text: str, left_index: int, right_index: int) -> tuple[s
 
 def eliminate_all_longtables(text: str, disallow_figures: bool = True,
                              replace_longtable: bool = True, split_longtables: bool = False,
-                             float_type: str = 'h') -> str:
+                             float_type: str = 'h', max_page_len: int = 35) -> str:
     """Eliminate all longtables.
     Upper function for the other
 
@@ -432,7 +433,7 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
             if split_longtables:
                 during = longtable_split_detector(during)
             if replace_longtable:
-                new_table_info = longtable_eliminator(during, fig_label, figure_caption, float_type)
+                new_table_info = longtable_eliminator(during, fig_label, figure_caption, float_type, max_page_len)
             else:
                 during = add_label_to_longtable(during, figure_caption, fig_label)
                 new_table_info = during
@@ -441,7 +442,7 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
             if split_longtables:
                 during = longtable_split_detector(during)
             if replace_longtable:
-                new_table_info = longtable_eliminator(during, '', '', float_type)
+                new_table_info = longtable_eliminator(during, '', '', float_type, max_page_len=max_page_len)
             else:
                 new_table_info = during
                 skip += 1
@@ -602,7 +603,7 @@ def remove_images(text: str) -> str:
     """
     # figures_so_far = []
     all_lines = text.split('\n')
-    all_lines_2 = [x for x in all_lines if not x.startswith('\\includegraphics')]
+    all_lines_2 = [x for x in all_lines if not x.strip().startswith('\\includegraphics')]
     return '\n'.join(all_lines_2)
 
 
@@ -1675,15 +1676,15 @@ def split_all_equations(text: str, max_len: int, skip: int = 0,
 
                 eqn_label = get_equation_label(eqn_comment)
                 if eqn_label is not None:
-                    labeling = R'\tag{' + eqn_label + '} ' if tag_equations else ''
+                    labeling = R' \tag{' + eqn_label + '} ' if tag_equations else ''
                     if label_equations:
-                        labeling += '\\label{eq:' + eqn_label + '}'
+                        labeling += ' \\label{eq:' + eqn_label + '}'
                         equation_labels.append(eqn_label)
                     eqn_env_text = begin_equation + eqn_text + labeling + end_equation
                 else:  # no time for wrapping
                     logging.warning(f'equation {eqn_text} has an invalid comment; removing comment.'
                                     f' Invalid comments are not plain text or numbers.')
-                    eqn_env_text = '\\[' + eqn_text + '\\]'
+                    eqn_env_text = '\\[' + eqn_text + '  \\]'  # add a backslash before
                     skip += 1
                 text = text[:starting_index] + eqn_env_text + text[finishing_index + 2:]
             else:  # skip only if we didn't wrap this around an eqn environment
@@ -1691,7 +1692,7 @@ def split_all_equations(text: str, max_len: int, skip: int = 0,
         else:  # otherwise, updates are done, and then we continue.
             if equation_is_numbered:
                 logging.warning(f'Extra long numbered equation: {eqn_comment}. Comment deleted.')
-            text = text[:starting_index] + R'\[' + new_eqn_text + R'\]' + text[finishing_index + 2:]
+            text = text[:starting_index] + R'\[' + new_eqn_text + R' \]' + text[finishing_index + 2:]
             skip += 1
     # if equation_labels:  # if equation_labels isn't empty
     #     text = bulk_labeling(text, equation_labels, )
@@ -3851,7 +3852,7 @@ five six
 def find_in_same_environment(text: str, sub: str, start: int, skip: int = 1) -> int:
     """Find sub in the same environment as start.
 
-    Return -1 on  failure.
+    Return -1 on failure.
     """
     env_start = find_env_start(text, start)
     env_end = find_env_end(text, start)

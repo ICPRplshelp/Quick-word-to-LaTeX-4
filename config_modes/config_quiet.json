@@ -5,6 +5,7 @@
   "allow_citations": true,
   "allow_no_longtable": true,
   "allow_alignments": true,
+  "max_page_length": 35,
   "exclude_preamble": false,
   "citation_mode": "apa2",
   "replacement_mode": false,
@@ -34,109 +35,6 @@
   "start_of_doc_text": "",
   "citation_brackets": false,
   "no_secnum": false,
-  "environments": {
-    "Theorem": {
-      "env_name": "Theorem",
-      "start": "Theorem.",
-      "end": "End theorem.",
-      "encapsulation": "textbf",
-      "initial_newline": true,
-      "priority": 3,
-      "has_extra_args": true,
-      "extra_args_type": "bracket",
-      "env_suffix": ""
-    },
-    "Corollary": {
-      "env_name": "Corollary",
-      "start": "Corollary.",
-      "end": "End corollary.",
-      "encapsulation": "textbf",
-      "initial_newline": true,
-      "priority": 3,
-      "has_extra_args": false,
-      "extra_args_type": "bracket"
-    },
-    "Lemma": {
-      "env_name": "Lemma",
-      "start": "Lemma.",
-      "end": "End lemma.",
-      "encapsulation": "textbf",
-      "initial_newline": true,
-      "priority": 3,
-      "has_extra_args": false,
-      "extra_args_type": "bracket"
-    },
-    "Remark": {
-      "env_name": "Remark",
-      "start": "Remark.",
-      "end": "End remark.",
-      "encapsulation": "textbf",
-      "initial_newline": false,
-      "priority": 3,
-      "has_extra_args": false,
-      "extra_args_type": "bracket"
-    },
-    "Definition": {
-      "env_name": "Definition",
-      "start": "Definition.",
-      "end": "End definition.",
-      "encapsulation": "textbf",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": true,
-      "extra_args_type": "bracket",
-      "env_suffix": ""
-    },
-    "Example": {
-      "env_name": "Example",
-      "start": "Example.",
-      "end": "End example.",
-      "encapsulation": "textbf",
-      "initial_newline": false,
-      "priority": 2,
-      "has_extra_args": true,
-      "extra_args_type": "bracket",
-      "env_suffix": ""
-    },
-    "mytheorem": {
-      "env_name": "mytheorem",
-      "start": "MT.",
-      "end": "End MT.",
-      "encapsulation": "textbf",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": false,
-      "extra_args_type": "brace"
-    },
-    "hintbox": {
-      "env_name": "hintbox",
-      "start": "Hint.",
-      "end": "End hint.",
-      "encapsulation": "emph",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": true,
-      "extra_args_type": "brace"
-    },
-        "infobox": {
-          "env_name": "infobox",
-      "start": "Info.",
-      "end": "End info.",
-      "encapsulation": "emph",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": true,
-      "extra_args_type": "brace"
-    },
-        "warningbox": {
-          "env_name": "warningbox",
-      "start": "Warning.",
-      "end": "End warning.",
-      "encapsulation": "emph",
-      "initial_newline": false,
-      "priority": 1,
-      "has_extra_args": true,
-      "extra_args_type": "brace"
-    }
-  }
+  "image_float": "H",
+  "environments": ["Theorem", "Lemma", "Corollary", "Proposition", "Conjecture", "Remark", "Note", "Claim", "Definition", "Condition", "Problem", "Example"]
 }
