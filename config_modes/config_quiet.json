@@ -3,7 +3,7 @@
   "preamble_path": "config_modes/preamble.txt",
   "allow_proofs": true,
   "allow_citations": true,
-  "allow_no_longtable": false,
+  "allow_no_longtable": true,
   "allow_alignments": true,
   "exclude_preamble": false,
   "citation_mode": "apa2",

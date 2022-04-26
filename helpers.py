@@ -99,6 +99,8 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
     j is the number of times this has run starting from 0.
     text is a longtable instance.
     """
+    caption_on_top_of_table = False
+
     band = 'GfªsBDÜG'
 
     tab_start = '\\endhead'
@@ -152,6 +154,7 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
             cols = str_split_not_in_env(roow, '&', fbd_env)
             cols = [minipage_remover(x.strip()) for x in cols]
             columns.append(cols)
+        # what we do here to columns is the reconstruction of the table
         rows_stage_2 = [' & '.join(x) for x in columns]
         tab_data = ' \\\\ \\hline\n'.join(rows_stage_2)
         tab_data = '\n\\hline\n' + first_row + '\\\\ \\hline\n' + tab_data + '\n\\\\\\hline\n'
@@ -161,9 +164,16 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
         caption_info = '\\caption{' + caption + '}\n'
     else:
         caption_info = ''
-    table_start = '\\begin{table}[' + float_type + ']\n\\centering\n' + label + '\n\\begin{tabular}{' + table_width \
-                  + '}\n'
-    table_end = '\\end{tabular}\n' + '\n' + caption_info + '\\end{table}\n'
+    if caption_on_top_of_table:
+        table_start = '\\begin{table}[' + float_type + ']\n\\centering\n' + caption_info + '\n' + label + \
+                      '\n\\begin{tabular}{' + table_width \
+                      + '}\n'
+        table_end = '\\end{tabular}\n' + '\n' + '\\end{table}\n'
+    else:
+        table_start = '\\begin{table}[' + float_type + ']\n\\centering\n' + '\n' + label + \
+                      '\n\\begin{tabular}{' + table_width \
+                      + '}\n'
+        table_end = '\\end{tabular}\n' + caption_info + '\n' + '\\end{table}\n'
     if '\\begin{minipage}' in tab_data:
         pass  # raise MinipageInLongtableError
     new_table = table_start + tab_data + table_end
