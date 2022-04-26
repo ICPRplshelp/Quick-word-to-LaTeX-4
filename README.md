@@ -9,9 +9,10 @@ as ``\paragraph{...}``s instead of ``\subsubsubsection{...}``s and are not
 affected by the change heading level in the config.
 
 ## Requirements and Dependencies
+
 - Make sure Python 3.10 is installed on your computer.
 The best place to install python is through the
-Python official website.
+Python official website. Things can go wrong if you install Python through the Windows 10 store.
 - You should also have Pandoc and LaTeX installed
 on your computer. I strongly recommend using
 **TeX Live** as your LaTeX distribution - search
