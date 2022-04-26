@@ -2,7 +2,9 @@
 A Microsoft Word to LaTeX converter which extends Pandoc 
 by adding a lot of useful features and removes quirks 
 that pandoc produces. The LaTeX document produced should look
-**very** similar to your MS Word document.
+**very** similar to your MS Word document. (As a warning, Heading 4s are treated 
+as ``\paragraph{...}``s instead of ``\subsubsubsection{...}``s and are not
+affected by the change heading level in the config.
 
 ## Requirements and Dependencies
 - Make sure Python 3.10 is installed on your computer.
