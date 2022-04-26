@@ -14,6 +14,18 @@ import helpers as dbl
 import alignments as w2l
 import cleanup
 
+
+has_pygments = True
+
+
+try:
+    import pygments
+except ModuleNotFoundError:
+    logging.warning('pygments isn\'t installed, meaning'
+                    ' code blocks will not be highlighted.')
+    has_pygments = False
+
+
 USE_SUBPROCESSES = True
 
 TEMP_TEX_FILENAME = 'temp.tex'
@@ -201,6 +213,8 @@ class Preferences:
             self._has_lang = True
         if self.sty_cls_files is None:
             self.sty_cls_files = []
+        if not has_pygments:
+            self.verbatim_plugin = ''
 
 
 DEFAULT_PREF = Preferences('preamble_0.txt', False, False, False, False, False)
@@ -388,8 +402,10 @@ class WordFile:
         end = '\\end{document}'
         text, start, end = w2l.find_between(text, start, end)
         dict_info_hide_verb = {}
+        # PUSH HEADER LEVELS, IF APPLICABLE
         if -2 <= self.preferences.header_level <= -1:
             text = dbl.make_chapter(text, depth=self.preferences.header_level)
+        # CONCEAL ALL VERBATIMS
         if self.preferences.conceal_verbatims:
             text, dict_info_hide_verb = dbl.hide_verbatims(text, self.preferences.bibliography_keyword,
                                                            self.preferences.verbatim_plugin)
@@ -413,12 +429,19 @@ class WordFile:
         # if True:
         #    text = dbl.longtable_backslash_add_full(text)
 
+        if self.preferences.modify_tables:  # LONGTABLE ELIMINATOR
+            disallow_tab_f = self.preferences.disable_table_figuring or self.preferences.disallow_figures
+            text = dbl.eliminate_all_longtables(text, disallow_tab_f,
+                                                self.preferences.allow_no_longtable,
+                                                float_type=self.preferences.image_float)
+
         eqn_comment = {'comment_type': self.preferences.eqn_comment_mode, 'label_equations':
             self.preferences.label_equations}
         # if self.preferences.remove_spaces_from_eqns:
         #     # TODO: after text, prevent messing with commands
         #     text = dbl.bad_backslash_replacer(text)
         #     text = dbl.bad_backslash_replacer(text, '\\(', '\\)')
+
         labels_so_far = []
         if self.preferences.allow_alignments:  # alignments must always run first
             while True:
@@ -447,11 +470,7 @@ class WordFile:
                 if stat:
                     break
 
-        if self.preferences.modify_tables:  # LONGTABLE ELIMINATOR
-            disallow_tab_f = self.preferences.disable_table_figuring or self.preferences.disallow_figures
-            text = dbl.eliminate_all_longtables(text, disallow_tab_f,
-                                                self.preferences.allow_no_longtable,
-                                                float_type=self.preferences.image_float)
+
         # use refs, which work in a very similar way to how it is implemented in tables
         if self.preferences.label_equations:
             text = dbl.bulk_labeling(text, labels_so_far, 'equation', 'ref', 'eq')

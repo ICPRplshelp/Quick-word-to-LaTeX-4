@@ -15,8 +15,11 @@ PREAMBLE_PATH = ('preamble.txt', 'preamble_LTable.txt', 'preamble_light.txt')
 APA_MODE = True
 ALPHABET = 'abcdefghijklmnopqrstuvwxyz'
 ALPHABET_ALL = ALPHABET + ALPHABET.upper() + '1234567890-+.,*/?!='
-MAX_PAGE_LENGTH = 40
+MAX_PAGE_LENGTH = 35
 ALLOW_SPACES_IN_LANGUAGES = True
+ENV_FORBIDDEN = ['table', 'tabular', 'longtable', 'minipage', 'texttt', 'enumerate', 'itemize',
+                      'align*', 'gather', 'matrix', 'bmatrix', 'pmatrix', 'vmatrix', 'Bmatrix',
+                      'Vmatrix']
 MINTED_LANGUAGES = {'cucumber', 'abap', 'ada', 'ahk', 'antlr', 'apacheconf', 'applescript', 'as', 'aspectj', 'autoit',
                     'asy', 'awk', 'basemake', 'bash', 'bat', 'bbcode', 'befunge', 'bmax', 'boo', 'bro',
                     'bugs', 'c', 'ceylon', 'cfm', 'cfs', 'cheetah', 'clj', 'cmake', 'cobol', 'cl', 'console', 'control',
@@ -131,28 +134,34 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
         # tab_data = table_minipage_cleaner(tab_data)
     else:
         tab_data = ''
+
+    header_count = len(headers_so_far)
+    em_length = MAX_PAGE_LENGTH // header_count
+    # a table can have up to 3 headers until we start splitting up the tables.
+
+    headers_so_far = [process_equations_in_table_header(x, em_length) for x in headers_so_far]
+
     first_row = '& '.join(headers_so_far)
     if '\\begin{minipage}' in first_row:
         pass  # raise MinipageInLongtableError
 
-    header_count = len(headers_so_far)
-    # a table can have up to 3 headers until we start splitting up the tables.
-
     max_header_count = 1
     seperator = 'c'
+
     if header_count > max_header_count:
-        em_length = MAX_PAGE_LENGTH // header_count
         seperator = 'm{' + str(em_length) + 'em}'
     vertical_line = '|'
     table_width = ((vertical_line + seperator) * header_count) + vertical_line
     if tab_data != '':
-        fbd_env = ['align', 'align*', 'tabular', 'table', 'longtable', 'minipage']
+        fbd_env = ENV_FORBIDDEN
         tab_data = tab_data.replace('\\&', band)
         split_data = str_split_not_in_env(tab_data, R'\\', fbd_env)
         columns = []  # [[a, b, c, d], [e, f, g, h]]
         for roow in split_data:
             cols = str_split_not_in_env(roow, '&', fbd_env)
-            cols = [minipage_remover(x.strip()) for x in cols]
+            # things that are done for all columns
+            cols = [process_equations_in_tables(minipage_remover(x.strip()), em_length) for x in cols]
+            cols = [force_not_inline(x) for x in cols]
             columns.append(cols)
         # what we do here to columns is the reconstruction of the table
         rows_stage_2 = [' & '.join(x) for x in columns]
@@ -177,8 +186,8 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
     if '\\begin{minipage}' in tab_data:
         pass  # raise MinipageInLongtableError
     new_table = table_start + tab_data + table_end
-    new_table = new_table.replace(R'\[', R'\(')  # all math in tables are inline math
-    new_table = new_table.replace(R'\]', R'\)')
+    # new_table = new_table.replace(R'\[', R'\(')  # all math in tables are inline math
+    # new_table = new_table.replace(R'\]', R'\)')
     return new_table
 
 
@@ -2247,6 +2256,8 @@ def retain_author_info(text: str) -> str:
             pass
     author_text = ''
     for mdd, txt in metadata.items():
+        if txt == 'ons for packages loaded elsewher':
+            txt = ''
         author_text += '\\' + mdd + '{' + txt + '}\n'
     return author_text
 
@@ -3614,9 +3625,7 @@ def force_not_inline(text: str) -> str:
         if st == -1 or en == -1:
             break
         assert st < en
-        if (text[st - 2:st] == '\n\n' or len(text[st - 2:st]) != 2) and (text[en + 2:en + 4] == '\n\n'
-                                                                         or len(
-                    text[en + 2: en + 4]) != 2):  # if both detected () are newline-wrapped
+        if (text[st - 2:st] == '\n\n' or len(text[st - 2:st]) != 2) and (text[en + 2:en + 4] == '\n\n' or len( text[en + 2: en + 4]) != 2):  # if both detected () are newline-wrapped
             text = text[:st] + p_start + text[st + 2:en] + p_end + text[en + 2:]
         else:
             skip += 1
@@ -4551,3 +4560,173 @@ def has_longtable(text: str) -> bool:
     """Return whether text has a longtable.
     """
     return '\\begin{longtable}' in text
+
+
+EQN_TABLE = R"""
+\(1+2=3\)
+\({4+2+66+5=4}{43+5+345+43=5}\)
+\(1+2=3\)
+\({4+2+66+5=4}{43+5+345+43=5}\)
+"""
+
+
+def process_equations_in_tables(text: str, p_box_size: int = 11) -> str:
+    """Inputs: text is an entire cell
+    in a regular LaTeX table.
+
+    p_box_size is always measured in em.
+    """
+    p_box = '\\parbox{' + str(p_box_size) + 'em}{'
+    skip = 1
+    while True:
+        eq_opener = find_not_in_any_env_tolerance(text, '\\(', start=0, skip=skip)
+        eq_closer = find_not_in_any_env_tolerance(text, '\\)', start=0, skip=skip)
+        if eq_opener == -1:
+            break  # also, eq_closer should be -1 as well
+        equation_contents = text[eq_opener:eq_closer + 2]
+        if equation_in_table_checker(equation_contents):
+            text = text[:eq_opener] + p_box + '\n\\[' + equation_contents[2:-2] + '\\]' + '\n}\n\n' + text[eq_closer + 2:]
+        else:
+            skip += 1
+    return text
+
+
+def process_equations_in_table_header(text: str, p_box_size: int = 11) -> str:
+    """Inputs: text is an entire cell
+     in a regular LaTeX table.
+
+     p_box_size is always measured in em.
+     """
+    p_box = '\\parbox{' + str(p_box_size) + 'em}{'
+    skip = 1
+    while True:
+        eq_opener = find_not_in_any_env_tolerance(text, '\\[', start=0, skip=skip)
+        eq_closer = find_not_in_any_env_tolerance(text, '\\]', start=0, skip=skip)
+        if eq_opener == -1:
+            break  # also, eq_closer should be -1 as well
+        equation_contents = text[eq_opener:eq_closer + 2]
+        if equation_in_table_checker(equation_contents):
+            text = text[:eq_opener] + p_box + '\n\\[' + equation_contents[2:-2] + '\\]' + '\n}\n\n' + text[
+                                                                                                      eq_closer + 2:]
+        skip += 1  # skip always goes up by 1
+    return text
+
+
+def equation_in_table_checker(text: str) -> bool:
+    """Inputs: text is the contents of an equation, which
+    MUST start with \\( and end with \\)
+
+    Returns: True if it's an alignment equation, False otherwise.
+    """
+    # assert text.startswith('\\(') and text.endswith('\\)')
+    text = text[2:-2]  # strip the left and right \( and \)
+    text = '\\[' + text + '\\]'
+    valid_alignment_state = check_valid_alignment(text)
+    return valid_alignment_state is not None
+
+
+def check_valid_alignment(text: str) -> Optional[tuple[str, int, int]]:
+    """Return isolate string, start index, end index + 1 for the first align region found in text.
+    Return nothing if no align region found.
+
+    What should be passed in must start with \\[ and \\].
+
+    Detect an alignment region. An alignment region starts with \\[ and ends with \\],
+    but only if { follows \\[. It will only detect if that happens for the first time.
+    Return None if we can't do that.
+
+    >>> string = 'you are not \\[{9 + 10 = 21}{420 + 69 = 222}\\] real'
+    >>> output = '\\[{9 + 10 = 21}{420 + 69 = 222}\\]'
+    >>> check_valid_alignment(string) == output
+    True
+
+
+    """
+    # text = 'aaaa(bb()()ccc)dd'
+    # istart = []  # stack of indices of opening parentheses
+    # d = {}
+
+    inside = False  # True if \[ has passed and not closed
+    brace_layer = 0
+    last_opening_region = 0
+    prev_is_backslash = False
+    prev_is_opening_bracket = False  # if the prev is \[ - the [
+    finished_region = [-1, -1]
+    found = False
+    special_region_info = None
+    for i, c in enumerate(text):  # the massive for loop
+        assert not (prev_is_opening_bracket and prev_is_backslash), '[ and \\ at the same time'
+
+        if prev_is_opening_bracket and c != '{':
+            inside = False
+            prev_is_opening_bracket = False
+        else:
+            prev_is_opening_bracket = False  # if \[{
+        # It's not an alignment region if all of the conditions are met:
+        # Inside is True
+        # brace_layer is 0
+        # the char we are focusing at is not {, }, or \n, and
+        # \{ and \} do not count as braces
+        if inside:
+            if c == '\\':
+                pass
+            elif prev_is_backslash and (c == '[' or c == ']'):
+                pass
+            elif not prev_is_backslash and (c == '{' or c == '}'):  # bare { or }
+                if c == '{':
+                    brace_layer += 1
+                elif c == '}':
+                    brace_layer -= 1
+                else:
+                    assert False  # we will NEVER reach there
+            elif prev_is_backslash and (c in {'[', ']'}):  # bare \[ or \]
+                pass  # prevents the branch below from happening. We would've ended stuff here.
+            elif c == '\n':
+                pass
+            else:
+                if brace_layer <= 0:  # this is a very special case.
+                    # if that is the case, skip to the next \\]
+                    # then check everything between c and before \\], stripped
+                    ti_c = text.find('\\]', i)
+                    assert ti_c != -1
+                    last_part = text[i - 1:ti_c].strip()
+                    state = valid_matrix(last_part)
+                    if not state:  # this happens the most often
+                        inside = False  # this is rarer.
+                    else:
+                        finished_region[0] = last_opening_region
+                        finished_region[1] = ti_c + 2
+                        found = True
+                        special_region_info = [i - 1, ti_c]  # positions to add { and }, similar to list.insert()
+                        break
+
+        if prev_is_backslash:
+            if c == '[':
+                inside = True
+                last_opening_region = i - 1
+                prev_is_opening_bracket = True
+            if c == ']' and inside:
+                # print('captured a region')
+                finished_region[0] = last_opening_region
+                finished_region[1] = i + 1
+                assert finished_region[0] <= finished_region[1], 'future sight'
+                found = True
+                break
+        prev_is_backslash = (c == '\\')  # if c is \\
+        # if prev_is_backslash:
+        #    print(prev_is_backslash)
+    # if we ever find one
+    if found:
+        if special_region_info is None:
+            captured_region = text[finished_region[0]:finished_region[1]]
+            # print(captured_region)
+        else:
+            captured_region = text[finished_region[0]:special_region_info[0]] + '{' + \
+                              text[special_region_info[0]:special_region_info[1]] + '}' + \
+                              text[special_region_info[1]:finished_region[1]]
+            # print(captured_region)
+
+        return captured_region, finished_region[0], finished_region[1]
+    else:
+        # print('ran out of alignment regions to check')
+        return None
