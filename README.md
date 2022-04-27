@@ -1,8 +1,11 @@
 # Quick word to LaTeX
+
 A Microsoft Word to LaTeX converter which extends Pandoc 
 by adding a lot of useful features and removes quirks 
 that pandoc produces. The LaTeX document produced should look
-**very** similar to your MS Word document.
+**very** similar to your MS Word document. It's like a pandoc filter, except I didn't
+want to make a pandoc filter.
+
 
 As a warning, Heading 4s are treated 
 as ``\paragraph{...}``s instead of ``\subsubsubsection{...}``s and are not
@@ -75,3 +78,43 @@ If the program is able to attempt to compile the ``.tex`` file
 into a PDF, and the PDF compiler breaks midway, check to see
 if your `*.docx` has the following, because these prevent
 proper compilation:
+
+- Nested tables (not used for environments)
+- Images in tables (not used for environments)
+
+## Features shorthand
+
+### Environments
+
+On a new paragraph, if you type something with this syntax (where only the words `Definition`, `Term` and `The definition of the term.` can be switched out):
+
+> **Definition.** (Term). The definition of the term.
+
+It will translate to the following in LaTeX:
+
+```tex
+\begin{definition}[Term]
+    The definition of the term.
+\end{definition}
+```
+
+The environment stops on the next paragraph. If the next paragraph is an equation, the environment will stop at the paragraph after the equation. However,
+if the first character of the next paragraph, excluding leading spaces, is lowercase, then the next paragraph will be included in the environment (and so on). Lists will not stop environments, and will end after the list.
+
+**Only certain environments will work with this.**  The ones I know that will work is *Definition, Theorem, and Lemma.* You should check the [wiki](https://github.com/ICPRplshelp/Quick-word-to-LaTeX-4/wiki/Proofs-and-Environments) if you want to know what environments are supported.
+
+### Numbering equations
+
+Equations numbered/commented in Microsoft Word that are **flushed-right** will be accounted for. ``#`` is the delimiter to number equations - just type `#` and your comment, and press space. Your comment should be wrapped in (circular brackets). If you don't, this program will add it for you.
+
+**Equation numbering/comments must be alphanumeric and must work in `\label` (the comment will be dropped if it isn't), though you may wrap equation text in "quotes" to unitalicize them.** To reference equations, just type ``equation <##>`` where `<##>` is your comment (Equation is not case-sensitive) without circular brackets wrapped around it. The numbering you type in MS Word will be
+the one that shows up in your LaTeX document, though there is a configuration option available to have them always numbered in order.
+
+### Figures and Numbering tables
+
+[READ THE WIKI FOR INFORMATION ON THIS](https://github.com/ICPRplshelp/Quick-word-to-LaTeX-4/wiki/Figure-and-Table-numbering) FOR MORE INFORMATION ON THIS**
+
+
+### Proofs
+
+Proofs work differently from environments. **READ THE [WIKI](https://github.com/ICPRplshelp/Quick-word-to-LaTeX-4/wiki/Proofs-and-Environments)!!!**
