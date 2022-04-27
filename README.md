@@ -112,7 +112,7 @@ the one that shows up in your LaTeX document, though there is a configuration op
 
 ### Figures and Numbering tables
 
-[READ THE WIKI FOR INFORMATION ON THIS](https://github.com/ICPRplshelp/Quick-word-to-LaTeX-4/wiki/Figure-and-Table-numbering) FOR MORE INFORMATION ON THIS**
+**[READ THE WIKI FOR INFORMATION ON THIS](https://github.com/ICPRplshelp/Quick-word-to-LaTeX-4/wiki/Figure-and-Table-numbering)**
 
 
 ### Proofs
