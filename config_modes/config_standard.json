@@ -2,7 +2,7 @@
   "description": "This is the default configuration file.",
   "preamble_path": "config_modes/preamble.txt",
   "auto_numbering": false,
-  "big_text": true,
+  "big_text": false,
   "small_margins": true,
   "default_date": "\\today",
   "document_class": "",

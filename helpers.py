@@ -2092,10 +2092,11 @@ def find_author(text: str, props: str = 'author') -> str:
     """
     auth = '\\' + props + '{'
     author_pos = find_nth(text, auth, 1) + len(auth)
+    t_author_pos = author_pos - len(auth)
     if author_pos == -1:
         raise ValueError
     else:
-        end_author_pos = find_nth(text, '\n', 1, author_pos) - 1  # focused on the closing bracket
+        end_author_pos = local_env_end(text, t_author_pos)  # focused on the closing bracket
         author_name = text[author_pos:end_author_pos]
         return author_name
 
@@ -2108,7 +2109,7 @@ def swap_author(text: str, new_author: str, props: str = 'author') -> str:
     author_pos = find_nth(text, auth, 1)
     if author_pos == -1:
         return text
-    end_author_pos = find_nth(text, '\n', 1, author_pos)
+    end_author_pos = local_env_end(text, author_pos)
     return text[:author_pos] + auth + new_author + '}' + text[end_author_pos:]
 
 
@@ -2257,7 +2258,7 @@ def retain_author_info(text: str) -> str:
             pass
     author_text = ''
     for mdd, txt in metadata.items():
-        if txt == 'ons for packages loaded elsewher':
+        if 'ons for packages loaded elsewher' in txt:
             txt = ''
         author_text += '\\' + mdd + '{' + txt + '}\n'
     return author_text

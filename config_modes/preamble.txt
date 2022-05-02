@@ -1,6 +1,9 @@
 \usepackage[fontsize=12pt]{scrextend}  % big_text==True
-\usepackage[includeheadfoot,margin=0.75in]{geometry}  % headings==True
-\usepackage[margin=0.75in]{geometry}  % headings==False
+\usepackage[
+includeheadfoot, % headings==True
+margin=0.75in % small_margins==True
+]{geometry}
+
 % Alternatively, take advantage of small_margins
 
 % NOTE: comments with [param]==[condition] means that the line will only
@@ -43,7 +46,11 @@
 
 \usepackage{framed}
 
-% IF pdf_engine==NOTSETUP
+% IF pdf_engine==xelatex
+\ProvidesPackage{iftex}
+
+\ifxetex
+
 % \usepackage{fontspec}
 % \setmainfont{Times New Roman}
 
@@ -52,7 +59,9 @@
 \setmathfont{STIX Two Math}
 \setmathfont[range={\mathcal,\mathbfcal},StylisticSet=1]{STIX Two Math}
 
-\setmonofont[Color={0019D4}]{JetBrains Mono}
+\setmonofont{JetBrains Mono}
+
+\fi
 % ENDIF
 
 % IF verbatim_plugin==minted
@@ -79,3 +88,5 @@
 % \doublespacing
 
 \usepackage{csquotes}
+
+% SPACER AT THE BOTTOM

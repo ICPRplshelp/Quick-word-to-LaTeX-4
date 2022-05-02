@@ -125,6 +125,16 @@ def click() -> None:
 
 
 def zero_one_tf(num: int) -> bool:
+    """Return whether num == 1.
+
+    Parameters
+    ----------
+    num
+        number to be compared with 1.
+    Returns
+    -------
+        whether num == 1
+    """
     return num == 1
 
 

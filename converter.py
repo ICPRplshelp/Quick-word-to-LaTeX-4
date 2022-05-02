@@ -455,7 +455,7 @@ class WordFile:
         if self.preferences.allow_alignments:  # alignments must always run first
             while True:
                 max_line = self.preferences.max_line_length if self.preferences.max_line_align else -1
-                text, stat, labbs = w2l.replace_align_region(text, self.preferences.allow_proofs,
+                text, stat, labbs = w2l.replace_align_region(text,
                                                              self.preferences.autodetect_align_symbols,
                                                              max_line, extra_info=eqn_comment)
                 # print('stat')
@@ -474,7 +474,7 @@ class WordFile:
             while True:
                 # the second time alignment replacement is used.
                 # this time, discard all labels.
-                text, stat, _ = w2l.replace_align_region(text, self.preferences.allow_proofs,
+                text, stat, _ = w2l.replace_align_region(text,
                                                          self.preferences.autodetect_align_symbols)
                 if stat:
                     break
@@ -650,6 +650,7 @@ class WordFile:
 
                 # command_string_2 = latex_engine + ' "' + self.output_path + '"'
                 command_string_3 = '"' + self.output_path[:-4] + '.pdf' '"'
+                print(f'opening {self.output_path[:-4]}.pdf.')
                 os.system(command_string_3)
                 # os.system(command_string_2)  # compile the pdf
 
