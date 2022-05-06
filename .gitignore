@@ -281,4 +281,4 @@ TSWLatexianTemp*
 # standalone packages
 *.sta
 
-!Documentation/**
+!documentation/**

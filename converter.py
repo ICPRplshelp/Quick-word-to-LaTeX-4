@@ -10,13 +10,10 @@ from tkinter.filedialog import askopenfile
 from typing import Optional, Union
 import subprocess
 
-import helpers as dbl
-import alignments as w2l
+from helper_files import helpers as dbl, alignments as w2l
 import cleanup
 
-
 has_pygments = True
-
 
 try:
     import pygments
@@ -26,7 +23,6 @@ except ModuleNotFoundError:
                     ' and some text from the preamble will be'
                     ' omitted.')
     has_pygments = False
-
 
 USE_SUBPROCESSES = True
 
@@ -82,6 +78,11 @@ class InvalidFileTypeError(Exception):
     def __str__(self) -> str:
         """Return a string representation of this error."""
         return 'invalid file type.'
+
+
+class AttemptedFilePromptError(Exception):
+    """Exception raised when a file dialogue would open up
+    when that is not allowed to happen."""
 
 
 class SpaceError(Exception):
@@ -162,7 +163,7 @@ class Preferences:
     auto_numbering: bool = False  # if this is true, label equations will be set to true and
     # comment mode will be set to "hidden" - meaning equations will be automatically numbered.
 
-    remove_spaces_from_eqns: bool = True  # whether long spaces should be removed from equations.
+    remove_spaces_from_eqns: bool = False  # whether long spaces should be removed from equations.
 
     no_secnum: bool = False  # omit section numbering. This may affect how environments are numbered.
     conceal_verbatims: bool = True  # prevent verbatim environments from being affected,
@@ -258,16 +259,19 @@ class WordFile:
     erase_pandoc_preamble: bool  # erase the pandoc preamble.
     citations_enabled: bool
     contains_longtable: bool
+    disable_file_prompts: bool
 
     _temp_tex_file: str
     _disallow_pdf: bool
 
-    def __init__(self, word_file_path: str, preferences: Preferences = DEFAULT_PREF) -> None:
+    def __init__(self, word_file_path: str, preferences: Preferences = DEFAULT_PREF,
+                 disable_file_prompts: bool = False) -> None:
         """Initialize a new WordFile object.
 
         Raise an InvalidFileTypeError if word_file_path is not a Microsoft word file.
         The only IO function allowed here is to open the Word file and create temp.tex
         """
+        self.disable_file_prompts = disable_file_prompts
         self.contains_longtable = False
         self.citations_enabled = False
         if word_file_path[-5:] != '.docx' and word_file_path[-4:] != '.tex':
@@ -286,6 +290,7 @@ class WordFile:
         self.output_path = self.word_file_nosuffix + export_suffix
         if word_file_path[-5:] == '.docx':
             self.text = self.open_word_file()
+            print(self.text)
             self.original_tex = False
             self._disallow_pdf = False
         else:
@@ -316,12 +321,15 @@ class WordFile:
         """
         # pass
         if not self.preferences.disable_bib_prompts:
-            print('Opening the bib document file open box. If noting opens, consider re-running this program.')
-            file_info = askopenfile(mode='r', title='Open the bib file you want to combine',
-                                    filetypes=[('Bib Files', '*.bib')])
-            self.bib_path = file_info.name.replace("/", "\\") if file_info is not None else None
-            if self.bib_path is None:
-                print('You did not specify a bib path, so we\'re assuming you\'re not citing anything')
+            if self.disable_file_prompts:
+                raise AttemptedFilePromptError
+            else:
+                print('Opening the bib document file open box. If noting opens, consider re-running this program.')
+                file_info = askopenfile(mode='r', title='Open the bib file you want to combine',
+                                        filetypes=[('Bib Files', '*.bib')])
+                self.bib_path = file_info.name.replace("/", "\\") if file_info is not None else None
+                if self.bib_path is None:
+                    print('You did not specify a bib path, so we\'re assuming you\'re not citing anything')
         else:
             print('The document does contain a bibliography section, but we will not ask for it'
                   ' as it is forced disabled.')
@@ -347,33 +355,35 @@ class WordFile:
         """Return tex code of WordFile."""
         using_command_prompt = not USE_SUBPROCESSES
         if using_command_prompt:
-            media_path = '--extract-media=' + self.preferences.media_folder_name + \
-                         self.word_file_nosuffix.replace(' ', '_')
-            dquote = '"'
-            # toc = '--toc'
-            # these are writer options
-            # tuple index 0 is the string; tuple index 1 is the condition
-            filter_list = [
-                ('-s', True),
-                (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level != 0),
-                ('--toc', self.preferences.table_of_contents)
-            ]
-            # if self.preferences.table_of_contents:
-            #     filter_list.append('--toc')
-
-            filters_1 = ' '.join(process_permissive_list(filter_list))
-
-            # command_string = 'cmd /c "pandoc ' + media_path + ' -s ' + \
-            #                 self.word_file_path + ' -o ' + self._temp_tex_file
-
-            # self.preferences.pdf_engine
-
-            pdf_engine_str = '--pdf-engine=xelatex '
-            # f'--pdf-engine={self.preferences.pdf_engine} ' if self.preferences.pdf_engine != 'pdflatex' else ''
-            command_string = f'pandoc {dquote}{media_path}{dquote} {filters_1} {dquote}{self.word_file_path}{dquote} ' \
-                             f'{pdf_engine_str}-o {self._temp_tex_file}'
-            os.system(command_string)
-            return open_file(self._temp_tex_file)
+            raise ValueError("Branch NOT to be ran at all. Command prompt"
+                             " is not to be used.")
+            # media_path = '--extract-media=' + self.preferences.media_folder_name + \
+            #              self.word_file_nosuffix.replace(' ', '_')
+            # dquote = '"'
+            # # toc = '--toc'
+            # # these are writer options
+            # # tuple index 0 is the string; tuple index 1 is the condition
+            # filter_list = [
+            #     ('-s', True),
+            #     (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level != 0),
+            #     ('--toc', self.preferences.table_of_contents)
+            # ]
+            # # if self.preferences.table_of_contents:
+            # #     filter_list.append('--toc')
+            #
+            # filters_1 = ' '.join(process_permissive_list(filter_list))
+            #
+            # # command_string = 'cmd /c "pandoc ' + media_path + ' -s ' + \
+            # #                 self.word_file_path + ' -o ' + self._temp_tex_file
+            #
+            # # self.preferences.pdf_engine
+            #
+            # pdf_engine_str = '--pdf-engine=xelatex '
+            # # f'--pdf-engine={self.preferences.pdf_engine} ' if self.preferences.pdf_engine != 'pdflatex' else ''
+            # command_string = f'pandoc {dquote}{media_path}{dquote} {filters_1} {dquote}{self.word_file_path}{dquote} ' \
+            #                  f'{pdf_engine_str}-o {self._temp_tex_file}'
+            # os.system(command_string)
+            # return open_file(self._temp_tex_file)
         else:
             media_path = '--extract-media=' + self.preferences.media_folder_name + \
                          self.word_file_nosuffix.replace(' ', '_')
@@ -484,7 +494,6 @@ class WordFile:
                                                          self.preferences.autodetect_align_symbols)
                 if stat:
                     break
-
 
         # use refs, which work in a very similar way to how it is implemented in tables
         if self.preferences.label_equations:
@@ -681,38 +690,40 @@ class WordFile:
                 cleanup.move_useless_files_away(output_nameless, sty_cls)
 
         else:
+            raise ValueError("Brach NOT to be reached.")
             # try:
             #     os.mkdir('export')
             # except FileExistsError:
             #     pass
             # self.output_path = 'export\\' + self.output_path
-            latex_engine = self.preferences.pdf_engine
-            if latex_engine not in ALLOWED_LATEX_COMPILERS:
-                latex_engine = 'xelatex'
-            dq = '"'
-            write_file(self.text, self.output_path)
-            if not self._disallow_pdf:
-                command_string_2 = latex_engine + ' "' + self.output_path + '"'
-                command_string_3 = '"' + self.output_path[:-4] + '.pdf' '"'
-                # os.system(command_string_2)
-                os.system(command_string_2)  # compile the pdf
-                # if citations are on OR (figures are on AND center images / long table eliminators are on)
-                if (self.preferences.allow_citations and self.bib_path is not None) or (
-                        not self.preferences.disallow_figures and (
-                        self.preferences.allow_no_longtable or self.preferences.center_images)):
-                    os.system(command_string_2)  # compile it again
-                os.system(command_string_3)
-            else:
-                command_string_4 = f'{dq}self.output_path{dq}'
-                print('You inputted a .tex file that contains images, so we aren\'t compiling')
-                os.system(command_string_4)
-
-            print('Finished!')
-            assert self.output_path[-4:] == '.tex'
-            if self.preferences.cleanup:
-                print('removing all unneeded files')
-                output_nameless = self.output_path[:-4]
-                cleanup.move_useless_files_away(output_nameless)
+            # ----------- UNCOMMENT BELOW IF NEEDED -----------
+            # latex_engine = self.preferences.pdf_engine
+            # if latex_engine not in ALLOWED_LATEX_COMPILERS:
+            #     latex_engine = 'xelatex'
+            # dq = '"'
+            # write_file(self.text, self.output_path)
+            # if not self._disallow_pdf:
+            #     command_string_2 = latex_engine + ' "' + self.output_path + '"'
+            #     command_string_3 = '"' + self.output_path[:-4] + '.pdf' '"'
+            #     # os.system(command_string_2)
+            #     os.system(command_string_2)  # compile the pdf
+            #     # if citations are on OR (figures are on AND center images / long table eliminators are on)
+            #     if (self.preferences.allow_citations and self.bib_path is not None) or (
+            #             not self.preferences.disallow_figures and (
+            #             self.preferences.allow_no_longtable or self.preferences.center_images)):
+            #         os.system(command_string_2)  # compile it again
+            #     os.system(command_string_3)
+            # else:
+            #     command_string_4 = f'{dq}self.output_path{dq}'
+            #     print('You inputted a .tex file that contains images, so we aren\'t compiling')
+            #     os.system(command_string_4)
+            #
+            # print('Finished!')
+            # assert self.output_path[-4:] == '.tex'
+            # if self.preferences.cleanup:
+            #     print('removing all unneeded files')
+            #     output_nameless = self.output_path[:-4]
+            #     cleanup.move_useless_files_away(output_nameless)
 
 
 class WordFileCombo(WordFile):
@@ -723,16 +734,21 @@ class WordFileCombo(WordFile):
     author: Optional[str]
     doc_title: Optional[str]
 
-    def __init__(self, word_file_path: str, preferences: Preferences = DEFAULT_PREF) -> None:
-        super().__init__(word_file_path, preferences)
+    def __init__(self, word_file_path: str, preferences: Preferences = DEFAULT_PREF,
+                 disable_file_prompts: Optional[bool] = None,
+                 corresponding_tex_file: Optional[str] = None) -> None:
+        super().__init__(word_file_path, preferences, disable_file_prompts)
         print('Opening the replacement tex file open box. If nothing opens, consider re-running this program.')
-        file_info = askopenfile(mode='r', title='Open the word file you want to combine',
-                                filetypes=[('Tex Files', '*.tex')])
-        self.corresponding_tex_file = file_info.name.replace("/", "\\") if file_info is not None else None
-        # self.corresponding_tex_file = easygui.fileopenbox(msg='Select the corresponding *.tex '
-        #                                                       'file you'
-        #                                                       'want to open.', filetypes=["*.tex"],
-        #                                                   default='*.tex')
+
+        if corresponding_tex_file is None:
+            if self.disable_file_prompts:
+                raise AttemptedFilePromptError
+            else:
+                file_info = askopenfile(mode='r', title='Open the TeX file you want to combine',
+                                        filetypes=[('Tex Files', '*.tex')])
+                self.corresponding_tex_file = file_info.name.replace("/", "\\") if file_info is not None else None
+        else:
+            self.corresponding_tex_file = corresponding_tex_file
         self.preferences.exclude_preamble = True  # the preamble is always excluded here
         self.alt_text = ''
         self._disallow_pdf = False  # PDFs will always compile
@@ -852,15 +868,51 @@ def check_config(json_path: str, overrides: dict) -> tuple[Preferences, bool]:
     return cur_prefs, data["replacement_mode"]
 
 
-def main(config: str = '', overrides: Optional[dict] = None) -> None:
-    """Run this file.
+def main(config: str = '', overrides: Optional[dict] = None,
+         path_to_wordfile: Optional[str] = None,
+         replacement_mode_path: Optional[str] = None,
+         disable_file_prompts: bool = False) -> None:
+    """The main method of this module.
+
+    All paths are relative to main.py.
+    Parameters
+    ----------
+
+    config
+        the path to the config used. leave blank to take what is in mode.txt, if it exists.
+    overrides
+        the key-value pairs passed in overrides will override any config value.
+    path_to_wordfile
+        the path to the wordfile or any plain text file. If it's a word file, it will
+        open the document in the MS Word way. Otherwise, it will treat it as if
+        a plain-text file was being opened.
+    replacement_mode_path
+        the path to the other .tex file used in replacement mode, or None if that
+        should be prompted.
+    disable_file_prompts
+        if this is set to true, if a file prompt comes up
+        an error will be thrown.
+
+    Returns
+    -------
+        Nothing
     """
     if overrides is None:
         overrides = {}
+
+    # invariants must be met
+
     try:
         print('Opening the word document file open box. If noting opens, consider re-running this program.')
-        main_file_mfn = askopenfile(mode='r', title='Open the word file you want to convert',
-                                    filetypes=[('Word Files', '*.docx'), ('Tex Files', '*.tex')])
+        if path_to_wordfile is None:
+            if disable_file_prompts:
+                raise AttemptedFilePromptError('A word file prompt would have shown here.')
+            else:
+                main_file_mfn = askopenfile(mode='r', title='Open the word file you want to convert',
+                                            filetypes=[('Word Files', '*.docx'), ('Tex Files', '*.tex')])
+
+        else:
+            main_file_mfn = path_to_wordfile
         path_mfn = main_file_mfn.name.replace("/", "\\") if main_file_mfn is not None else None
         if path_mfn is None:
             print('You didn\'t select anything')
@@ -871,37 +923,18 @@ def main(config: str = '', overrides: Optional[dict] = None) -> None:
         else:
             json_dir_mfn = config
         prefs_mfn, replacement_mode_mfn = check_config(json_dir_mfn.strip(), overrides)
+
+        # determines whether replacement mode is on or off
         if replacement_mode_mfn:
             print('We are in replacement mode')
-            word_file_mfn = WordFileCombo(path_mfn, prefs_mfn)
+            word_file_mfn = WordFileCombo(path_mfn, prefs_mfn,
+                                          corresponding_tex_file=replacement_mode_path,
+                                          disable_file_prompts=disable_file_prompts)
         else:
-            word_file_mfn = WordFile(path_mfn, prefs_mfn)
+            word_file_mfn = WordFile(path_mfn, prefs_mfn, disable_file_prompts=disable_file_prompts)
+
+        # process and export the file.
         word_file_mfn.sequence()
-    finally:
-        print('Ending program. If a PDF was never compiled, it means something\'s wrong with'
-              ' the file you\'ve chosen.')
-        time.sleep(2)
-
-
-if __name__ == '__main__':
-
-    try:
-        print('Opening the word document file open box. If noting opens, consider re-running this program.')
-        main_file = askopenfile(mode='r', title='Open the word file you want to convert',
-                                filetypes=[('Word Files', '*.docx'), ('Tex Files', '*.tex')])
-        path = main_file.name.replace("/", "\\") if main_file is not None else None
-        if path is None:
-            print('You didn\'t select anything')
-        else:
-            print(path)
-            json_dir = open_file('mode.txt')
-            prefs, replacement_mode = check_config(json_dir.strip(), {})
-            if replacement_mode:
-                print('We are in replacement mode')
-                word_file = WordFileCombo(path, prefs)
-            else:
-                word_file = WordFile(path, prefs)
-            word_file.sequence()
     finally:
         print('Ending program. If a PDF was never compiled, it means something\'s wrong with'
               ' the file you\'ve chosen.')

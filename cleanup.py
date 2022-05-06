@@ -112,7 +112,7 @@ def move_useless_files_away(file_name: str, additional_files: Optional[list[str]
         additional_files = []
     current_directory = os.getcwd()
     forbidden_filetypes = ['.aux', '.bcf', '.log', '.run.xml', '.bbl', '.blg', '.fdb_latexmk',
-                           '.fls', '.synctex.gz', '-blx.bib']
+                           '.fls', '.synctex.gz', '-blx.bib', '.out', '.toc']
     folder_name = 'TRASH_LATEX_FILES'
 
     image_directory = 'latex_images_'

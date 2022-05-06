@@ -1,3 +1,7 @@
+"""This is the main file meant to be run directly.
+This script contains input prompts.
+"""
+
 import json
 import os
 import tkinter
@@ -41,7 +45,7 @@ def read_json(json_dir: str) -> tuple[str, dict[str, Any]]:
     return description, data_dict
 
 
-def update_desc(*args) -> dict[str, Any]:
+def update_desc() -> dict[str, Any]:
     """Also return the config!!!
     """
     sv = variable.get()
@@ -105,8 +109,9 @@ def checkbox_variables(keys: dict[str, Any]) -> dict[str, BooleanVar]:
             value = False
 
         cur_dict[key].set(value)
-        check_btn = Checkbutton(root, text=key, variable=cur_dict[key], onvalue=True, offvalue=False)
-        check_btn.pack()
+        check_btn_fn = Checkbutton(root, text=key, variable=cur_dict[key], onvalue=True,
+                                   offvalue=False)
+        check_btn_fn.pack()
     return cur_dict
 
 

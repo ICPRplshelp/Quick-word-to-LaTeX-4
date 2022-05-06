@@ -18,8 +18,8 @@ ALPHABET_ALL = ALPHABET + ALPHABET.upper() + '1234567890-+.,*/?!='
 MAX_PAGE_LENGTH = 35
 ALLOW_SPACES_IN_LANGUAGES = True
 ENV_FORBIDDEN = ['table', 'tabular', 'longtable', 'minipage', 'texttt', 'enumerate', 'itemize',
-                      'align*', 'gather', 'matrix', 'bmatrix', 'pmatrix', 'vmatrix', 'Bmatrix',
-                      'Vmatrix']
+                 'align*', 'gather', 'matrix', 'bmatrix', 'pmatrix', 'vmatrix', 'Bmatrix',
+                 'Vmatrix']
 MINTED_LANGUAGES = {'cucumber', 'abap', 'ada', 'ahk', 'antlr', 'apacheconf', 'applescript', 'as', 'aspectj', 'autoit',
                     'asy', 'awk', 'basemake', 'bash', 'bat', 'bbcode', 'befunge', 'bmax', 'boo', 'bro',
                     'bugs', 'c', 'ceylon', 'cfm', 'cfs', 'cheetah', 'clj', 'cmake', 'cobol', 'cl', 'console', 'control',
@@ -607,6 +607,25 @@ def remove_images(text: str) -> str:
     return '\n'.join(all_lines_2)
 
 
+def find_stripped(text: str, sub: str) -> int:
+    """Behaves very similar to str.find(), but strips the string first.
+    Start and end are not supported.
+    Parameters
+    ----------
+    text
+        the text the search will be occurring in.
+    sub
+        the item to look for.
+
+    Returns
+    -------
+        the index of the first occurrence of item
+    """
+    stripped = text.lstrip()
+    len_diff = len(text) - len(stripped)
+    return text.find(sub, len_diff)
+
+
 def detect_include_graphics(text: str, disallow_figures: bool = False, float_type: str = 'H') -> str:
     """Center all images.
     """
@@ -620,7 +639,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False, float_typ
         el = '\\end{figure}\n'
         include_index = find_nth(text, '\\includegraphics', i)
         in_table = check_in_environment(text, 'longtable', include_index) or \
-                   check_in_environment(text, 'tabular', include_index)
+            check_in_environment(text, 'tabular', include_index)
         if include_index == -1:
             break
         before = text[:include_index]
@@ -634,7 +653,10 @@ def detect_include_graphics(text: str, disallow_figures: bool = False, float_typ
         # paste_after = temp_after[temp_after_index + 2:]
         after = temp_after[temp_after_index + 1:]  # starts with \n
         if not disallow_figures and after[:len(figure_text_cap)] == figure_text_cap and not in_table:
-            end_figure_index = find_nth(after, '\n\n', starter=2)  # start at that
+            # end_figure_index = find_stripped(after, '\n\n')
+            # assert after.startswith('\n\n')
+            end_figure_index = find_nth(after, '\n\n', 1, starter=2)  # start at that
+            # I need a find stripped
             temp_figure_text = after[:end_figure_index]
             temp_figure_text_2 = temp_figure_text[len(figure_text_cap) + 1:]
             end_of_numbering_1 = find_nth(temp_figure_text_2, ':', 1)
@@ -925,7 +947,7 @@ def multi_cite_handler(text: str, cur_src: str, srcs: list[str],
                     author_list.append(author)
         # updated text
         text = text[:cite_ind] + '\\' + cite_properities['citation_kw'] + \
-               '{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
+            '{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
     return text
 
 
@@ -1393,7 +1415,7 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
 
             elif text[next_newline + 2:next_newline + 4] == R'\[' \
                     or text[next_newline + 2:next_newline + 3] in ALPHABET or any(
-                text[next_newline + 2:].startswith(tx) for tx in allowed_terms):
+                    text[next_newline + 2:].startswith(tx) for tx in allowed_terms):
                 next_nl_skip += 1
                 continue
             else:
@@ -1401,8 +1423,9 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
 
         extra_args = br[0] + term + br[1] if term != '' else ''
 
-        text = text[:start] + k_begin + extra_args + env_info.env_suffix + '\n' + text[
-                                                                                  end + 1:next_newline].strip() + '\n' + k_end + text[
+        text = text[:start] + k_begin + extra_args + \
+            env_info.env_suffix + '\n' + text[end + 1:next_newline].strip() + '\n' + \
+            k_end + text[
                                                                                                                                  next_newline:]
     return text
 
@@ -1719,7 +1742,7 @@ def remove_local_environment(text: str, env: Union[str, list[str]]) -> str:
             ending_index = local_env_end(text, starting_index)
             # the local environment is always destroyed everytime this is run.
             text = text[:starting_index] + text[starting_index + len(env_start):ending_index] + \
-                   text[ending_index + 1:]
+                text[ending_index + 1:]
     return text
 
 
@@ -1874,7 +1897,7 @@ def split_equation(text: str, max_len: int, list_mode: bool = False) -> Union[No
         final_str = ''
         if not list_mode:
             for line in new_master:
-                final_str = final_str + '{' + line + '}'
+                final_str = final_str + '{ ' + line + ' }'
             return final_str
         else:
             return new_master
@@ -1907,7 +1930,7 @@ def calculate_eqn_length(text: str, disable: Optional[Iterable] = None) -> int:
             if ending_frac_index == 0:
                 break
             text = text[:frac_index] + seperate_fraction_block(text[frac_index:ending_frac_index]) + \
-                   text[ending_frac_index:]
+                text[ending_frac_index:]
 
     if 'matrix' not in disable:
         text = remove_matrices(text, 'matrix')
@@ -2967,9 +2990,9 @@ def quote_to_environment(text: str, env: LatexEnvironment, has_extra_args: bool 
                 assert False  # who decided to put more than one colon?
             br = ('{', '}') if env.extra_args_type == 'brace' else ('[', ']')
             text = text[:start_pos_1] + env.env_prefix + k_begin + br[0] + \
-                   env_title + br[1] + \
-                   env.env_suffix + '\n' + \
-                   during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
+                env_title + br[1] + \
+                env.env_suffix + '\n' + \
+                during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
         else:
             text = text[:start_pos_1] + env.env_prefix + k_begin + \
                    env.env_suffix + '\n' + \
@@ -3634,7 +3657,8 @@ def force_not_inline(text: str) -> str:
         if st == -1 or en == -1:
             break
         assert st < en
-        if (text[st - 2:st] == '\n\n' or len(text[st - 2:st]) != 2) and (text[en + 2:en + 4] == '\n\n' or len( text[en + 2: en + 4]) != 2):  # if both detected () are newline-wrapped
+        if (text[st - 2:st] == '\n\n' or len(text[st - 2:st]) != 2) and (text[en + 2:en + 4] == '\n\n' or len(
+                text[en + 2: en + 4]) != 2):  # if both detected () are newline-wrapped
             text = text[:st] + p_start + text[st + 2:en] + p_end + text[en + 2:]
         else:
             skip += 1
@@ -4623,7 +4647,8 @@ def process_equations_in_tables(text: str, p_box_size: int = 11) -> str:
             break  # also, eq_closer should be -1 as well
         equation_contents = text[eq_opener:eq_closer + 2]
         if equation_in_table_checker(equation_contents):
-            text = text[:eq_opener] + p_box + '\n\\[' + equation_contents[2:-2] + '\\]' + '\n}\n\n' + text[eq_closer + 2:]
+            text = text[:eq_opener] + p_box + '\n\\[' + equation_contents[2:-2] + '\\]' + '\n}\n\n' + text[
+                                                                                                      eq_closer + 2:]
         else:
             skip += 1
     return text
