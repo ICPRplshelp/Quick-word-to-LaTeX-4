@@ -128,6 +128,7 @@ HARDCODED_TEXT = r"""\documentclass[fontsize=11pt]{article}
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 % ENDIF
 
+
 \usepackage{hyperref}
 \providecommand{\href}[1]{\url{#1}}
 \usepackage{iftex}
@@ -136,6 +137,10 @@ HARDCODED_TEXT = r"""\documentclass[fontsize=11pt]{article}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt plus 2pt minus 1pt}
 \usepackage[normalem]{ulem}
+
+\makeatletter
+\providecommand{\subtitle}[1]{\apptocmd{\@title}{\par {\large #1 \par}}{}{}}
+\makeatother
 """
 
 HARDCODED_TEXT_POST = r"""
@@ -152,9 +157,6 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
     if dataclass_dict is None:
         dataclass_dict = {}
     # prestart = ''
-
-
-
     prestart = preamble_path
     if isinstance(has_bib_file, bool) and has_bib_file is True:
         assert False  # this is never supposed to run.
@@ -475,6 +477,19 @@ def detect_align_region(text: str) -> Optional[tuple[str, int, int]]:
         return None
 
 
+TEST_TEXT = R"""
+{ LHS = AP  }{ = A\begin{bmatrix}
+ \mid & \mid & \mid & \mid & \mid \\
+{\overset{⃑}{v}}_{1} & {\overset{⃑}{v}}_{2} & {\overset{⃑}{v}}_{3} & \cdots & {\overset{⃑}{v}}_{n} \\
+ \mid & \mid & \mid & \mid & \mid \\
+\end{bmatrix}  }{ = \left\lbrack A\begin{matrix}
+ \mid & \mid & \mid & \mid & \mid \\
+{\overset{⃑}{v}}_{1} & A{\overset{⃑}{v}}_{2} & A{\overset{⃑}{v}}_{3} & \cdots & A{\overset{⃑}{v}}_{n} \\
+ \mid & \mid & \mid & \mid & \mid \\
+\end{matrix} \right\rbrack }
+""".strip()
+
+
 def process_align_region(txt: str, auto_align: bool = False, max_line_len: int = -1,
                          extra_info: Optional[dict] = None) -> tuple[str, bool, list[str]]:
     """Repairs all multiline equation environments.
@@ -490,7 +505,7 @@ def process_align_region(txt: str, auto_align: bool = False, max_line_len: int =
     # max_line_len = 40
     # text_so_far = txt
     # uni_seperator = 'Ↄ'
-    txt = txt.replace('\n', '')  # may make equations long.
+    txt = txt.strip()
     separator_points = bracket_region_outer(txt)
     # it is slicing time
     lines_so_far = []

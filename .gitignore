@@ -251,6 +251,9 @@ pythontex-files-*/
 *.ttt
 *.fff
 
+
+*.html
+
 # Latexian
 TSWLatexianTemp*
 

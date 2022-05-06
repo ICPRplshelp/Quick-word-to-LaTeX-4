@@ -91,7 +91,7 @@ def longtable_split_detector(text: str) -> str:
         - text is an entire longtable environment.
     """
     header = find_not_in_any_env_tolerance(text, '\\endhead', depth_overlimit=2)
-    footer = find_not_in_any_env_tolerance(text, '\\bottomrule', depth_overlimit=2)
+    footer = find_not_in_any_env_tolerance(text, '\\bottomrule()', depth_overlimit=2)
     during, before, after = three_way_isolation(text, header + len('\\endhead'), footer)
     during = longtable_splitter(during)
     return '\n\n'.join([before, during, after])
@@ -108,7 +108,7 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
     band = 'GfªsBDÜG'
 
     tab_start = '\\endhead'
-    tab_end = '\\bottomrule'
+    tab_end = '\\bottomrule()'
     tab_s_index = find_not_in_any_env_tolerance(text, tab_start, 0, 2, 1) + len(tab_start)
     tab_e_index = find_not_in_any_env_tolerance(text, tab_end, 0, 2, 1)
 
@@ -513,7 +513,7 @@ def add_label_to_longtable(text: str, caption: str, label: str) -> str:
     """
     assert text.startswith('\\begin{longtable}')
     caption_str = '\\caption{' + caption + '}' + label + '\\\\'
-    return insert_before(text, '\\toprule', caption_str)
+    return insert_before(text, '\\toprule()', caption_str)
 
 
 def insert_before(text: str, key: str, sub: str) -> str:
@@ -1719,7 +1719,7 @@ def split_all_equations(text: str, max_len: int, skip: int = 0,
         else:  # otherwise, updates are done, and then we continue.
             if equation_is_numbered:
                 logging.warning(f'Extra long numbered equation: {eqn_comment}. Comment deleted.')
-            text = text[:starting_index] + R'\[' + new_eqn_text + R' \]' + text[finishing_index + 2:]
+            text = text[:starting_index] + R'\[' + new_eqn_text + R'\]' + text[finishing_index + 2:]
             skip += 1
     # if equation_labels:  # if equation_labels isn't empty
     #     text = bulk_labeling(text, equation_labels, )
@@ -1828,6 +1828,19 @@ def matrix_equation_extractor(text: str) -> tuple[str, str]:
     # ti_temp is also where the hashtag point starts, so everything before it is the contents
     equation_contents = text[b_start:ti_temp].strip()
     return equation_contents, comment
+
+
+DIAG = R"""
+LHS = AP = A\begin{bmatrix}
+ \mid & \mid & \mid & \mid & \mid \\
+{\overset{⃑}{v}}_{1} & {\overset{⃑}{v}}_{2} & {\overset{⃑}{v}}_{3} & \cdots & {\overset{⃑}{v}}_{n} \\
+ \mid & \mid & \mid & \mid & \mid \\
+\end{bmatrix} = \left\lbrack A\begin{matrix}
+ \mid & \mid & \mid & \mid & \mid \\
+{\overset{⃑}{v}}_{1} & A{\overset{⃑}{v}}_{2} & A{\overset{⃑}{v}}_{3} & \cdots & A{\overset{⃑}{v}}_{n} \\
+ \mid & \mid & \mid & \mid & \mid \\
+\end{matrix} \right\rbrack
+"""
 
 
 def split_equation(text: str, max_len: int, list_mode: bool = False) -> Union[None, str, list[str]]:
@@ -2112,16 +2125,16 @@ def swap_day_with_today(text: str) -> str:
     raise NotImplementedError
 
 
-def find_author(text: str, props: str = 'author') -> str:
+def find_author(text: str, props: str = 'author') -> Optional[str]:
     """Find the current author of the text.
     text is the entire text.
-    Raise ValueError if we can't find an author.
+    Return None otherwise.
     """
     auth = '\\' + props + '{'
     author_pos = find_nth(text, auth, 1) + len(auth)
     t_author_pos = author_pos - len(auth)
     if author_pos == -1:
-        raise ValueError
+        return None
     else:
         end_author_pos = local_env_end(text, t_author_pos)  # focused on the closing bracket
         author_name = text[author_pos:end_author_pos]
@@ -2275,18 +2288,17 @@ EX_AT = r"""
 def retain_author_info(text: str) -> str:
     """Return author-related metadata
     """
-    mdl = ['title', 'author', 'date']
+    # add subtitle to mdl to force a subtitle
+    mdl = ['title', 'author', 'date', 'subtitle']
     metadata = {}
     for md in mdl:
-        try:
-            auth = find_author(text, md)
+        auth = find_author(text, md)
+        if auth is not None:
             metadata[md] = auth
-        except ValueError:
-            pass
     author_text = ''
     for mdd, txt in metadata.items():
-        if 'ons for packages loaded elsewher' in txt:
-            txt = ''
+        # if 'ons for packages loaded elsewher' in txt:
+        #     txt = ''
         author_text += '\\' + mdd + '{' + txt + '}\n'
     return author_text
 
@@ -3476,7 +3488,7 @@ def framed(text: str) -> str:
         #     skip += 1  # skip if the header isn't the environment we look for
         #     continue
         # check if this table is only one wide:
-        if not text[right_index_border:].startswith('\\end{minipage} \\\\\n\\midrule\n\\endhead\n\\bottomrule'
+        if not text[right_index_border:].startswith('\\end{minipage} \\\\\n\\midrule()\n\\endhead\n\\bottomrule()'
                                                     '\n\\end{longtable}'):
             skip += 1
             continue  # if it is not one wide, then this is the wrong table
@@ -3539,7 +3551,7 @@ def longtable_environment(text: str, env: str, env_info: LatexEnvironment) -> st
 
         table_content_start = find_not_in_environment_tolerance(text, R'\endhead', forbid_env_tolerance,
                                                                 right_index_border) + len(R'\endhead')
-        table_content_end = find_not_in_environment_tolerance(text, R'\bottomrule', forbid_env_tolerance,
+        table_content_end = find_not_in_environment_tolerance(text, R'\bottomrule()', forbid_env_tolerance,
                                                               right_index_border)
         # table_content_end = text.find(R'\bottomrule', right_index_border)
         if table_content_start == -1 or table_content_end == -1:
@@ -4439,13 +4451,45 @@ def abstract_wrapper(text: str) -> str:
     checker_text = text.strip()
     if checker_text.startswith(mt):
         checker_text = checker_text[len(mt):].strip()
-    if checker_text.startswith('Abstract'):
-        text = text.replace('Abstract', '\\begin{abstract}\n\n', 1)
-        next_section = find_next_section(text, 0, 6)
-        text = text[:next_section] + '\n\n\\end{abstract}\n\n' + text[next_section:]
+    abstract_text = 'Abstract'
+    abstract_location = checker_text.find('Abstract')
+    abstract_location_bold = checker_text.find('\\textbf{Abstract}')
+    if abstract_location_bold != -1 and abstract_location_bold < abstract_location:
+        abstract_location = abstract_location_bold
+        abstract_text = '\\textbf{Abstract}'
+    if abstract_location == -1:  # if the word abstract DNE
         return text
     else:
+        nearest_section_location = find_next_section(checker_text, 0)
+        # look for the next the nearest section. if the abstract starts
+        # before the nearest next section, then declare it.
+        if abstract_location < nearest_section_location:
+            text = text.replace(abstract_text, '\\begin{abstract}\n\n', 1)
+            next_section = find_next_section(text, 0, 6)
+            text = text[:next_section] + '\n\n\\end{abstract}\n\n' + text[next_section:]
+            # by convention, the abstract will always go
+            # before the table of contents. if there is a table of contents,
+            # swap them.
+            abstract_location = text.find('\\begin{abstract}')
+            abstract_ending = text.find('\\end{abstract}')
+            title_location = text.find('\\maketitle')
+            assert abstract_ending != -1 and abstract_location != -1
+            if title_location == -1:  # can't find the title? place the abstract at the v. start
+                text = text[abstract_location:abstract_ending + len('\\end{abstract')] + \
+                    text[:abstract_location] + text[abstract_ending + len('\\end{abstract}'):]
+            else:
+                text = text[:title_location + len('\\maketitle')] + \
+                    text[abstract_location:abstract_ending + len('\\end{abstract}')] + \
+                    text[title_location + len('\\maketitle'):abstract_location] + \
+                    text[abstract_ending + len('\\end{abstract}'):]  # past the abstract end
+                # start to \maketitle
+                # add the abstract content
+                # after title to where the abstract starts
+                # after the abstract ends
+
         return text
+    # else:
+    #     return text
 
 
 def local_env_layer_bulk(text: str, index: int, envs: list[str]) -> int:
@@ -4810,3 +4854,37 @@ def include_graphics_failsafe(text: str) -> str:
         LaTeX file.
     """
     return text.replace('\\includegraphics', '        \\includegraphics')
+
+
+def toc_detector(text: str, depth: int) -> str:
+    """Detect if there's a table of contents in the document.
+    If so, return text with the table of contents.
+    Note that in MS Word, the table contents begins with a section.
+    It is treated to end at the next section, so you should
+    start a new section after the
+    table of contents finish.
+
+    Preconditions:
+        - hypertargets eliminated
+        - depth >= 0
+
+    Parameters
+    ----------
+    text
+        the text to input.
+    depth
+        if this value is greater than 0, it means that the entire
+        document has its headers shifted.
+
+    Returns
+    -------
+        text with the toc appended, or not at all.
+    """
+    sb = 'sub' * depth
+    toc = '\n{\n\\setcounter{tocdepth}{3}\n\\tableofcontents\n}\n'
+    toc_location = text.find('\\' + sb + 'section{Contents}')
+    if toc_location == -1:
+        return text
+    else:
+        next_section = find_next_section(text, toc_location + 2)
+        return text[:toc_location] + toc + text[next_section:]

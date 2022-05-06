@@ -46,7 +46,7 @@ margin=0.75in % small_margins==True
 
 \usepackage{framed}
 
-% IF pdf_engine==xelatex
+% IF pdf_engine==DISABLE
 \ProvidesPackage{iftex}
 
 \ifxetex

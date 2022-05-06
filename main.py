@@ -45,8 +45,9 @@ def read_json(json_dir: str) -> tuple[str, dict[str, Any]]:
     return description, data_dict
 
 
-def update_desc() -> dict[str, Any]:
+def update_desc(*args) -> dict[str, Any]:
     """Also return the config!!!
+    *args MUST BE KEPT.
     """
     sv = variable.get()
     np = 'config_modes\\' + sv

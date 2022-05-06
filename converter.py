@@ -209,6 +209,8 @@ class Preferences:
     max_page_length: int = 35  # for use with the longtable eliminator module, how long
     # a page is, in EM units.
     disable_bib_prompts: bool = True  # prevent biblio files from being asked at all.
+    html_output: bool = False  # render an HTML file as well. Not affected by
+    # whether the PDF file should not be rendered.
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -397,7 +399,7 @@ class WordFile:
                 (media_path, True),
                 ('-s', True),
                 (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level >= 1),
-                ('--toc', self.preferences.table_of_contents),
+                # ('--toc', self.preferences.table_of_contents), TABLE OF CONTENTS IS HANDLED OTHERWISE
                 # ('--top-level-division=chapter', self.preferences.document_class in ['book', 'tufte-book']),
                 (self.word_file_path, True),  # FILTERS END HERE
                 ('--pdf-engine=xelatex', False),
@@ -422,6 +424,9 @@ class WordFile:
         end = '\\end{document}'
         text, start, end = w2l.find_between(text, start, end)
         dict_info_hide_verb = {}
+
+        text = dbl.toc_detector(text, min(self.preferences.header_level, 0))
+
         # PUSH HEADER LEVELS, IF APPLICABLE
         if -2 <= self.preferences.header_level <= -1:
             text = dbl.make_chapter(text, depth=self.preferences.header_level)
@@ -642,6 +647,26 @@ class WordFile:
                 latex_engine = 'xelatex'
             dq = '"'
             write_file(self.text, self.output_path)
+
+            if self.preferences.html_output:
+                html_command = [
+                    'pandoc',
+                    self.output_path,
+                    '-f',
+                    'latex',
+                    '-t',
+                    'html',
+                    '--katex',
+                    '-s'
+                    '-o',
+                    self.output_path[:-4] + '.html'
+                ]
+                if self.citations_enabled:
+                    print(f'citations are enabled and will read {self.bib_path}')
+                    html_command.append('--citeproc')
+                    html_command.append(f'--bibliography={self.bib_path}')
+                print('exporting HTML...')
+                subprocess.run(html_command)
 
             if not self._disallow_pdf:
                 if '\\usepackage{minted}' in self.text:
