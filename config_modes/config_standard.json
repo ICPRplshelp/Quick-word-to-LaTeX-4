@@ -27,7 +27,7 @@
   "max_line_length": 110,
   "max_line_align": true,
   "fix_texttt": true,
-  "table_of_contents": false,
+  "table_of_contents": true,
   "forbid_images": false,
   "citation_keyword": "cite",
   "no_secnum": false,

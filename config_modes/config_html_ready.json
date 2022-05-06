@@ -1,5 +1,5 @@
 {
-  "description": "A config file that optimizes HTML outputs.",
+  "description": "A config file that outputs an HTML file. Equation labeling is off. HTML to be put in same directory as exported files.",
   "preamble_path": "config_modes/preamble.txt",
   "allow_proofs": true,
   "allow_citations": true,

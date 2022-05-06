@@ -425,7 +425,8 @@ class WordFile:
         text, start, end = w2l.find_between(text, start, end)
         dict_info_hide_verb = {}
 
-        text = dbl.toc_detector(text, min(self.preferences.header_level, 0))
+        if self.preferences.table_of_contents:
+            text = dbl.toc_detector(text, min(self.preferences.header_level, 0))
 
         # PUSH HEADER LEVELS, IF APPLICABLE
         if -2 <= self.preferences.header_level <= -1:

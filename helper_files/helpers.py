@@ -2131,7 +2131,7 @@ def find_author(text: str, props: str = 'author') -> Optional[str]:
     Return None otherwise.
     """
     auth = '\\' + props + '{'
-    author_pos = find_nth(text, auth, 1) + len(auth)
+    author_pos = rfind_nth(text, auth, 1) + len(auth)
     t_author_pos = author_pos - len(auth)
     if author_pos == -1:
         return None
@@ -2289,7 +2289,7 @@ def retain_author_info(text: str) -> str:
     """Return author-related metadata
     """
     # add subtitle to mdl to force a subtitle
-    mdl = ['title', 'author', 'date', 'subtitle']
+    mdl = ['title', 'author', 'date']
     metadata = {}
     for md in mdl:
         auth = find_author(text, md)
@@ -2910,6 +2910,8 @@ def find_previous_section(text: str, max_index: int, max_depth: int = 6) -> int:
     """Find when the previous section / subsection / subsubsection occurs.
     The number returned should be the index of the backslash of whehere
     the new section occurs.
+
+    Return -1 on failure.
     """
     highest_start = 0
     if max_depth < 0:
@@ -4885,6 +4887,13 @@ def toc_detector(text: str, depth: int) -> str:
     toc_location = text.find('\\' + sb + 'section{Contents}')
     if toc_location == -1:
         return text
+    # elif find_previous_section(text, toc_location) != -1:  # there may not be a
+    #     # previous section
+    #     return text
     else:
         next_section = find_next_section(text, toc_location + 2)
-        return text[:toc_location] + toc + text[next_section:]
+        original_toc_contents = text[toc_location:next_section]
+        if '\\protect\\hyperlink' in original_toc_contents:
+            return text[:toc_location] + toc + text[next_section:]
+        else:
+            return text
