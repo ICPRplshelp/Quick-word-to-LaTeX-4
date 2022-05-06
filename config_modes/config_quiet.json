@@ -32,7 +32,7 @@
   "max_line_align": true,
   "fix_texttt": false,
   "combine_aligns": true,
-  "table_of_contents": true,
+  "table_of_contents": false,
   "special_proofs": false,
   "forbid_images": false,
   "erase_pandoc_preamble": true,
