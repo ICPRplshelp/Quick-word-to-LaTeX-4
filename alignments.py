@@ -491,7 +491,7 @@ def process_align_region(txt: str, auto_align: bool = False, max_line_len: int =
     # text_so_far = txt
     # uni_seperator = 'Ↄ'
     txt = txt.replace('\n', '')  # may make equations long.
-    separator_points = bracket_region_outer(txt, '{', '}')
+    separator_points = bracket_region_outer(txt)
     # it is slicing time
     lines_so_far = []
     for start in separator_points:
@@ -733,46 +733,33 @@ def bracket_region(text: str, opening_bracket: str, close: str) -> dict:
     return d
 
 
-def bracket_region_outer(text: str, opening: str, close: str):
-    """Bracket region. Outer only. Skips backslash cases.
-    \\{ x+y \\} means \\{ x+y \\}
+def bracket_region_outer(text: str):
+    """Return a dictionary, where each key-value pair maps an opening
+    bracket to its closing bracket. In this case, it will only
+    look for brackets aren't nested within any other
+    bracket.
+
     Preconditions:
-        - len(open) = 1 and len(close) = 1
-        - open != '\\' and close != '\\'
+        - no \verb instances. verbatims are concealed.
 
-    >>> bracket_region('abc\bdefghi','b','h')
-
+    >>> rr = '{123}{{7}}{\\}3}{678}'
+    >>> bracket_region_outer(rr) == {0: 4, 5: 9, 10: 14, 15: 19}
+    True
     """
-    # text = 'aaaa(bb()()ccc)dd'
-    istart = []  # stack of indices of opening parentheses
-    d = {}
 
-    # if the previous char is a \\, then don't check the next one. \\ counts as 1 char
-    backslash_state = False
-    for i, c in enumerate(text):
-        if c == '\\':
-            backslash_state = True
-        elif backslash_state:
-            backslash_state = False
-        if c == opening:
-            if not backslash_state:  # if the previous char isn't \\
-                istart.append(i)
-            elif c != '\\':  # turn it back to false, UNLESS c == \\
-                backslash_state = False
-        if c == close:
-            if not backslash_state:
-                try:
-                    # prior_istart_len = len(istart)
-                    kc = istart.pop()
-                    if len(istart) == 0:  # only when capturing outermost brackets
-                        d[kc] = i
-                except IndexError:
-                    print('Too many closing parentheses')
-            elif c != '\\':
-                backslash_state = False
-    if istart:  # check if stack is empty afterwards
-        print('Too many opening parentheses')
-    return d
+    dict_so_far = {}
+    cur_ind = 0
+    while True:
+        closest_opener = dbl.find_no_escape_char_first(text, '{', cur_ind)
+        if closest_opener == -1:
+            break
+        closer = dbl.local_env_end(text, closest_opener)
+        dict_so_far[closest_opener] = closer
+        cur_ind = closer + 1
+    return dict_so_far
+
+    # istart = []  # stack of indices of opening parentheses
+    # d = {}
 
 
 # def remove_enumerated_headers(txt: str) -> str:

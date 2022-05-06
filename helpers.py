@@ -614,7 +614,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False, float_typ
     figures_so_far = []
     i = 1
 
-    figure_text_cap = '\nFigure'
+    figure_text_cap = '\n\nFigure'
     while True:
         bl = '\n\\begin{figure}[' + float_type + ']\n\\centering\n'
         el = '\\end{figure}\n'
@@ -631,9 +631,10 @@ def detect_include_graphics(text: str, disallow_figures: bool = False, float_typ
             break
 
         during = temp_after[:temp_after_index + 1]
-        after = temp_after[temp_after_index + 2:]  # starts with \n
+        # paste_after = temp_after[temp_after_index + 2:]
+        after = temp_after[temp_after_index + 1:]  # starts with \n
         if not disallow_figures and after[:len(figure_text_cap)] == figure_text_cap and not in_table:
-            end_figure_index = find_nth(after, '\n\n', 1)
+            end_figure_index = find_nth(after, '\n\n', starter=2)  # start at that
             temp_figure_text = after[:end_figure_index]
             temp_figure_text_2 = temp_figure_text[len(figure_text_cap) + 1:]
             end_of_numbering_1 = find_nth(temp_figure_text_2, ':', 1)
@@ -655,6 +656,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False, float_typ
         else:
             bl = '\n\\begin{figure}[' + float_type + ']\n\\centering\n'
             el = '\n\\end{figure}'
+
         text = before + bl + during + el + '\n' + after
         i += 1
     new_figures_so_far = ['\\ref{fig:p' + x + '}' for x in figures_so_far]
@@ -1483,6 +1485,8 @@ def dy_fixer(text: str) -> str:
     all_letters = (low_letters.union(cap_letters)).union(extra_letters)
     for letter_instance in all_letters:
         d_text = '\\text{d' + letter_instance + '}'
+        if letter_instance == 'θ':
+            letter_instance = '\\theta'
         d_text_fixed = '\\text{d}' + letter_instance
         text = text.replace(d_text, d_text_fixed)
     return text
@@ -2452,17 +2456,20 @@ def local_env_end(text: str, index: int) -> int:
     """Return the position of the closing brace where the local environment ends.
 
     It is strongly recommended that text[index] == '\\' and
-    is the start of a local environment declaration.
+    is the start of a local environment declaration. Though the farthest
+    index can be is at the position of the opening brace.
+
+    Raise ValueError if an end cannot be found.
 
     >>> te = 'abc\\wh{fo3rce}the'
-    >>> local_env_end(te, 3)
+    >>> local_env_end(te, 6)
     13
     """
     n = 1
     while True:
         closest_bracket = find_nth(text, '}', n, index)
         if closest_bracket == -1:
-            raise ValueError
+            raise ValueError("Opening bracket without a closing bracket detected")
         b_layer = bracket_layers(text, closest_bracket, starting_index=index)
         if b_layer == 0:
             # cur_ind = closest_bracket
@@ -4271,6 +4278,35 @@ def find_no_escape_char(text: str, sub: str, skip: int = 1, start: int = 0) -> i
     # return candidate_location
 
 
+def find_no_escape_char_first(text: str, sub: str, start: int = 0) -> int:
+    """Very similar to str.find. Return -1 on failure.
+    Parameters
+    ----------
+    text
+        the text to search.
+    sub
+        the substring to find.
+    start
+        the index to start searching.
+
+    Returns
+    -------
+        the index at the first occurrence of the substring, ignoring
+        instances where a backslash is put before the substring.
+    """
+    skip = 1
+    while True:
+        candidate_index = find_nth(text, sub, skip, start)
+        # assert 0 <= candidate_index < len(text)
+        if candidate_index == -1:
+            return candidate_index
+        elif candidate_index != 0 and text[candidate_index - 1] == '\\':
+            skip += 1
+            continue
+        else:
+            return candidate_index
+
+
 def date_today(text: str) -> str:
     """If the date in the preamble contains the word Today, then actually make it today.
     This is case-sensitive.
@@ -4732,3 +4768,20 @@ def check_valid_alignment(text: str) -> Optional[tuple[str, int, int]]:
     else:
         # print('ran out of alignment regions to check')
         return None
+
+
+def include_graphics_failsafe(text: str) -> str:
+    """Prevents include graphics instances from
+    breaking the LaTeX file.
+
+    Parameters
+    ----------
+    text
+        the text contents of the LaTeX file.
+
+    Returns
+    -------
+        a modified version of the text contents of the
+        LaTeX file.
+    """
+    return text.replace('\\includegraphics', '        \\includegraphics')

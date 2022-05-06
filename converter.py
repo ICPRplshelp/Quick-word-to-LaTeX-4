@@ -22,7 +22,9 @@ try:
     import pygments
 except ModuleNotFoundError:
     logging.warning('pygments isn\'t installed, meaning'
-                    ' code blocks will not be highlighted.')
+                    ' code blocks will not be highlighted,'
+                    ' and some text from the preamble will be'
+                    ' omitted.')
     has_pygments = False
 
 
@@ -205,6 +207,7 @@ class Preferences:
     # code blocks
     max_page_length: int = 35  # for use with the longtable eliminator module, how long
     # a page is, in EM units.
+    disable_bib_prompts: bool = True  # prevent biblio files from being asked at all.
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -312,13 +315,16 @@ class WordFile:
         """Ask for citations. Should only be called if we want citations.
         """
         # pass
-
-        print('Opening the bib document file open box. If noting opens, consider re-running this program.')
-        file_info = askopenfile(mode='r', title='Open the bib file you want to combine',
-                                filetypes=[('Bib Files', '*.bib')])
-        self.bib_path = file_info.name.replace("/", "\\") if file_info is not None else None
-        if self.bib_path is None:
-            print('You did not specify a bib path, so we\'re assuming you\'re not citing anything')
+        if not self.preferences.disable_bib_prompts:
+            print('Opening the bib document file open box. If noting opens, consider re-running this program.')
+            file_info = askopenfile(mode='r', title='Open the bib file you want to combine',
+                                    filetypes=[('Bib Files', '*.bib')])
+            self.bib_path = file_info.name.replace("/", "\\") if file_info is not None else None
+            if self.bib_path is None:
+                print('You did not specify a bib path, so we\'re assuming you\'re not citing anything')
+        else:
+            print('The document does contain a bibliography section, but we will not ask for it'
+                  ' as it is forced disabled.')
 
     def _recalculate_erase_preamble(self) -> None:
         """Determine whether the pandoc preamble should be removed based on preferences."""
@@ -418,7 +424,7 @@ class WordFile:
         if self.preferences.forbid_images:
             logging.warning('About to remove images')
             text = dbl.remove_images(text)
-
+        # text = dbl.include_graphics_failsafe(text)
         if self.preferences.fix_vectors:
             text = w2l.fix_vectors(text)
             text = w2l.fix_vectors_again(text)
@@ -795,6 +801,8 @@ def move_sty_cls_files(files: list[str]) -> list[str]:
     the same directory as this .py file.
 
     Copy means literally taking the text contents of the file.
+
+    Return the list of files that were copied.
     """
     files_moved = []
     for file in files:
@@ -818,7 +826,10 @@ def move_sty_cls_files(files: list[str]) -> list[str]:
         else:
             print(f_contents + ' ' + file_name)
             # write_file(f_contents, file_name)
-            files_moved.append(file_name)
+            if len(file) != len(file_name):
+                # add to the list only if the file is in a sub-directory
+                write_file(f_contents, file_name)
+                files_moved.append(file_name)
     return files_moved
 
 

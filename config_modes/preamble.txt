@@ -82,6 +82,10 @@ margin=0.75in % small_margins==True
 \rfoot{Page \thepage}
 % ENDIF
 
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}} % erase_pandoc_preamble==True
+
+
+
 % \renewcommand{\arraystretch}{2}
 
 % \usepackage{setspace}

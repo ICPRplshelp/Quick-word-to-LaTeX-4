@@ -193,5 +193,4 @@ if __name__ == '__main__':
     button = Button(root, text='Submit', command=click)
     button.pack()
 
-
     root.mainloop()
