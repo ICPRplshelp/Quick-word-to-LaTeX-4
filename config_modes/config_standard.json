@@ -1,5 +1,5 @@
 {
-  "description": "This is the default configuration file.",
+  "description": "This is the default configuration file. Keep in mind this produces a very messy preamble, so I would suggest using config_quiet. While it sounds standard, I barely use it.",
   "preamble_path": "config_modes/preamble.txt",
   "auto_numbering": false,
   "big_text": false,
