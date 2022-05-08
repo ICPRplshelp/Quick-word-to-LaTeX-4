@@ -7,7 +7,7 @@ import time
 from dataclasses import dataclass, fields, asdict
 
 from tkinter.filedialog import askopenfile
-from typing import Optional, Union
+from typing import Optional, Union, Any
 import subprocess
 
 from helper_files import helpers as dbl, alignments as w2l
@@ -85,6 +85,11 @@ class InvalidFileTypeError(Exception):
 class AttemptedFilePromptError(Exception):
     """Exception raised when a file dialogue would open up
     when that is not allowed to happen."""
+
+
+class WordFileNotSpecified(Exception):
+    """Exception raised when a Word file is not
+    specified when it really has to."""
 
 
 class SpaceError(Exception):
@@ -971,3 +976,41 @@ def main(config: str = '', overrides: Optional[dict] = None,
               ' the file you\'ve chosen. Press ENTER to quit if the program will not quit\n'
               'by itself.')
         time.sleep(2)
+
+
+def list_get(lst: list[Any], index: int, default: Any = None) -> Any:
+    """Grab the list at index, or default otherwise.
+
+    Parameters
+    ----------
+    lst
+        the list
+    index
+        the index
+    default
+        if index DNE
+
+    Returns
+    -------
+        item at index or default if index DNE
+    """
+    if index < 0:
+        index = len(lst) - index
+    if 0 <= index < len(lst):
+        return lst[index]
+    else:
+        return default
+
+
+if __name__ == '__main__':
+    import sys
+    full_command = sys.argv[1:]
+    if len(full_command) != 0:
+        main_path_to_wordfile = full_command[0]
+        config_mode = list_get(full_command, 1, 'config_modes/config_standard.json')  # default: config_standard.json
+        main_replacement_mode_path = list_get(full_command, 2)  # default: None
+        main_disable_file_prompts: bool = True  # always True
+        print('Make sure you include the folder the config files are in!!')
+        main(config_mode, {}, main_path_to_wordfile, main_replacement_mode_path, main_disable_file_prompts)
+    else:
+        print('No word file specified! Doing nothing.')
