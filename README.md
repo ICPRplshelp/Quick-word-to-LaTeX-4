@@ -27,6 +27,8 @@ these commands once Python is installed:
 pip install pygments
 ```
 
+(Note: Sometimes, you may have PATH variables mixed up. The best way to fix them is by reinstalling python from the python website.)
+
 ## Usage
 Make sure Python 3.10 is installed on your computer.
 Pandoc and LaTeX should be installed on your computer.
