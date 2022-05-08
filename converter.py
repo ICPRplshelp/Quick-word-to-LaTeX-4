@@ -529,8 +529,12 @@ class WordFile:
         # combines matrices. This is forced.
         text = dbl.aug_matrix_spacing(text)
         if self.preferences.verbatim_plugin in ('lstlisting', 'minted'):
-            text = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang, self.preferences.verbatim_plugin,
-                                           self.preferences.verbatim_options)
+            text, lang_converted = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang, self.preferences.verbatim_plugin,
+                                                           self.preferences.verbatim_options)
+            # no language??
+            if not lang_converted and self.preferences.verbatim_plugin == "minted":
+                print('No language declarations.')
+                self.preferences.verbatim_plugin = "NOTHING"
             # I might have to change this if I ever decide to use auto
             # language detection
         # text = text.replace('…', '...')  # only occurs in verbatim envs

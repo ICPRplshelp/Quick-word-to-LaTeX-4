@@ -155,7 +155,8 @@ if __name__ == '__main__':
     directory_files = os.listdir(cfg_modes)
 
     cfgs = [df for df in directory_files if df.endswith('.json') and df.startswith('config')]
-
+    if len(cfgs) == 0:
+        print("No config files!!!")
     if cur_config not in cfgs:
         cur_config = cfgs[0] if 'config_standard.json' not in cfgs else 'config_standard.json'
     root = Tk()

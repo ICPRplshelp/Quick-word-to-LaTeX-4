@@ -2304,20 +2304,24 @@ def retain_author_info(text: str) -> str:
     return author_text
 
 
-def verbatim_to_listing(text: str, lang: str, plugin: str = '', minted_params: str = '') -> str:
+def verbatim_to_listing(text: str, lang: str, plugin: str = '', minted_params: str = '') -> tuple[str, bool]:
     """Converts all verbatim environments to the language in question.
     No language detection is done.
     Language must be in this list:
     https://www.overleaf.com/learn/latex/Code_listing
+
+    This may only run once.
     """
     if plugin not in ('minted', 'lstlisting'):
-        return text
+        return text, False
     language_dir = {'minted': MINTED_LANGUAGES, 'lstlisting': LISTING_LANGUAGES}[plugin]
     # MINTED_LANGUAGES if lang.strip().lower() == 'minted' else LISTING_LANGUAGES
 
     skip = 1
     bv = R'\begin{verbatim}'
     ev = R'\end{verbatim}'
+
+    converted_once = False
     while True:
         closest_verb = find_nth(text, bv, skip)
         if closest_verb == -1:
@@ -2341,6 +2345,10 @@ def verbatim_to_listing(text: str, lang: str, plugin: str = '', minted_params: s
         if language == '':
             skip += 1
             continue
+
+        # BY THIS POINT, A LANGUAGE HAS BEEN DETECTED.
+        # print('FOUND A LANGUAGE!!!')
+        converted_once = True
         # otherwise, it must have a language.
         if plugin == 'minted':
             params = minted_params if minted_params.startswith('[') and minted_params.endswith(']') else \
@@ -2354,7 +2362,7 @@ def verbatim_to_listing(text: str, lang: str, plugin: str = '', minted_params: s
             command_end = '\\end{lstlisting}'
 
         text = before + command_start + during + command_end + after
-    return text
+    return text, converted_once
 
 
 def first_upper(text: str) -> str:
