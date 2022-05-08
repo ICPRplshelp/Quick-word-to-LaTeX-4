@@ -42,7 +42,7 @@ prompted to.
 3. The program will convert it and output
 a PDF in the same directory as `main.py`.
 
-You should look at the [documentation](https://github.com/ICPRplshelp/Quick-word-to-LaTeX-4/tree/master/Documentation)
+You should look at the [documentation](https://github.com/ICPRplshelp/Quick-word-to-LaTeX-4/tree/master/documentation)
 if you want to make the most use of this program.
 
 ## CAUTION!!!
