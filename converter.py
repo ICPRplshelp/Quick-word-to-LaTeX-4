@@ -32,6 +32,8 @@ REPLAC = {'α': R'\alpha', 'β': R'\beta', 'γ': R'\gamma', 'δ': R'\delta', 'ϵ
           'Λ': R'\Lambda', 'Δ': R'\Delta', 'μ': R'\mu', 'ν': R'\nu', 'ξ': R'\xi', 'ρ': R'\rho'}
 # REPLAC = {'α'}
 ALLOWED_LATEX_COMPILERS = {'pdflatex', 'xelatex', 'luatex'}
+FOLDER_TO_RUN_IN = 'export'  # the folder to run it.
+FOLDER_TO_RUN_IN_SLASH = FOLDER_TO_RUN_IN + '\\'
 
 
 def open_file(file: str, allow_exceptions: bool = False) -> str:
@@ -178,8 +180,8 @@ class Preferences:
     # no matter what.
     modify_tables: bool = True  # determine whether tables should be modified.
     # if false, longtable eliminator and table labeling will not work.
-    document_class: str = '\\documentclass[12pt]{article}'  # the document class, or '' if it should not be changed. Either
-    # the name of the document class, or the document class command (it's a command if it has a
+    document_class: str = '\\documentclass[12pt]{article}'  # the document class, or '' if it should not be changed.
+    # Either the name of the document class, or the document class command (it's a command if it has a
     # backslash.)
     subsection_limit: int = -1  # the subsection limit. anything deeper will fallback to the limit.
     # -1 disable
@@ -557,9 +559,9 @@ class WordFile:
                     #     temp_text_here[bib_ind:]
                     bib_num = '[heading=bibnumbered]' if not self.preferences.no_secnum else ''
                     cite_properties = {'bibtex_def': self.preferences.bibtex_def, 'citation_kw':
-                        self.preferences.citation_keyword}
+                                        self.preferences.citation_keyword}
                     temp_text_here = temp_text_here[:bib_ind] + '\\medskip\n\\printbibliography' + bib_num + \
-                                     temp_text_here[bib_ind:]
+                        temp_text_here[bib_ind:]
                     # then replace the citations
                     text = dbl.do_citations(temp_text_here, bib_data, self.preferences.citation_mode,
                                             self.preferences.citation_brackets, cite_properties)
@@ -589,7 +591,7 @@ class WordFile:
             text = dbl.show_verbatims(text, dict_info_hide_verb)
         # always on
         text = dbl.verbatim_regular_quotes(text)
-        text = text.replace('ò÷öæ🬵🬶	🬷', '').strip()
+        text = text.replace('ò÷öæ🬵🬶	🬷', '')
 
         if '\\begin{longtable}' in text:  # check if text has a longtable
             self.contains_longtable = True  # and set contains longtable to true.
@@ -805,10 +807,10 @@ class WordFileCombo(WordFile):
         new_file_start = dbl.insert_in_preamble(new_file_start, file_text)
         new_file_text_3 = dbl.many_instances(self.text, new_file_text_2, self.preferences.replacement_marker)
         new_file_text_4 = new_file_start + new_file_text_3 + new_file_end
-        if self.preferences.override_author and isinstance(self.author, str):
-            new_file_text_4 = dbl.swap_author(new_file_text_4, self.author, 'author')
-        if self.preferences.override_title and isinstance(self.doc_title, str):
-            new_file_text_4 = dbl.swap_author(new_file_text_4, self.doc_title, 'title')
+        # if self.preferences.override_author and isinstance(self.author, str):
+        #     new_file_text_4 = dbl.swap_author(new_file_text_4, self.author, 'author')
+        # if self.preferences.override_title and isinstance(self.doc_title, str):
+        #     new_file_text_4 = dbl.swap_author(new_file_text_4, self.doc_title, 'title')
         self.text = new_file_text_4
         print(new_file_text_4)
         self.export()
@@ -914,7 +916,7 @@ def main(config: str = '', overrides: Optional[dict] = None,
         a plain-text file was being opened.
     replacement_mode_path
         the path to the other .tex file used in replacement mode, or None if that
-        should be prompted.
+        should be prompted. Do nothing if not in replacement mode.
     disable_file_prompts
         if this is set to true, if a file prompt comes up
         an error will be thrown.
@@ -936,10 +938,9 @@ def main(config: str = '', overrides: Optional[dict] = None,
             else:
                 main_file_mfn = askopenfile(mode='r', title='Open the word file you want to convert',
                                             filetypes=[('Word Files', '*.docx'), ('Tex Files', '*.tex')])
-
+            path_mfn = main_file_mfn.name.replace("/", "\\") if main_file_mfn is not None else None
         else:
-            main_file_mfn = path_to_wordfile
-        path_mfn = main_file_mfn.name.replace("/", "\\") if main_file_mfn is not None else None
+            path_mfn = path_to_wordfile.replace("/", "\\")
         if path_mfn is None:
             print('You didn\'t select anything')
             exit()
@@ -963,5 +964,6 @@ def main(config: str = '', overrides: Optional[dict] = None,
         word_file_mfn.sequence()
     finally:
         print('Ending program. If a PDF was never compiled, it means something\'s wrong with'
-              ' the file you\'ve chosen.')
+              ' the file you\'ve chosen. Press ENTER to quit if the program will not quit\n'
+              'by itself.')
         time.sleep(2)

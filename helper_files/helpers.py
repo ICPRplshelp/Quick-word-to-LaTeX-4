@@ -162,7 +162,7 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
             cols = str_split_not_in_env(roow, '&', fbd_env)
             # things that are done for all columns
             cols = [process_equations_in_tables(minipage_remover(x.strip()), em_length) for x in cols]
-            cols = [force_not_inline(x) for x in cols]
+            # cols = [force_not_inline(x) for x in cols]
             columns.append(cols)
         # what we do here to columns is the reconstruction of the table
         rows_stage_2 = [' & '.join(x) for x in columns]
@@ -2131,12 +2131,13 @@ def find_author(text: str, props: str = 'author') -> Optional[str]:
     Return None otherwise.
     """
     auth = '\\' + props + '{'
-    author_pos = rfind_nth(text, auth, 1) + len(auth)
-    t_author_pos = author_pos - len(auth)
-    if author_pos == -1:
+    author_pos_raw = rfind_nth(text, auth, 1)  # the position of the \ in \author{}
+    if author_pos_raw == -1:
         return None
     else:
-        end_author_pos = local_env_end(text, t_author_pos)  # focused on the closing bracket
+        # the position of the character after the { in author declaration
+        author_pos = author_pos_raw + len(auth)
+        end_author_pos = local_env_end(text, author_pos_raw)  # focused on the closing bracket
         author_name = text[author_pos:end_author_pos]
         return author_name
 

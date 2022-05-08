@@ -3,9 +3,11 @@ build/
 vnev/
 .pytest_cache/
 out/
+files_to_check/
 
 images/
 latex_images_*/
+main.*/
 
 mode.txt
 testing.py

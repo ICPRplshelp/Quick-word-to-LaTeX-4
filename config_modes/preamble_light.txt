@@ -1,5 +1,8 @@
-\usepackage{amsmath,amssymb}
-\usepackage{lmodern,iftex}
-\usepackage[fontsize=11pt]{scrextend}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\usepackage[fontsize=11pt]{scrextend}  % big_text==True
 \usepackage{array}
 \usepackage{framed}
+\usepackage{float}

@@ -104,9 +104,26 @@ def __main() -> None:
             pass
 
 
-def move_useless_files_away(file_name: str, additional_files: Optional[list[str]] = None) -> None:
+def move_useless_files_away(file_name: str, additional_files: Optional[list[str]] = None,
+                            cur_folder: str = '') -> None:
     """Move all temp. tex related files into the trash folder.
     This does overwrite!!
+
+    Parameters
+    ----------
+    file_name
+        the name of the TEX file that is being exported, without the suffix.
+    additional_files
+        additional files to remove, independent of the tex file name without
+        the suffix. To be reserved for sty-cls files. Not anticipated to
+        be used.
+    cur_folder
+        Blank by default. If all the latex stuff happens
+        in that folder, then have it happen in that folder.
+
+    Returns
+    -------
+
     """
     if additional_files is None:
         additional_files = []
@@ -130,7 +147,7 @@ def move_useless_files_away(file_name: str, additional_files: Optional[list[str]
     for fm in files_to_move:
         # logging.warning('REPLACED ' + fm)
         try:
-            os.replace(fm, new_folder_path + '\\' + fm)
+            os.replace(cur_folder + fm, new_folder_path + '\\' + fm)
         except PermissionError:
             print(f'Cannot move file {fm}')
 
