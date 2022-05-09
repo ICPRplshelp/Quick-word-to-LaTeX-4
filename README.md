@@ -17,6 +17,7 @@ affected by the change heading level in the config.
 - Make sure Python 3.10 is installed on your computer.
 The best place to install python is through the
 Python official website. Things can go wrong if you install Python through the Windows 10 store.
+This program is compatible with Python 3.9, but nothing lower than that.
 - You should also have Pandoc and LaTeX installed
 on your computer. I strongly recommend using
 **TeX Live** as your LaTeX distribution - search
