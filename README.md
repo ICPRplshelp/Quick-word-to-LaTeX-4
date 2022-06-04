@@ -15,8 +15,6 @@ affected by the change heading level in the config.
 ## Requirements and Dependencies
 
 - Make sure Python 3.10 is installed on your computer.
-The best place to install python is through the
-Python official website. Things can go wrong if you install Python through the Windows 10 store.
 This program is compatible with Python 3.9, but nothing lower than that.
 - You should also have Pandoc and LaTeX installed
 on your computer. I strongly recommend using
@@ -31,16 +29,11 @@ pip install pygments
 
 (Note: Sometimes, you may have PATH variables mixed up. The best way to fix them is by reinstalling python from the python website.)
 
-## Usage
-Make sure Python 3.10 is installed on your computer.
-Pandoc and LaTeX should be installed on your computer.
-I suggest using TeX Live. I cannot guarantee
-that this will work for any other LaTeX distributions.
 
 **I've only tested this for Windows 10.** I am unsure
 how this works for macOS.
 
-1. Run `main.py`. Either through your IDE or with python directly, by opening the `.py` file with python.
+1. Run `main.py`. The easiest way is to click on `run_it.bat`, but make sure you've installed the dependencies first.
 2. Choose the Word file you want to convert when
 prompted to.
 3. The program will convert it and output
