@@ -184,11 +184,12 @@ if __name__ == '__main__':
     # {'forbid_images': zero_one_tf(hide_images_state.get()), 'pdf_engine': options[rd.get()]}
     # pdf engine
     rd = tkinter.IntVar()
-    rd.set(2)
+    rd.set(0)
     # rdt = lambda: print(rd.get())
 
     my_label_6 = Label(root, text='Choose a LaTeX compiler. Use XeLaTeX or LuaTeX if your Word file\n'
-                                  'has unusual unicode characters outside equations.')
+                                  'has unusual unicode characters outside equations, but is'
+                                  ' slower than PDFLaTeX.')
     my_label_6.pack()
 
     options = ['pdflatex', 'luatex', 'xelatex']

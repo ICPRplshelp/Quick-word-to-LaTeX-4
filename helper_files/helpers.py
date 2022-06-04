@@ -65,17 +65,43 @@ def deduce_preamble_mode(tex_file: str) -> int:
 
 
 def insert_in_preamble(tex_file: str, file_text: str) -> str:
-    """Insert in preamble
+    """Insert in preamble. Don't insert if preamble isn't detected.
     """
     # have it insert right before the document starts
     title_index = find_nth(tex_file, '\\begin{document}', 1)
+    if title_index == -1:
+        return tex_file
     newest_text = tex_file[:title_index] + '\n' + file_text + '\n' + tex_file[title_index:]
     return newest_text
 
 
-def many_instances(old_tex: str, tex_file: str, todo_str: str) -> str:
-    """Many instances
+def many_instances(old_tex: str, tex_file: str, todo_str: str,
+                   skip: int = 0) -> str:
+    """The main function to replacement mode.
+    Parameters
+    ----------
+    old_tex
+        The word file contents.
+    tex_file
+        The target LaTeX file contents.
+    todo_str
+        The replacement keyword.
+    skip
+        Number of headings in the original Word file to skip.
+
+    Returns
+    -------
+        The output.
+
     """
+    sec = '\\section{'
+    for _ in range(0, skip):
+        first_section = old_tex.find(sec)
+        if first_section == -1:
+            break
+        first_section_end = local_env_end(old_tex, first_section)
+        old_tex = old_tex[:first_section] + old_tex[first_section_end + 1:]
+
     while True:
         try:
             old_tex, tex_file = one_instance(old_tex, tex_file, todo_str)
@@ -98,13 +124,34 @@ def longtable_split_detector(text: str) -> str:
 
 
 def longtable_eliminator(text: str, label: str = '', caption: str = '', float_type: str = 'h',
-                         max_page_len: int = MAX_PAGE_LENGTH) -> str:
+                         max_page_len: int = MAX_PAGE_LENGTH, rule_type: int = 0) -> str:
     """Instance - Here, everything is in a longtable.
     j is the number of times this has run starting from 0.
     text is a longtable instance.
     """
-    caption_on_top_of_table = False
+    if not (0 <= rule_type <= 1):
+        rule_type = 0
+    rules_list = [{
+        "toprule": '\\toprule',
+        "midrule": '\\midrule',
+        "bottomrule": '\\bottomrule',
+        "hline": '',
+        "vline": ''
+    },
+        {
+            "toprule": '\\hline',
+            "midrule": '\\hline',
+            "bottomrule": '\\hline',
+            "hline": '\\hline',
+            "vline": '|'
+        }]
+    rule = rules_list[rule_type]
 
+    first_line = '\n' + rule['toprule'] + '\n'
+    mid_line = '\\\\ ' + rule['midrule'] + '\n'
+    end_line = '\n\\\\' + rule['bottomrule'] + '\n'
+    vertical_line = rule['vline']
+    caption_on_top_of_table = False
     band = 'GfªsBDÜG'
 
     tab_start = '\\endhead'
@@ -151,7 +198,7 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
 
     if header_count > max_header_count:
         seperator = 'm{' + str(em_length) + 'em}'
-    vertical_line = '|'
+
     table_width = ((vertical_line + seperator) * header_count) + vertical_line
     if tab_data != '':
         fbd_env = ENV_FORBIDDEN
@@ -166,10 +213,14 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
             columns.append(cols)
         # what we do here to columns is the reconstruction of the table
         rows_stage_2 = [' & '.join(x) for x in columns]
-        tab_data = ' \\\\ \\hline\n'.join(rows_stage_2)
-        tab_data = '\n\\hline\n' + first_row + '\\\\ \\hline\n' + tab_data + '\n\\\\\\hline\n'
+
+        hline_split = '\\\\ ' + rule['hline'] + '\n'
+
+        tab_data = hline_split.join(rows_stage_2)
+
+        tab_data = first_line + first_row + mid_line + tab_data + end_line
     else:
-        tab_data = '\n\\hline\n' + first_row + '\n\\hline'
+        tab_data = first_line + first_row + end_line
     if caption != '':
         caption_info = '\\caption{' + caption + '}\n'
     else:
@@ -360,6 +411,7 @@ def fix_texttt(text: str) -> str:
     text = text.replace('🬠', R'\$')
     text = text.replace('🬰', R'\{')
     text = text.replace('🭀', R'\}')
+    text = text.replace('–', '-')
     # w_quote_remove = lambda s: s.replace('‘', "'").replace('’', "'")
     # text = w_quote_remove(text)
     text = text.replace('‘', "'").replace('’', "'").replace('“', '"').replace('”', '"')
@@ -390,6 +442,7 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
 
     If disallow_figures is true, figuring tables will not count anything.
     """
+
     # i = 1
     lt_start = '\\begin{longtable}'
     lt_end = '\\end{longtable}'
@@ -626,7 +679,8 @@ def find_stripped(text: str, sub: str) -> int:
     return text.find(sub, len_diff)
 
 
-def detect_include_graphics(text: str, disallow_figures: bool = False, float_type: str = 'H') -> str:
+def detect_include_graphics(text: str, disallow_figures: bool = False, float_type: str = 'H',
+                            tufte: bool = False) -> str:
     """Center all images.
     """
     # if True:  # WHEN YOU CAN'T COMMENT OUT LINES
@@ -635,8 +689,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False, float_typ
 
     figure_text_cap = '\n\nFigure'
     while True:
-        bl = '\n\\begin{figure}[' + float_type + ']\n\\centering\n'
-        el = '\\end{figure}\n'
+
         include_index = find_nth(text, '\\includegraphics', i)
         in_table = check_in_environment(text, 'longtable', include_index) or \
             check_in_environment(text, 'tabular', include_index)
@@ -650,6 +703,28 @@ def detect_include_graphics(text: str, disallow_figures: bool = False, float_typ
             break
 
         during = temp_after[:temp_after_index + 1]
+
+        # DETERMINING THE WIDTH
+        wd_index = during.find('width=')
+        width = "8.9000"
+        if wd_index != -1:
+            wd_start = wd_index + len('width=')
+            wd_f1 = during.find('in', wd_start)
+            if wd_f1 != -1:
+                width = during[wd_start:wd_f1]
+                logging.info(f'the width is {width}')
+        width_num = float(width)
+        fg = 'figure'
+        float_text = f'[{float_type}]'
+        if tufte:
+            if width_num < 3.0:
+                fg = "marginfigure"
+                float_type = ''
+                float_text = ''
+            fg = "figure*" if width_num > 6.3 else fg
+
+        bl = '\n\\begin{' + fg + '}' + float_text + '\n\\centering\n'
+        el = '\n\\end{' + fg + '}\n'
         # paste_after = temp_after[temp_after_index + 2:]
         after = temp_after[temp_after_index + 1:]  # starts with \n
         if not disallow_figures and after[:len(figure_text_cap)] == figure_text_cap and not in_table:
@@ -676,8 +751,8 @@ def detect_include_graphics(text: str, disallow_figures: bool = False, float_typ
             if valid_figure:
                 figures_so_far.append(figure_num)
         else:
-            bl = '\n\\begin{figure}[' + float_type + ']\n\\centering\n'
-            el = '\n\\end{figure}'
+            bl = '\n\\begin{' + fg + '}' + float_text + '\n\\centering\n'
+            el = '\n\\end{' + fg + '}'
 
         text = before + bl + during + el + '\n' + after
         i += 1
@@ -705,9 +780,10 @@ def insert_at_todo(extract: str, tex_file: str, todo_str: str) -> str:
     # and then split the thing:
     left_tex = tex_file[:first_todo_index]
     right_text = tex_file[first_todo_index:]
-    first_newline_afterwards = right_text.index('\n')
+    first_newline_afterwards = right_text.find('\n')
     if first_newline_afterwards == -1:
         right_text = ''
+        first_newline_afterwards = 0
     # elif first_newline_afterwards - first_todo_index > 7:
     #     while True:
     #         if right_text[first_newline_afterwards - 1] == '}':
@@ -947,7 +1023,7 @@ def multi_cite_handler(text: str, cur_src: str, srcs: list[str],
                     author_list.append(author)
         # updated text
         text = text[:cite_ind] + '\\' + cite_properities['citation_kw'] + \
-            '{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
+               '{' + ','.join(author_list) + '}' + text[next_parentheses + 1:]
     return text
 
 
@@ -1415,7 +1491,7 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
 
             elif text[next_newline + 2:next_newline + 4] == R'\[' \
                     or text[next_newline + 2:next_newline + 3] in ALPHABET or any(
-                    text[next_newline + 2:].startswith(tx) for tx in allowed_terms):
+                text[next_newline + 2:].startswith(tx) for tx in allowed_terms):
                 next_nl_skip += 1
                 continue
             else:
@@ -1424,9 +1500,9 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
         extra_args = br[0] + term + br[1] if term != '' else ''
 
         text = text[:start] + k_begin + extra_args + \
-            env_info.env_suffix + '\n' + text[end + 1:next_newline].strip() + '\n' + \
-            k_end + text[
-                                                                                                                                 next_newline:]
+               env_info.env_suffix + '\n' + text[end + 1:next_newline].strip() + '\n' + \
+               k_end + text[
+                       next_newline:]
     return text
 
 
@@ -1742,7 +1818,7 @@ def remove_local_environment(text: str, env: Union[str, list[str]]) -> str:
             ending_index = local_env_end(text, starting_index)
             # the local environment is always destroyed everytime this is run.
             text = text[:starting_index] + text[starting_index + len(env_start):ending_index] + \
-                text[ending_index + 1:]
+                   text[ending_index + 1:]
     return text
 
 
@@ -1943,7 +2019,7 @@ def calculate_eqn_length(text: str, disable: Optional[Iterable] = None) -> int:
             if ending_frac_index == 0:
                 break
             text = text[:frac_index] + seperate_fraction_block(text[frac_index:ending_frac_index]) + \
-                text[ending_frac_index:]
+                   text[ending_frac_index:]
 
     if 'matrix' not in disable:
         text = remove_matrices(text, 'matrix')
@@ -2073,7 +2149,17 @@ def remove_matrices(text: str, matrix_type: str) -> str:
     return remove_matrices(text, matrix_type)
 
 
-def combine_environments(text: str, env: str) -> str:
+C_TEST = R"""
+\begin{verbatim}
+    Some code blocks
+\end{verbatim}
+\begin{verbatim}
+    Some more code blocks
+\end{verbatim}
+"""
+
+
+def combine_environments(text: str, env: str, between: str = '\n') -> str:
     """Combine broken-up environments.
     Example: env = 'align*'"""
     skip = 1
@@ -2089,7 +2175,7 @@ def combine_environments(text: str, env: str) -> str:
         # this is the position of the backslash of the next environment
         text_between = text[end_pos + len(end_str):next_start_pos]
         if check_region_empty(text_between):
-            text = text[:end_pos] + R' \\' + text[next_start_pos + len(begin_str):]
+            text = text[:end_pos].rstrip('\n') + between + text[next_start_pos + len(begin_str):].lstrip('\n')
         else:
             skip += 1
     return text
@@ -3013,9 +3099,9 @@ def quote_to_environment(text: str, env: LatexEnvironment, has_extra_args: bool 
                 assert False  # who decided to put more than one colon?
             br = ('{', '}') if env.extra_args_type == 'brace' else ('[', ']')
             text = text[:start_pos_1] + env.env_prefix + k_begin + br[0] + \
-                env_title + br[1] + \
-                env.env_suffix + '\n' + \
-                during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
+                   env_title + br[1] + \
+                   env.env_suffix + '\n' + \
+                   during[declare_end + 1:end_pos_1] + k_end + text[end_pos_1 + len(end):]
         else:
             text = text[:start_pos_1] + env.env_prefix + k_begin + \
                    env.env_suffix + '\n' + \
@@ -4487,12 +4573,12 @@ def abstract_wrapper(text: str) -> str:
             assert abstract_ending != -1 and abstract_location != -1
             if title_location == -1:  # can't find the title? place the abstract at the v. start
                 text = text[abstract_location:abstract_ending + len('\\end{abstract')] + \
-                    text[:abstract_location] + text[abstract_ending + len('\\end{abstract}'):]
+                       text[:abstract_location] + text[abstract_ending + len('\\end{abstract}'):]
             else:
                 text = text[:title_location + len('\\maketitle')] + \
-                    text[abstract_location:abstract_ending + len('\\end{abstract}')] + \
-                    text[title_location + len('\\maketitle'):abstract_location] + \
-                    text[abstract_ending + len('\\end{abstract}'):]  # past the abstract end
+                       text[abstract_location:abstract_ending + len('\\end{abstract}')] + \
+                       text[title_location + len('\\maketitle'):abstract_location] + \
+                       text[abstract_ending + len('\\end{abstract}'):]  # past the abstract end
                 # start to \maketitle
                 # add the abstract content
                 # after title to where the abstract starts
@@ -4780,7 +4866,7 @@ def check_valid_alignment(text: str) -> Optional[tuple[str, int, int]]:
             prev_is_opening_bracket = False
         else:
             prev_is_opening_bracket = False  # if \[{
-        # It's not an alignment region if all of the conditions are met:
+        # It's not an alignment region if all the conditions are met:
         # Inside is True
         # brace_layer is 0
         # the char we are focusing at is not {, }, or \n, and

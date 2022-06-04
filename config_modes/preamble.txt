@@ -1,4 +1,3 @@
-\usepackage[fontsize=12pt]{scrextend}  % big_text==True
 \usepackage[
 includeheadfoot, % headings==True
 margin=0.75in % small_margins==True

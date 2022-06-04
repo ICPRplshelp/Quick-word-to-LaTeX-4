@@ -71,6 +71,8 @@ check_files.py
 
 ## Build tool directories for auxiliary files
 # latexrun
+.idea/
+.vscode/
 latex.out/
 
 ## Auxiliary and intermediate files from other packages:
@@ -283,7 +285,7 @@ TSWLatexianTemp*
 # expex forward references with \gathertags
 *-tags.tex
 
-# standalone packages
+# standalone packgaes
 *.sta
 
 !documentation/**

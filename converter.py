@@ -16,7 +16,8 @@ import cleanup
 has_pygments = True
 
 try:
-    import pygments
+    pass
+    # import pygments
 except ModuleNotFoundError:
     logging.warning('pygments isn\'t installed, meaning'
                     ' code blocks will not be highlighted,'
@@ -218,6 +219,13 @@ class Preferences:
     disable_bib_prompts: bool = True  # prevent biblio files from being asked at all.
     html_output: bool = False  # render an HTML file as well. Not affected by
     # whether the PDF file should not be rendered.
+    force_shell_escape: bool = False  # force
+    image_extra_commands: str = ''
+
+    to_replace: Optional[dict[str, str]] = None
+    tufte: bool = False  # am I using the tufte style?
+    replacement_mode_skip: int = 0  # the number of headings in your Word File to skip when
+    # using replacement mode.
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -299,7 +307,7 @@ class WordFile:
         self.output_path = self.word_file_nosuffix + export_suffix
         if word_file_path[-5:] == '.docx':
             self.text = self.open_word_file()
-            print(self.text)
+            # print(self.text)
             self.original_tex = False
             self._disallow_pdf = False
         else:
@@ -333,7 +341,7 @@ class WordFile:
             if self.disable_file_prompts:
                 raise AttemptedFilePromptError
             else:
-                print('Opening the bib document file open box. If noting opens, consider re-running this program.')
+                print('Opening the bib document file open box. If nothing opens, consider re-running this program.')
                 file_info = askopenfile(mode='r', title='Open the bib file you want to combine',
                                         filetypes=[('Bib Files', '*.bib')])
                 self.bib_path = file_info.name.replace("/", "\\") if file_info is not None else None
@@ -480,6 +488,10 @@ class WordFile:
         #     text = dbl.bad_backslash_replacer(text)
         #     text = dbl.bad_backslash_replacer(text, '\\(', '\\)')
 
+        if self.preferences.to_replace is not None:
+            for r_key, r_value in self.preferences.to_replace.items():
+                text = text.replace(r_key, r_value)
+
         labels_so_far = []
         if self.preferences.allow_alignments:  # alignments must always run first
             while True:
@@ -516,7 +528,8 @@ class WordFile:
 
             logging.warning('Removing images')
         elif self.preferences.center_images:
-            text = dbl.detect_include_graphics(text, self.preferences.disallow_figures, self.preferences.image_float)
+            text = dbl.detect_include_graphics(text, self.preferences.disallow_figures, self.preferences.image_float,
+                                               self.preferences.tufte)
         if self.preferences.fix_prime_symbols:
             text = w2l.prime_dealer(text)
         if self.preferences.fix_derivatives:
@@ -530,7 +543,7 @@ class WordFile:
         if self.preferences.fix_texttt:
             text = dbl.fix_all_textt(text)
         if self.preferences.combine_aligns:
-            text = dbl.combine_environments(text, 'align*')
+            text = dbl.combine_environments(text, 'align*', ' \\\\')
         # combines matrices. This is forced.
         text = dbl.aug_matrix_spacing(text)
         if self.preferences.verbatim_plugin in ('lstlisting', 'minted'):
@@ -629,7 +642,7 @@ class WordFile:
                 preamble = dbl.remove_comments_from_document(preamble)
 
             text = preamble + '\n' + self.preferences.start_of_doc_text + '\n\n' + text + '\n\n' + \
-                   self.raw_text[end:]
+                self.raw_text[end:]
         # else do nothing
         if self.preferences.document_class != '':
             text = dbl.change_document_class(text, self.preferences.document_class)
@@ -659,7 +672,9 @@ class WordFile:
                 latex_engine = 'xelatex'
             dq = '"'
             write_file(self.text, self.output_path)
-
+            if self._disallow_pdf or self.preferences.prevent_pdf_exports:
+                print('No PDF to be exported here.')
+                return
             if self.preferences.html_output:
                 html_command = [
                     'pandoc',
@@ -681,7 +696,7 @@ class WordFile:
                 subprocess.run(html_command)
 
             if not self._disallow_pdf:
-                if '\\usepackage{minted}' in self.text:
+                if self.preferences.force_shell_escape or '\\usepackage{minted}' in self.text:
                     latex_compile_command = [latex_engine, '-shell-escape', self.output_path]
                 else:
                     latex_compile_command = [latex_engine, self.output_path]
@@ -798,14 +813,9 @@ class WordFileCombo(WordFile):
         """
         # file_text_1 = self.text
         self.alt_text = open_file(self.corresponding_tex_file)
-        try:
-            self.author = dbl.find_author(self.text, 'author')
-        except ValueError:
-            pass
-        try:
-            self.doc_title = dbl.find_author(self.text, 'title')
-        except ValueError:
-            pass
+        self.author = dbl.find_author(self.text, 'author')
+        self.doc_title = dbl.find_author(self.text, 'title')
+
         logging.warning(f'author name is {self.author} and title name is {self.doc_title}')
 
         self.latex_repair()
@@ -814,14 +824,15 @@ class WordFileCombo(WordFile):
         # preamble_mode = dbl.deduce_preamble_mode(new_file_text_2)
         file_text = open_multiple_files(self.preferences.preamble_path)
         new_file_start = dbl.insert_in_preamble(new_file_start, file_text)
-        new_file_text_3 = dbl.many_instances(self.text, new_file_text_2, self.preferences.replacement_marker)
+        new_file_text_3 = dbl.many_instances(self.text, new_file_text_2, self.preferences.replacement_marker,
+                                             self.preferences.replacement_mode_skip)
         new_file_text_4 = new_file_start + new_file_text_3 + new_file_end
         # if self.preferences.override_author and isinstance(self.author, str):
         #     new_file_text_4 = dbl.swap_author(new_file_text_4, self.author, 'author')
         # if self.preferences.override_title and isinstance(self.doc_title, str):
         #     new_file_text_4 = dbl.swap_author(new_file_text_4, self.doc_title, 'title')
         self.text = new_file_text_4
-        print(new_file_text_4)
+        # print(new_file_text_4)
         self.export()
 
 
@@ -877,7 +888,7 @@ def move_sty_cls_files(files: list[str]) -> list[str]:
         if not any(file.endswith(x) for x in allowed_extensions):
             raise ValueError('sty-cls files can ONLY end with .sty, .cls, .bst, or .def.')
         else:
-            print(f_contents + ' ' + file_name)
+            # print(f_contents + ' ' + file_name)
             # write_file(f_contents, file_name)
             if len(file) != len(file_name):
                 # add to the list only if the file is in a sub-directory
@@ -886,7 +897,7 @@ def move_sty_cls_files(files: list[str]) -> list[str]:
     return files_moved
 
 
-def check_config(json_path: str, overrides: dict) -> tuple[Preferences, bool]:
+def check_config(json_path: str, overrides: dict[str, Any]) -> tuple[Preferences, bool]:
     """Return Preferences based on configurations.
     """
     with open(json_path) as json_file:
@@ -975,7 +986,7 @@ def main(config: str = '', overrides: Optional[dict] = None,
         print('Ending program. If a PDF was never compiled, it means something\'s wrong with'
               ' the file you\'ve chosen. Press ENTER to quit if the program will not quit\n'
               'by itself.')
-        time.sleep(2)
+        # time.sleep(2)
 
 
 def list_get(lst: list[Any], index: int, default: Any = None) -> Any:

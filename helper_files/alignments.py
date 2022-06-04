@@ -141,6 +141,10 @@ HARDCODED_TEXT = r"""\documentclass[fontsize=11pt]{article}
 \makeatletter
 \providecommand{\subtitle}[1]{\apptocmd{\@title}{\par {\large #1 \par}}{}{}}
 \makeatother
+
+\usepackage[]{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} 
+
 """
 
 HARDCODED_TEXT_POST = r"""
@@ -204,16 +208,32 @@ def dollar_sign_equations(text: str) -> str:
 
 
 def find_between(s: str, first: str, last: str) -> tuple[str, int, int]:
-    """Return extracted string between two substrings, start index, and end index
+    """Return extracted string between two substrings, start index, and end index.
 
+    If the substrings first or start don't appear in s, then
+    the start index will be 0, and the end index len(s).
     """
-    try:
-        start = s.index(first) + len(first)
-        end = s.index(last, start)
+    start_raw = s.find(first)
+    if start_raw == -1:
+        temp_end = s.find(last)
+        if temp_end == -1:
+            return s, 0, len(s)
+        else:
+            return s[:temp_end], 0, temp_end
+    start = start_raw + len(first)
+    end = s.find(last, start)
+    if end == -1:
+        return s[start:], start, len(s)
+    else:
         return s[start:end], start, end
-    except ValueError:
-        logging.warning('Threw an assert False on find between')
-        assert False, 'no ' + first + '.'
+
+    # try:
+    #     start = s.index(first) + len(first)
+    #     end = s.index(last, start)
+    #     return s[start:end], start, end
+    # except ValueError:
+    #     logging.warning('Threw an assert False on find between')
+    #     assert False, 'no ' + first + '.'
 
 
 def remove_circ_brackets(txt: str) -> str:

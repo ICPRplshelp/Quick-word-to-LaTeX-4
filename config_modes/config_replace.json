@@ -7,7 +7,7 @@
   "allow_no_longtable": true,
   "allow_alignments": true,
   "exclude_preamble": false,
-  "image_float": "H",
+  "image_float": "h",
   "disallow_figures": false,
   "hypertarget_remover": true,
   "fix_vectors": true,
