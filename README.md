@@ -3,9 +3,10 @@
 A Microsoft Word to LaTeX converter which extends Pandoc 
 by adding a lot of useful features and removes quirks 
 that pandoc produces. The LaTeX document produced should look
-**very** similar to your MS Word document. It's like a pandoc filter, except I didn't
-want to make a pandoc filter.
+**very** similar to your MS Word document.
 
+This is **NOT** a Pandoc filter. If you want a Pandoc filter that ports some features
+from this repo, click [Here](https://github.com/ICPRplshelp/MS-Word-Pandoc-Filters).
 
 As a warning, Heading 4s are treated 
 as ``\paragraph{...}``s instead of ``\subsubsubsection{...}``s and are not
@@ -16,6 +17,7 @@ affected by the change heading level in the config.
 - Make sure Python 3.10 is installed on your computer.
 The best place to install python is through the
 Python official website. Things can go wrong if you install Python through the Windows 10 store.
+This program is compatible with Python 3.9, but nothing lower than that.
 - You should also have Pandoc and LaTeX installed
 on your computer. I strongly recommend using
 **TeX Live** as your LaTeX distribution - search
