@@ -109,7 +109,13 @@ the one that shows up in your LaTeX document, though there is a configuration op
 
 ### Figures and Numbering tables
 
-**[READ THE WIKI FOR INFORMATION ON THIS](https://github.com/ICPRplshelp/Quick-word-to-LaTeX-4/wiki/Figure-and-Table-numbering)**
+The paragraph after the figure, type
+
+> Figure #: Figure description
+
+To label a figure. The figure description lasts for the paragraph. Then, this program will look for all instances of `Figure #` typed in text (unless it's in source code) and make them referencable. It does not matter what number you assign in MS Word; just note that figures will always start counting from 1 regardless.
+
+The same applies to tables: replace `Figure` with `Table`. They are counted completely differently.
 
 
 ### Proofs
