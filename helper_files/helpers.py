@@ -599,17 +599,6 @@ def qed(text: str, special: bool = False) -> str:
         text = text[:qed_start_index] + proof_start + text[qed_start_index + len(proof_str):]
         text, cur_index = blacksquare_detector_single(text, qed_start_index)  # qed_start_index is \n\n\\...
         text = text.replace(proof_start, proof_start_serious)
-    # text = text.replace('\n\n\\emph{Proof.}', '\n\n\\begin{proof}' + sp)
-    # text = text.replace('\\[\\blacksquare\\]', '\\end{proof}')
-    # text = text.replace('\\blacksquare\\]', '\\] \\end{proof}')
-    # text = text.replace('\\(\\blacksquare\\)', '\\end{proof}')
-    # text = text.replace('\\blacksquare\\)', '\\) \\end{proof}')
-    # text = text.replace(R'~◻', '\\end{proof}')
-    # text = text.replace(R'□', '\\end{proof}')
-    # text = text.replace(R'◻', '\\end{proof}')
-    # text = text.replace(R'∎', '\\end{proof}')
-    # text = '\\renewcommand\\qedsymbol{$\\blacksquare$}\n' + text
-    # text = blacksquare_detector(text)
     return text
 
 
@@ -2024,6 +2013,7 @@ def calculate_eqn_length(text: str, disable: Optional[Iterable] = None) -> int:
     if 'matrix' not in disable:
         text = remove_matrices(text, 'matrix')
         text = remove_matrices(text, 'bmatrix')
+        text = remove_matrices(text, 'pmatrix')
 
     for fun in predetermined_functions:
         text = text.replace('\\' + fun, fun)
