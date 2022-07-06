@@ -724,8 +724,16 @@ def detect_include_graphics(text: str, disallow_figures: bool = False, float_typ
             temp_figure_text = after[:end_figure_index]
             temp_figure_text_2 = temp_figure_text[len(figure_text_cap) + 1:]
             end_of_numbering_1 = find_nth(temp_figure_text_2, ':', 1)
-            end_of_numbering_2 = find_nth(temp_figure_text_2, '\n', 1)
+            end_of_numbering_2 = find_nth(temp_figure_text_2, '\n\n', 1)
+            end_of_numbering_3 = find_nth(temp_figure_text_2, '.', 1)
             # we can assert that end of both numbers aren't the same
+
+            # if the . position is earlier than the : position
+            # OR the : position DNE and the . position exists
+            # Figure 1. This is: Not real  # this should work as intended.
+            # Figure 1: This works. This works.
+            if 0 <= end_of_numbering_3 < end_of_numbering_1 or (end_of_numbering_1 == -1 and end_of_numbering_3 != -1):
+                end_of_numbering_1 = end_of_numbering_3
             if end_of_numbering_1 < 0:
                 end_of_numbering_1 = end_of_numbering_2
             if end_of_numbering_2 < 0:
@@ -1253,8 +1261,8 @@ def environment_stack(text: str, envs: list[LatexEnvironment]) -> list[Environme
     ◺"""
     last_tracking_index = 0
     # former_tracking_index = -1
-    finished_env_instances = []
-    working_env_instances = []
+    finished_env_instances: list[EnvironmentInstance]  = []
+    working_env_instances: list[EnvironmentInstance] = []
     while True:
         former_tracking_index = last_tracking_index
         tracking_index_so_far = []
