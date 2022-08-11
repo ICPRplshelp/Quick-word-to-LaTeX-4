@@ -21,7 +21,8 @@ def new_folder(folder_name: str) -> str:
     else:
         pass
         # logging.warning('cannot create new folder due to existing folder')
-    return current_directory + '\\' + folder_name
+    return os.path.join(current_directory, folder_name)
+    # return current_directory + '\\' + folder_name
 
 
 def __obtain_files_to_move() -> list[str]:
@@ -97,9 +98,9 @@ def __main() -> None:
     file_move_list = __obtain_files_to_move()
     print(file_move_list)
     for file in file_move_list:
-        logging.warning('REPLACED ' + file)
+        logging.info('REPLACED ' + file)
         try:
-            os.replace(file, new_folder_path + '\\' + file)
+            os.replace(file, os.path.join(new_folder_path, file))
         except PermissionError:
             pass
 
@@ -147,7 +148,7 @@ def move_useless_files_away(file_name: str, additional_files: Optional[list[str]
     for fm in files_to_move:
         # logging.warning('REPLACED ' + fm)
         try:
-            os.replace(cur_folder + fm, new_folder_path + '\\' + fm)
+            os.replace(fm, os.path.join(new_folder_path, fm))
         except PermissionError:
             print(f'Cannot move file {fm}')
 

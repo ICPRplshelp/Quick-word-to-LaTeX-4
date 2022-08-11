@@ -347,6 +347,8 @@ class WordFile:
                 self.bib_path = file_info.name.replace("/", "\\") if file_info is not None else None
                 if self.bib_path is None:
                     print('You did not specify a bib path, so we\'re assuming you\'re not citing anything')
+                else:
+                    self.bib_path = os.sep.join(self.bib_path.split('\\'))
         else:
             print('The document does contain a bibliography section, but we will not ask for it'
                   ' as it is forced disabled.')
@@ -587,7 +589,7 @@ class WordFile:
                     # then replace the citations
                     text = dbl.do_citations(temp_text_here, bib_data, self.preferences.citation_mode,
                                             self.preferences.citation_brackets, cite_properties)
-                    last_dbl_backslash = self.bib_path.rfind('\\')
+                    last_dbl_backslash = self.bib_path.replace('/', '\\').rfind('\\')
                     if last_dbl_backslash == -1:
                         has_bib_file = self.bib_path
                         # last_dbl_backslash -= 1
@@ -798,7 +800,9 @@ class WordFileCombo(WordFile):
             else:
                 file_info = askopenfile(mode='r', title='Open the TeX file you want to combine',
                                         filetypes=[('Tex Files', '*.tex')])
-                self.corresponding_tex_file = file_info.name.replace("/", "\\") if file_info is not None else None
+                self.corresponding_tex_file = file_info.name.replace("\\", "/") if file_info is not None else None
+                self.corresponding_tex_file = os.sep.join(self.corresponding_tex_file.split('/'))  # ensures multi os
+                # compatible
         else:
             self.corresponding_tex_file = corresponding_tex_file
         self.preferences.exclude_preamble = True  # the preamble is always excluded here
@@ -958,18 +962,20 @@ def main(config: str = '', overrides: Optional[dict] = None,
             else:
                 main_file_mfn = askopenfile(mode='r', title='Open the word file you want to convert',
                                             filetypes=[('Word Files', '*.docx'), ('Tex Files', '*.tex')])
-            path_mfn = main_file_mfn.name.replace("/", "\\") if main_file_mfn is not None else None
+            path_mfn = main_file_mfn.name.replace("\\", "/") if main_file_mfn is not None else None
         else:
-            path_mfn = path_to_wordfile.replace("/", "\\")
+            path_mfn = path_to_wordfile.replace("\\", "/")
         if path_mfn is None:
             print('You didn\'t select anything')
             exit()
         print(path_mfn)
+        path_mfn = os.sep.join(path_mfn.split('/'))  # ensure that the os is always consistent
         if config == '':
             json_dir_mfn = open_file('mode.txt')
         else:
             json_dir_mfn = config
-        prefs_mfn, replacement_mode_mfn = check_config(json_dir_mfn.strip(), overrides)
+        json_dir_mfn = os.sep.join(json_dir_mfn.replace('\\', '/').strip().split('/'))
+        prefs_mfn, replacement_mode_mfn = check_config(json_dir_mfn, overrides)
 
         # determines whether replacement mode is on or off
         if replacement_mode_mfn:
@@ -1018,7 +1024,7 @@ if __name__ == '__main__':
     full_command = sys.argv[1:]
     if len(full_command) != 0:
         main_path_to_wordfile = full_command[0]
-        config_mode = list_get(full_command, 1, 'config_modes/config_standard.json')  # default: config_standard.json
+        config_mode = list_get(full_command, 1, os.path.join('config_modes', 'config_standard.json'))  # default: config_standard.json
         main_replacement_mode_path = list_get(full_command, 2)  # default: None
         main_disable_file_prompts: bool = True  # always True
         print('Make sure you include the folder the config files are in!!')

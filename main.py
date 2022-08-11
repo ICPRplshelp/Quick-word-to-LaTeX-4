@@ -118,16 +118,21 @@ def checkbox_variables(keys: dict[str, Any]) -> dict[str, BooleanVar]:
 
 def click() -> None:
     sv = variable.get()
+    num_selected = rd.get()
     root.destroy()
 
-    np = 'config_modes\\' + sv
-    np2 = 'config_modes/' + sv
-    print(np)
-    write_file(np2, 'mode.txt')
+    # np = 'config_modes\\' + sv
+    # np2 = 'config_modes/' + sv
+
+    np_all = os.path.join("config_modes", sv)
+
+    print(np_all)
+    write_file(np_all, 'mode.txt')
+    write_file(str(num_selected), 'ltoptions.txt')
     preamble_changes = {'forbid_images': zero_one_tf(hide_images_state.get()),
                         'pdf_engine': options[rd.get()]}
     print(preamble_changes)
-    conv.main(np, preamble_changes)
+    conv.main(np_all, preamble_changes)
 
 
 def zero_one_tf(num: int) -> bool:
@@ -147,7 +152,7 @@ def zero_one_tf(num: int) -> bool:
 if __name__ == '__main__':
 
     current_directory = os.getcwd()
-    cfg_modes = current_directory + '\\config_modes'
+    cfg_modes = os.path.join(current_directory, 'config_modes')
     mt = open_file('mode.txt', True).strip()
     if mt == '':
         mt = ' '
@@ -184,7 +189,8 @@ if __name__ == '__main__':
     # {'forbid_images': zero_one_tf(hide_images_state.get()), 'pdf_engine': options[rd.get()]}
     # pdf engine
     rd = tkinter.IntVar()
-    rd.set(0)
+    the_num = int(open_file('ltoptions.txt', True))
+    rd.set(the_num if 0 <= the_num <= 2 else 0)
     # rdt = lambda: print(rd.get())
 
     my_label_6 = Label(root, text='Choose a LaTeX compiler. Use XeLaTeX or LuaTeX if your Word file\n'
