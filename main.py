@@ -50,7 +50,7 @@ def update_desc(*args) -> dict[str, Any]:
     *args MUST BE KEPT.
     """
     sv = variable.get()
-    np = 'config_modes\\' + sv
+    np = os.path.join('config_modes', sv)
     desc, data = read_json(np)
     lim = 60
     if len(desc) > lim:

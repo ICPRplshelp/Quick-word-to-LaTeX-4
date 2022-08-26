@@ -2,9 +2,10 @@
 Move all useless files to a new folder
 """
 import os
+import shutil
 import logging
 from typing import Iterable, Optional
-
+from pathlib import Path
 
 REMOVE_IMAGES = False
 
@@ -148,7 +149,12 @@ def move_useless_files_away(file_name: str, additional_files: Optional[list[str]
     for fm in files_to_move:
         # logging.warning('REPLACED ' + fm)
         try:
-            os.replace(fm, os.path.join(new_folder_path, fm))
+            to_move_to = os.path.join(new_folder_path, fm)
+            as_path = Path(to_move_to)
+            if as_path.is_dir():
+                shutil.rmtree(as_path)
+            shutil.move(fm, to_move_to)
+            # os.replace(fm, os.path.join(new_folder_path, fm))
         except PermissionError:
             print(f'Cannot move file {fm}')
 

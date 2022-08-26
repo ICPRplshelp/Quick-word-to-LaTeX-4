@@ -226,6 +226,8 @@ class Preferences:
     tufte: bool = False  # am I using the tufte style?
     replacement_mode_skip: int = 0  # the number of headings in your Word File to skip when
     # using replacement mode.
+    open_after_export: bool = False  # open the PDF file after exporting.
+    export_folder: bool = False
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -296,10 +298,7 @@ class WordFile:
         if ' ' in word_file_path:
             pass  # raise SpaceError
         self.word_file_path = word_file_path
-        starter_name_directory_index = self.word_file_path.rfind('\\') + 1
-        if starter_name_directory_index == -1:
-            starter_name_directory_index = 0
-        self.word_file_nosuffix = word_file_path[starter_name_directory_index:-5]
+        self.word_file_nosuffix = os.path.basename(word_file_path)[:-5]
         self.preferences = preferences
         self.preferences.recalculate_invariants()
         self._temp_tex_file = TEMP_TEX_FILENAME
@@ -698,11 +697,12 @@ class WordFile:
                 subprocess.run(html_command)
 
             if not self._disallow_pdf:
+                output_dir_command = "-output-directory=export" if self.preferences.export_folder else ""
                 if self.preferences.force_shell_escape or '\\usepackage{minted}' in self.text:
-                    latex_compile_command = [latex_engine, '-shell-escape', self.output_path]
+                    latex_compile_command = [latex_engine, output_dir_command, '-shell-escape', self.output_path]
                 else:
-                    latex_compile_command = [latex_engine, self.output_path]
-
+                    latex_compile_command = [latex_engine, output_dir_command, self.output_path]
+                latex_compile_command = [w for w in latex_compile_command if w != '']
                 # latex_output_path = self.output_path[:-4] + '.pdf'
                 subprocess.run(latex_compile_command)
 
@@ -720,7 +720,8 @@ class WordFile:
                 # command_string_2 = latex_engine + ' "' + self.output_path + '"'
                 command_string_3 = '"' + self.output_path[:-4] + '.pdf' '"'
                 print(f'opening {self.output_path[:-4]}.pdf.')
-                os.system(command_string_3)
+                if self.preferences.open_after_export:
+                    os.system(command_string_3)
                 # os.system(command_string_2)  # compile the pdf
 
                 # if citations are on OR (figures are on AND center images / long table eliminators are on)
@@ -733,13 +734,15 @@ class WordFile:
             else:
                 command_string_4 = f'{dq}{self.output_path}{dq}'
                 print('You inputted a .tex file that contains images, so we aren\'t compiling')
-                os.system(command_string_4)
+                if self.preferences.open_after_export:
+                    os.system(command_string_4)
 
+            self.output_path = os.path.basename(self.output_path)
             print('Finished!')
             assert self.output_path[-4:] == '.tex'
             if self.preferences.cleanup:
-                print('removing all unneeded files in 5 seconds')
-                time.sleep(5)
+                print('removing all unneeded files in 2 seconds')
+                time.sleep(2)
                 output_nameless = self.output_path[:-4]
                 cleanup.move_useless_files_away(output_nameless, sty_cls)
 
@@ -955,7 +958,7 @@ def main(config: str = '', overrides: Optional[dict] = None,
     # invariants must be met
 
     try:
-        print('Opening the word document file open box. If noting opens, consider re-running this program.')
+        print('Opening the word document file open box. If nothing opens, consider re-running this program.')
         if path_to_wordfile is None:
             if disable_file_prompts:
                 raise AttemptedFilePromptError('A word file prompt would have shown here.')

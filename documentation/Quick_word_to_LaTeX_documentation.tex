@@ -1,20 +1,66 @@
-\documentclass[12pt]{article}  
-\usepackage{amsmath}
-\usepackage{amssymb}
 
-\usepackage{booktabs}
-\usepackage{array}
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
 
-\usepackage{hyperref}
-\providecommand{\href}[1]{\url{#1}}
+\documentclass[12pt]{article}
+\usepackage{amsmath,amssymb}
+
 \usepackage{iftex}
-\usepackage[utf8]{inputenc}  
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} 
+\else 
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} 
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{
+  \IfFileExists{parskip.sty}{
+    \usepackage{parskip}
+  }{
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} 
+
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
 \usepackage{graphicx}
-\setlength{\parindent}{0pt}
-\setlength{\parskip}{6pt plus 2pt minus 1pt}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+
+
+
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
 \usepackage[normalem]{ulem}
-\usepackage[fontsize=12pt]{scrextend}  
-\usepackage[margin=0.75in]{geometry}  
+\setlength{\emergencystretch}{3em} 
+\providecommand{\tightlist}{
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}\usepackage[
+margin=0.75in 
+]{geometry}
 
 \usepackage{amsthm}
 \usepackage{float}
@@ -43,7 +89,7 @@
 
 \usepackage{mathtools}
 \usepackage{listings}
-\usepackage{csquotes}
+
 \usepackage{framed}
 
 \usepackage{minted}
@@ -52,7 +98,24 @@
 \usepackage{mdframed}
 \surroundwithmdframed[linewidth=0, backgroundcolor=bg]{minted}
 
+\usepackage{csquotes}
+
 \addbibresource{Quick_word_to_LaTeX_documentation-citations.bib}
+
+
+
+
+\ifLuaTeX
+  \usepackage{selnolig}  
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} 
+
+\hypersetup{
+  pdftitle={Quick-Word-To-LaTeX Documentation},
+  pdfauthor={ICPR},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
 
 \title{Quick-Word-To-LaTeX Documentation}
 \author{ICPR}
@@ -61,9 +124,8 @@
 \begin{document}
 
 
-\maketitle
 
-\begin{abstract}
+\maketitle\begin{abstract}
 
 
 
@@ -85,6 +147,8 @@ title, date, author, and so on. \uline{The abstract ends at the
 
 
 \end{abstract}
+
+
 
 \section{Introduction}
 
@@ -109,47 +173,54 @@ some things in MS Word that tend to break LaTeX, the document can't be
 converted properly. The following things in this list are the things you
 should \textbf{avoid.}
 
-\begin{table}[H]
-\centering
-
-
-\begin{tabular}{|m{11em}|m{11em}|m{11em}|}
-
-\hline
-What is it& Why doesn't it work?& Chances of breaking the converter\\ \hline
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3334}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3334}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+What is it
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Why doesn't it work?
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Chances of breaking the converter
+\end{minipage} \\
+\midrule()
+\endhead
 Tables inside tables (UNLESS the table inside is used to define an
 environment, like \emph{framed,} and vice versa) & LaTeX does not like
 nested tables, and nested tables that aren't used to define environments
-will confuse the converter. & Always \\ \hline
+will confuse the converter. & Always \\
 Not using inline mode for images & This can break Pandoc,
 \texttt{Quick-word-to-LaTeX}, and the LaTeX compiler. & Most of the
-time \\ \hline
+time \\
 Using the inline code style to write source code & Inline code is
 analogous to \texttt{\textbackslash{}texttt}. Source code is analogous
-to the verbatim environment. & Most of the time \\ \hline
+to the verbatim environment. & Most of the time \\
 Using CTRL+B or \emph{CTRL+I} in the equation editor & Doing so may
 confuse Pandoc. Sometimes, when you type something like \texttt{sin}
 into MS Word's equation editor and decide to erase it. If, for some
 reason, you didn't press CTRL+I and what you're typing in the equation
 editor is forced upright, just retype the entire equation or delete what
-you think is causing it. & Sometimes \\ \hline
+you think is causing it. & Sometimes \\
 Creating fake headers by using bolded text, instead of using headers in
 the style sheet & It works, but it looks ugly, and it won't be
 recognized as a header. & Does not break the converter, but it looks
-ugly \\ \hline
-Placing Microsoft Word's built-in table of contents into the document & Don't do that. Enable table of contents in the configuration file if you
-want to do that. & Does not break the converter, but it looks ugly \\ \hline
+ugly \\
+Placing Microsoft Word's built-in table of contents into the document &
+Don't do that. Enable table of contents in the configuration file if you
+want to do that. & Does not break the converter, but it looks ugly \\
 Making source or inline code lines too long & This creates overfull
-H-boxes. It's also very bad practice to make code lines extra-long. & Does not break the converter, but it looks ugly. \\ \hline
+H-boxes. It's also very bad practice to make code lines extra-long. &
+Does not break the converter, but it looks ugly. \\
 Changing the font of the MS Word document by using CTRL+A, and changing
 the font from HOME & This is one way to make the fonts very inconsistent
 in a Microsoft Word document. The better way to change fonts is by doing
 to Design \textgreater{} Fonts. & Has nothing to do with
-\texttt{Quick-word-to-LaTeX}. This is just good practice.
-\\\hline
-\end{tabular}
+\texttt{Quick-word-to-LaTeX}. This is just good practice. \\
+\bottomrule()
+\end{longtable}
 
-\end{table}
 You may notice that the table contains bolded text on the left, due to
 the fact that I selected a preset in the table design tab. If a design
 causes some parts of the table text to be formatted \textbf{bold} or
@@ -182,13 +253,20 @@ Equations are created with the \texttt{ALT+=} shortcut:
 \end{itemize}
 
 \begin{align*}
-&\int_{}^{}{\sin^{3}(x)\text{d}x} \\
-&\int_{}^{}{\sin(x) \cdot \sin^{2}(x)\text{d}x} \\
-&\int_{}^{}{\sin(x)\left( 1 - \cos^{2}(x) \right)\text{d}x} \\
-u &= \cos(x) \\
-du &= - \sin(x)\text{d}x \\
-&- \int_{}^{}{\left( 1 - u^{2} \right)\text{d}u} \\
-&= - u + \frac{1}{3}u^{3} \\
+&\int_{}^{}{\sin^{3}(x)dx}
+ \\
+&\int_{}^{}{\sin(x) \cdot \sin^{2}(x)dx}
+ \\
+&\int_{}^{}{\sin(x)\left( 1 - \cos^{2}(x) \right)dx}
+ \\
+u &= \cos(x)
+ \\
+du &= - \sin(x)dx
+ \\
+&- \int_{}^{}{\left( 1 - u^{2} \right)du}
+ \\
+&= - u + \frac{1}{3}u^{3}
+ \\
 &- \cos(x) + \frac{1}{3}\cos^{3}(x)
 \end{align*}
 
@@ -207,8 +285,8 @@ equation character count. In Microsoft word, long equations will likely
 be broken automatically.
 
 \begin{align*}
-&a + b + c + d + e + f + g + h + i + j + k + l + m + n + o  \\
-&= q + r + s + t + u + v + w + x + y + z + a + b + c + d + e + f + g + h
+& a + b + c + d + e + f + g + h + i + j + k + l + m + n + o   \\
+ &= q + r + s + t + u + v + w + x + y + z + a + b + c + d + e + f + g + h
 \end{align*}
 
 
@@ -288,8 +366,9 @@ Here are some tips extracted from that article:
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=1.26316in,height=0.63514in]{latex_images_Quick_word_to_LaTeX_documentation/media/image1.png}
+\includegraphics[width=1.26316in,height=0.63514in]{latex_images_/Users/admin/Documents/GitHub/Quick-word-to-LaTeX-4/documentation/Quick_word_to_LaTeX_documentation/media/image1.png}
 \end{figure}
+
 
 \begin{itemize}
 \item
@@ -321,8 +400,9 @@ conversions \textgreater{} check the image:
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=1.64328in,height=2.75344in]{latex_images_Quick_word_to_LaTeX_documentation/media/image2.png}
+\includegraphics[width=1.64328in,height=2.75344in]{latex_images_/Users/admin/Documents/GitHub/Quick-word-to-LaTeX-4/documentation/Quick_word_to_LaTeX_documentation/media/image2.png}
 \end{figure}
+
 
 TexGyreTermes looks a lot like Times New Roman. It is also the least
 buggiest out of all the other Microsoft Word math fonts other than
@@ -352,8 +432,9 @@ style set for this document.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=6.49089in,height=2.84196in]{latex_images_Quick_word_to_LaTeX_documentation/media/image3.png}
+\includegraphics[width=6.49089in,height=2.84196in]{latex_images_/Users/admin/Documents/GitHub/Quick-word-to-LaTeX-4/documentation/Quick_word_to_LaTeX_documentation/media/image3.png}
 \end{figure}
+
 
 After opening one of the templates / styles sets that support code
 blocks, you can initiate a code block by choosing it from the styles
@@ -362,15 +443,16 @@ pane.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=3.68403in,height=0.77778in]{latex_images_Quick_word_to_LaTeX_documentation/media/image4.png}
+\includegraphics[width=3.68403in,height=0.77778in]{latex_images_/Users/admin/Documents/GitHub/Quick-word-to-LaTeX-4/documentation/Quick_word_to_LaTeX_documentation/media/image4.png}
 \end{figure}
+
 
 Alternatively, you can use \texttt{CTRL+SHIFT+S} (Windows only) and type
 ``Inline code'' to change the style to code blocks. Or you can use
 macros. You can press \texttt{CTRL+SPACE} to revert back to normal text
 when typing Inline code, or by switching the style back to normal.
 
-\texttt{CTRL+S}\texttt{HIF}\texttt{T+S} is useful if you want to quickly
+\texttt{CTRL+SHIFT+S} is useful if you want to quickly
 type headings. The WordTeX template, which this document is based on,
 has shortcuts: You can type \texttt{H1} in the style bar to apply the
 heading 1 style very quickly. You can create footnotes with
@@ -383,8 +465,9 @@ text.}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=1.70764in,height=0.71944in]{latex_images_Quick_word_to_LaTeX_documentation/media/image5.png}
+\includegraphics[width=1.70764in,height=0.71944in]{latex_images_/Users/admin/Documents/GitHub/Quick-word-to-LaTeX-4/documentation/Quick_word_to_LaTeX_documentation/media/image5.png}
 \end{figure}
+
 
 \textbf{Pandoc does not recognize TABS used in Word documents, so always
 use four spaces to indent code.} To revert back from source code to
@@ -398,7 +481,7 @@ will not break.}
 
 Here's an example:
 
-\begin{minted}[]{python}
+\begin{minted}[linenos, breaklines=true, breakaftergroup=true]{python}
 def open_file(file: str, allow_exceptions: bool = False) -> str:
     """Return file contents of any plain text file in the directory file.
     """
@@ -449,11 +532,11 @@ equations}
 
 To number an equation, enter the equation followed by a \#, followed by
 the equation numbering. For example, the following keystrokes produce
-the equation below: \texttt{9+10\#(10)}
+the equation below: \texttt{1+12\#(10)}
 
 
 \begin{equation}
-1 + 12\tag{1} \label{eq:1}
+1 + 12 \tag{1}  \label{eq:1}
 \end{equation}
 
 
@@ -489,7 +572,8 @@ Equation labeling also works for aligned equations. For example:
 \begin{align*}
 &1 + 2 + 8\tag{2} \label{eq:2} \\
 &3 + 4 + 4\tag{3} \label{eq:3} \\
-&4 + 5 + 3 \\
+&4 + 5 + 3
+ \\
 &7 + 8 + 2\tag{4} \label{eq:4}
 \end{align*}
 
@@ -499,7 +583,8 @@ equation \ref{eq:3}, and equation \ref{eq:4}. Note that issues like these can ap
 
 \begin{align*}
 &1 + 2 + 3\tag{5} \label{eq:5} \\
-&4 + 6 + 7 \\
+&4 + 6 + 7
+ \\
 &8 + 9 + 10\tag{6} \label{eq:6}
 \end{align*}
 
@@ -516,9 +601,10 @@ To add a label to an image, do the following:
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=3.65169in,height=2.48767in]{latex_images_Quick_word_to_LaTeX_documentation/media/image6.png}
+\includegraphics[width=3.65804in,height=2.492in]{latex_images_/Users/admin/Documents/GitHub/Quick-word-to-LaTeX-4/documentation/Quick_word_to_LaTeX_documentation/media/image6.png}
 \caption{This is an image.}
 \label{fig:p1}
+
 \end{figure}
 
 
@@ -552,22 +638,26 @@ coloring it).}}
 
 Suppose I want to label this table.
 
-\begin{table}[H]
-\centering
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3334}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3334}}@{}}
+\caption{This is a table.}\label{table:p1}
+\\\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+Trial
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Variable 1
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Variable 2
+\end{minipage} \\
+\midrule()
+\endhead
+1 & 3 & 5 \\
+2 & 4 & 6 \\
+\bottomrule()
+\end{longtable}
 
-\label{table:p1}
-
-\begin{tabular}{|m{11em}|m{11em}|m{11em}|}
-
-\hline
-Trial& Variable 1& Variable 2\\ \hline
-1 & 3 & 5 \\ \hline
-2 & 4 & 6
-\\\hline
-\end{tabular}
-\caption{This is a table.}
-
-\end{table}
 
 
 To reference this table, type ``table \ref{table:p1}.'' ``Table \ref{table:p1}'' also work.
@@ -593,37 +683,40 @@ coloring it).}}
 
 \subsection{Summary}
 
-\begin{table}[H]
-\centering
-
-
-\begin{tabular}{|m{11em}|m{11em}|m{11em}|}
-
-\hline
-\textbf{Labelable object}& \textbf{How to label it (declaration)}& \textbf{How to reference it}\\ \hline
-Equation & 
-\begin{equation}
-\int_{}^{}{f(x)\text{d}x}\tag{2} \label{eq:2}
-\end{equation}
-
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3332}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3336}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Labelable object}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{How to label it (declaration)}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{How to reference it}
+\end{minipage} \\
+\midrule()
+\endhead
+Equation & \(\begin{matrix}
+\int_{}^{}{f(x)dx}\#(2) \\
+\end{matrix}\)
 
 Equation numbering can't always be put in tables. It will depend on what
 types of tables are used -- regular tables support them. & By typing
-``equation \ref{eq:2}''. \\ \hline
-Image / Figure & {[}IMAGE{]}
+``equation \ref{eq:2}''. \\
+Figure & {[}IMAGE{]}
 
-Image 2: This is an image.
+Figure 2: This is an image.
 
 Note that images should not be placed in tables unless they're being
-used for environments. & By typing ``figure 2''. \\ \hline
+used for environments. & By typing ``figure 2''. \\
 Table & {[}TABLE{]}
 
 Table 2: This is the table. Don't nest tables unless they're within
-tables being used for environments. & By typing ``table 2''.
-\\\hline
-\end{tabular}
+tables being used for environments. & By typing ``table 2''. \\
+\bottomrule()
+\end{longtable}
 
-\end{table}
 CTRL+F the words in quotation marks to see what will be affected.
 
 
@@ -648,7 +741,7 @@ The text that goes in the theorem
 
 Produces the following code:
 
-\begin{minted}[]{tex}
+\begin{minted}[linenos, breaklines=true, breakaftergroup=true]{tex}
 \begin{theorem}[The name of the theorem]
     The text that goes in the theorem
 \end{theorem}
@@ -667,7 +760,7 @@ The text that goes in the theorem
 
 Produces the following code:
 
-\begin{minted}[]{tex}
+\begin{minted}[linenos, breaklines=true, breakaftergroup=true]{tex}
 \begin{theorem}
     The text that goes in the theorem
 \end{theorem}
@@ -729,7 +822,7 @@ This text is framed. I can also frame equations:
 
 Produces the following code:
 
-\begin{minted}[]{tex}
+\begin{minted}[linenos, breaklines=true, breakaftergroup=true]{tex}
 \begin{framed}
     This text is framed. I can also frame equations:
     \[33+43=99\]
@@ -756,8 +849,9 @@ an equation. It must be this specific Unicode character, found here:
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=1.99873in,height=0.97409in]{latex_images_Quick_word_to_LaTeX_documentation/media/image7.png}
+\includegraphics[width=2.02006in,height=0.98449in]{latex_images_/Users/admin/Documents/GitHub/Quick-word-to-LaTeX-4/documentation/Quick_word_to_LaTeX_documentation/media/image7.png}
 \end{figure}
+
 
 There is no default math autocorrect for this box. You should add it
 yourself into the equation autocorrect. Select and copy this black
@@ -804,7 +898,7 @@ This text is no longer in the definition.
 
 
 
-\begin{minted}[]{tex}
+\begin{minted}[linenos, breaklines=true, breakaftergroup=true]{tex}
 \begin{definition}[The term of the definition]
     This is the text within the definition.
     \[1 + 2 = 3\]
@@ -996,5 +1090,7 @@ Here are some readings that I find particularly useful:
 \item
   \url{https://support.microsoft.com/en-us/office/linear-format-equations-using-unicodemath-and-latex-in-word-2e00618d-b1fd-49d8-8cb4-8d17f25754f8}
 \end{itemize}
+
+
 
 \end{document}

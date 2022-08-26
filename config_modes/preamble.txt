@@ -54,11 +54,7 @@ margin=0.75in % small_margins==True
 % \setmainfont{Times New Roman}
 
 \usepackage{unicode-math}
-\setmainfont{STIX Two Text}
-\setmathfont{STIX Two Math}
-\setmathfont[range={\mathcal,\mathbfcal},StylisticSet=1]{STIX Two Math}
 
-\setmonofont{JetBrains Mono}
 
 \fi
 % ENDIF
