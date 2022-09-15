@@ -29,11 +29,9 @@ pip install pygments
 
 (Note: Sometimes, you may have PATH variables mixed up. The best way to fix them is by reinstalling python from the python website.)
 
+This program should work fine on both Windows and Mac OS.
 
-**I've only tested this for Windows 10.** I am unsure
-how this works for macOS.
-
-1. Run `main.py`. The easiest way is to click on `run_it.bat`, but make sure you've installed the dependencies first.
+1. Run `main.py`. The easiest way is to click on `run_it.bat` (windows only), but make sure you've installed the dependencies first.
 2. Choose the Word file you want to convert when
 prompted to.
 3. The program will convert it and output

@@ -681,7 +681,7 @@ def detect_include_graphics(text: str, disallow_figures: bool = False, float_typ
 
         include_index = find_nth(text, '\\includegraphics', i)
         in_table = check_in_environment(text, 'longtable', include_index) or \
-            check_in_environment(text, 'tabular', include_index)
+                   check_in_environment(text, 'tabular', include_index)
         if include_index == -1:
             break
         before = text[:include_index]
@@ -1261,7 +1261,7 @@ def environment_stack(text: str, envs: list[LatexEnvironment]) -> list[Environme
     ◺"""
     last_tracking_index = 0
     # former_tracking_index = -1
-    finished_env_instances: list[EnvironmentInstance]  = []
+    finished_env_instances: list[EnvironmentInstance] = []
     working_env_instances: list[EnvironmentInstance] = []
     while True:
         former_tracking_index = last_tracking_index
@@ -4506,7 +4506,7 @@ def longtable_splitter(text: str) -> str:
     Text must be the contents of the longtable
     and may not include any headings.
     """
-    escape_and = '⅘ↈ↋ↇ'
+    escape_and = 'Kↈ↋ↇ'
     text = text.replace('\\&', escape_and)
 
     target_characters = ('&', R'\\')
@@ -4990,3 +4990,56 @@ def toc_detector(text: str, depth: int) -> str:
             return text[:toc_location] + toc + text[next_section:]
         else:
             return text
+
+
+def remove_this_environment(text: str, env: str) -> str:
+    """Remove this environment from text.
+    """
+    env_begin = "\\begin{" + env + "}"
+    env_end = "\\end{" + env + "}"
+    text = text.replace(env_begin, "").replace(env_end, "")
+    return text
+
+
+def no_quotes_in_itemize_enumerate(text: str) -> str:
+    """Remove all quote environments that are inside
+    itemize or enumerate.
+
+    Parameters
+    ----------
+    text
+        the text. The text must have all verbatim environments
+        concealed first.
+
+    Returns
+    -------
+        the repaired text
+    """
+    text = modify_text_in_environment(text, 'itemize', lambda t: remove_this_environment(t, 'quote'))
+    text = modify_text_in_environment(text, 'enumerate', lambda t: remove_this_environment(t, 'quote'))
+
+    return text
+
+
+def remove_unicode_fractions(text: str) -> str:
+    """Replace all unicode fraction characters with
+    their more readable variant."""
+    f_list = [
+        ('½', '1/2'),
+        ('⅓', '1/3'),
+        ('¼', '1/4'),
+        ('⅕', '1/5'),
+        ('⅙', '1/6'),
+        ('⅛', '1/8'),
+        ('⅔', '2/3'),
+        ('¾', '3/4'),
+        ('⅖', '2/5'),
+        ('⅘', '4/5'),
+        ('⅚', '5/6'),
+        ('⅗', '3/5'),
+        ('⅜', '3/8'),
+        ('⅝', '5/8'),
+    ]
+    for fr, num in f_list:
+        text = text.replace(fr, num)
+    return text

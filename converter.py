@@ -214,7 +214,7 @@ class Preferences:
     default_author: str = ''  # the default author, if none is stated. Empty if none.
     verbatim_options: str = ''  # options passed to minted and lstlisting used for
     # code blocks
-    max_page_length: int = 35  # for use with the longtable eliminator module, how long
+    max_page_length: int = 35  # for use with the long table eliminator module, how long
     # a page is, in EM units.
     disable_bib_prompts: bool = True  # prevent biblio files from being asked at all.
     html_output: bool = False  # render an HTML file as well. Not affected by
@@ -228,6 +228,8 @@ class Preferences:
     # using replacement mode.
     open_after_export: bool = False  # open the PDF file after exporting.
     export_folder: bool = False
+    no_quotes_in_lists: bool = True
+    no_unicode_fractions: bool = True
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -610,6 +612,10 @@ class WordFile:
         #     text = text + '\\medskip\n\\printbibliography'
         if self.preferences.subsection_limit >= 1:
             text = dbl.subsection_limit(text, self.preferences.subsection_limit, 6)
+        if self.preferences.no_unicode_fractions:
+            text = dbl.remove_unicode_fractions(text)
+        if self.preferences.no_quotes_in_lists:
+            text = dbl.no_quotes_in_itemize_enumerate(text)
         if self.preferences.conceal_verbatims:
             text = dbl.show_verbatims(text, dict_info_hide_verb)
         # always on

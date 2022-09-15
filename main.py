@@ -184,6 +184,7 @@ if __name__ == '__main__':
     my_label_2 = Label(root, textvariable=var2)
     my_label_2.pack()
     hide_images_state = tkinter.IntVar()
+
     check_btn = Checkbutton(root, text='Hide images?', variable=hide_images_state, onvalue=1, offvalue=0)
     check_btn.pack()
     # {'forbid_images': zero_one_tf(hide_images_state.get()), 'pdf_engine': options[rd.get()]}
