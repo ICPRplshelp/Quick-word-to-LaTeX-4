@@ -79,7 +79,7 @@ margin=0.75in % small_margins==True
 
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}} % erase_pandoc_preamble==True
 
-
+\usepackage{tikz}
 
 % \renewcommand{\arraystretch}{2}
 

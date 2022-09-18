@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import platform
 import time
 from dataclasses import dataclass, fields, asdict
 
@@ -226,10 +227,12 @@ class Preferences:
     tufte: bool = False  # am I using the tufte style?
     replacement_mode_skip: int = 0  # the number of headings in your Word File to skip when
     # using replacement mode.
-    open_after_export: bool = False  # open the PDF file after exporting.
+    open_after_export: bool = True  # open the PDF file after exporting.
+    # Requires that the OS is windows.
     export_folder: bool = False
     no_quotes_in_lists: bool = True
     no_unicode_fractions: bool = True
+    center_tikz: bool = True
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -533,6 +536,7 @@ class WordFile:
         elif self.preferences.center_images:
             text = dbl.detect_include_graphics(text, self.preferences.disallow_figures, self.preferences.image_float,
                                                self.preferences.tufte)
+
         if self.preferences.fix_prime_symbols:
             text = w2l.prime_dealer(text)
         if self.preferences.fix_derivatives:
@@ -560,6 +564,8 @@ class WordFile:
             # language detection
         # text = text.replace('…', '...')  # only occurs in verbatim envs
         has_bib_file = False
+        if self.preferences.center_tikz:
+            text = dbl.center_tikz(text, self.preferences.image_float)
         if self.preferences.allow_citations:  # if citations are allowed
             proceed_citations, temp_text_here, bib_ind = dbl.detect_if_bib_exists(text,
                                                                                   self.preferences.bibliography_keyword)
@@ -726,7 +732,7 @@ class WordFile:
                 # command_string_2 = latex_engine + ' "' + self.output_path + '"'
                 command_string_3 = '"' + self.output_path[:-4] + '.pdf' '"'
                 print(f'opening {self.output_path[:-4]}.pdf.')
-                if self.preferences.open_after_export:
+                if self.preferences.open_after_export and platform.system() == 'Windows':
                     os.system(command_string_3)
                 # os.system(command_string_2)  # compile the pdf
 

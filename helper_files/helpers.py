@@ -31,7 +31,7 @@ MINTED_LANGUAGES = {'cucumber', 'abap', 'ada', 'ahk', 'antlr', 'apacheconf', 'ap
                     'newlisp', 'newspeak', 'numpy', 'ocaml', 'octave', 'ooc', 'perl', 'php', 'plpgsql', 'postgresql',
                     'postscript', 'pot', 'prolog', 'psql', 'puppet', 'python', 'qml', 'ragel', 'raw', 'ruby', 'rhtml',
                     'sass', 'scheme', 'smalltalk', 'sql', 'ssp', 'tcl', 'tea', 'tex', 'text', 'vala', 'vgl', 'vim',
-                    'xml', 'xquery', 'yaml', 'ts'}
+                    'xml', 'xquery', 'yaml', 'ts', 'tikzpicture'}
 
 LISTING_LANGUAGES = {'ABAP', 'ACSL', 'Ada', 'Algol', 'Ant', 'Assembler', 'Awk', 'bash', 'Basic', 'C', 'C++', 'Caml',
                      'CIL', 'Clean', 'Cobol', 'Comal', '80', 'command.com', 'Comsol', 'csh', 'Delphi', 'Eiffel', 'Elan',
@@ -40,7 +40,10 @@ LISTING_LANGUAGES = {'ABAP', 'ACSL', 'Ada', 'Algol', 'Ant', 'Assembler', 'Awk', 
                      'Miranda', 'Mizar', 'ML', 'Modula-2', 'MuPAD', 'NASTRAN', 'Oberon-2', 'OCL', 'Octave', 'Oz',
                      'Pascal', 'Perl', 'PHP', 'PL/I', 'Plasm', 'PostScript', 'POV', 'Prolog', 'Promela', 'PSTricks',
                      'Python', 'R', 'Reduce', 'Rexx', 'RSL', 'Ruby', 'S', 'SAS', 'Scilab', 'sh', 'SHELXL', 'Simula',
-                     'SPARQL', 'SQL', 'tcl', 'TeX', 'VBScript', 'Verilog', 'VHDL', 'VRML', 'XML', 'XSLT', 'ts'}
+                     'SPARQL', 'SQL', 'tcl', 'TeX', 'VBScript', 'Verilog', 'VHDL', 'VRML', 'XML', 'XSLT', 'ts', ''
+                                                                                                                'tikzpicture'}
+
+TIKZ_ALIASES = {'tikzpicture'}
 
 
 class MinipageInLongtableError(Exception):
@@ -2415,11 +2418,18 @@ def verbatim_to_listing(text: str, lang: str, plugin: str = '', minted_params: s
         before = text[:closest_verb]
         during = '\n' + text[closest_verb + len(bv):ending_verb].strip() + '\n'
         after = text[ending_verb + len(ev):]
-
+        fake_text = ''
         language = ''
         for lan in language_dir:
-            if lan.lower() in during.lower():
+            if verify_surrounding(during.lower(), lan.lower()):
                 language = lan
+
+                lan_index = during.lower().find(lan.lower()) + len(lan)
+                if lan_index != -1 and during[lan_index] == '[':
+                    lan_index_close = during.find(']', lan_index)
+                    if lan_index != -1:
+                        lan_index += 1
+                        fake_text = during[lan_index:lan_index_close]
                 break
 
         assert language in language_dir or lang == ''
@@ -2434,7 +2444,13 @@ def verbatim_to_listing(text: str, lang: str, plugin: str = '', minted_params: s
         # print('FOUND A LANGUAGE!!!')
         converted_once = True
         # otherwise, it must have a language.
-        if plugin == 'minted':
+        lsb, rsb = ('', '') if len(fake_text) == 0 else ('[', ']')
+        # the language is one of the tikz aliases, so replace the entire environment with
+        # just itself.
+        if language in TIKZ_ALIASES:
+            command_start = '\\begin{' + language + '}' + lsb + fake_text + rsb
+            command_end = '\\end{' + language + '}'
+        elif plugin == 'minted':
             params = minted_params if minted_params.startswith('[') and minted_params.endswith(']') else \
                 '[' + minted_params + ']'
             command_start = '\\begin{minted}' + params + '{' + language + '}'
@@ -2447,6 +2463,39 @@ def verbatim_to_listing(text: str, lang: str, plugin: str = '', minted_params: s
 
         text = before + command_start + during + command_end + after
     return text, converted_once
+
+
+# give me a set of all lowercase letters [a-z]
+LOWERCASE = set(chr(i) for i in range(ord('a'), ord('z') + 1))
+
+
+def verify_surrounding(text: str, sub: str) -> bool:
+    """Return True if and only if
+
+    text == sub, or
+    (sub in text, and all characters adjacent to sub in text are not in the set LOWERCASE)
+
+    >>> verify_surrounding('python', 'python')
+    True
+
+    >>> verify_surrounding('apythona', 'python')
+    False
+
+    >>> verify_surrounding(']python[', 'python')
+    True
+    """
+    if text == sub:
+        return True
+    if sub not in text:
+        return False
+    sub_ind = text.find(sub)
+    if sub_ind == -1:
+        return False
+    if sub_ind != 0 and text[sub_ind - 1] in LOWERCASE:
+        return False
+    if sub_ind + len(sub) != len(text) and text[sub_ind + len(sub)] in LOWERCASE:
+        return False
+    return True
 
 
 def first_upper(text: str) -> str:
@@ -3306,12 +3355,21 @@ def identify_language(text: str, verb_plugin: str = '') -> tuple[str, str]:
     else:
         breaker = min(next_nl, next_space)
     text, language = text[breaker + 1:].strip('\n'), text[:breaker].strip().lower()
-    if language in [x.lower() for x in lang_list]:
+    if slice_to_first_char(language, '[') in [x.lower() for x in lang_list]:
         if language == 'ts':
             language = 'js'  # swap the language
         return language, text
     else:
         return '', hold
+
+
+def slice_to_first_char(text: str, char: str) -> str:
+    """Return text up to but not including the first instance of char."""
+    index = text.find(char)
+    if index == -1:
+        return text
+    else:
+        return text[:index]
 
 
 def count_outer(text: str, key: str, avoid_escape_char: bool = True) -> int:
@@ -5042,4 +5100,38 @@ def remove_unicode_fractions(text: str) -> str:
     ]
     for fr, num in f_list:
         text = text.replace(fr, num)
+    return text
+
+
+def surround_latex_environment_with_environment(text: str, env_to_surround: str, surround_start: str, surround_end: str) -> str:
+    """Surround all instances of env_to_surround with surround_start and surround_end.
+
+    Parameters
+    ----------
+    text
+        the text
+    env_to_surround
+        the environment to surround
+    surround_start
+        the environment to start with
+    surround_end
+        the environment to end with
+
+    Returns
+    -------
+        the modified text
+    """
+    env_begin = "\\begin{" + env_to_surround + "}"
+    env_end = "\\end{" + env_to_surround + "}"
+    text = text.replace(env_begin, surround_start + env_begin)
+    text = text.replace(env_end, env_end + surround_end)
+    return text
+
+
+def center_tikz(text: str, float_type: str) -> str:
+    """Center all tikz environments."""
+    st = '\\begin{figure}[' + float_type + ']'
+    en = '\\centering\n\\end{figure}'
+    for env in TIKZ_ALIASES:
+        text = surround_latex_environment_with_environment(text, env, st, en)
     return text
