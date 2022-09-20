@@ -1,13 +1,13 @@
 {
   "description": "Used for replacement mode. Replaces all instances of replacement markers with your word file, separated by heading 1s. Don't use this unless you know what it does.",
   "replacement_mode": true,
-  "replacement_marker": "TODO:",
+  "replacement_marker": "TODO",
   "preamble_path": "config_modes/preamble_light.txt",
   "allow_proofs": false,
   "allow_no_longtable": true,
   "allow_alignments": true,
   "exclude_preamble": false,
-  "image_float": "h",
+  "image_float": "H",
   "disallow_figures": false,
   "hypertarget_remover": true,
   "fix_vectors": true,
@@ -18,5 +18,5 @@
   "max_line_align": true,
   "verbatim_plugin": "",
   "document_class": "",
-  "hide_comments": true
+  "hide_comments": false
 }

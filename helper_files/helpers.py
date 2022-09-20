@@ -127,7 +127,7 @@ def longtable_split_detector(text: str) -> str:
 
 
 def longtable_eliminator(text: str, label: str = '', caption: str = '', float_type: str = 'h',
-                         max_page_len: int = MAX_PAGE_LENGTH, rule_type: int = 0) -> str:
+                         max_page_len: int = MAX_PAGE_LENGTH, rule_type: int = 1) -> str:
     """Instance - Here, everything is in a longtable.
     j is the number of times this has run starting from 0.
     text is a longtable instance.
@@ -196,7 +196,7 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
     if '\\begin{minipage}' in first_row:
         pass  # raise MinipageInLongtableError
 
-    max_header_count = 1
+    max_header_count = 9
     seperator = 'c'
 
     if header_count > max_header_count:
@@ -4835,6 +4835,7 @@ def process_equations_in_tables(text: str, p_box_size: int = 11) -> str:
 
     p_box_size is always measured in em.
     """
+    return text  # a temp solution to a forever problem
     p_box = '\\parbox{' + str(p_box_size) + 'em}{'
     skip = 1
     while True:
@@ -5103,7 +5104,8 @@ def remove_unicode_fractions(text: str) -> str:
     return text
 
 
-def surround_latex_environment_with_environment(text: str, env_to_surround: str, surround_start: str, surround_end: str) -> str:
+def surround_latex_environment_with_environment(text: str, env_to_surround: str, surround_start: str,
+                                                surround_end: str) -> str:
     """Surround all instances of env_to_surround with surround_start and surround_end.
 
     Parameters
