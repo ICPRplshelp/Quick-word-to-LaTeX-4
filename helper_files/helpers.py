@@ -5,6 +5,7 @@ I/O functions are NOT allowed.
 # import json
 import logging
 import math
+import re
 from dataclasses import dataclass, fields
 from typing import Optional, Iterable, Callable, Union, Any
 
@@ -5136,4 +5137,28 @@ def center_tikz(text: str, float_type: str) -> str:
     en = '\\centering\n\\end{figure}'
     for env in TIKZ_ALIASES:
         text = surround_latex_environment_with_environment(text, env, st, en)
+    return text
+
+
+def no_spaces_after_inline(text: str) -> str:
+    """
+    Modify and return the input parameter text by doing the following:
+    Any time the substring \\) appears (one backslash followed
+    by a closing parentheses), if the sequence of characters
+    right after it, case-insensitive, isn't any of the following:
+
+    .
+    ,
+    !
+    ) if not preceded by a backslash
+    th
+    rd
+    st
+
+    Then add a space after \\).
+    """
+    # get me a list of the indices where \) occurs in text
+    indices = [m.start() for m in re.finditer(r'\\\)(?![ .,!;":' + "'" + r']|th|rd|st|\)])', text)]
+    for ind in sorted(indices, reverse=True):
+        text = text[:ind + 2] + " " + text[ind + 2:]
     return text

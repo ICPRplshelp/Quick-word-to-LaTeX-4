@@ -233,6 +233,9 @@ class Preferences:
     no_quotes_in_lists: bool = True
     no_unicode_fractions: bool = True
     center_tikz: bool = True
+    allow_pauses: bool = True
+    force_space_after_inline_equation: bool = True  # forces spaces to appear
+    # after inline equations, with exceptions
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -622,6 +625,8 @@ class WordFile:
             text = dbl.remove_unicode_fractions(text)
         if self.preferences.no_quotes_in_lists:
             text = dbl.no_quotes_in_itemize_enumerate(text)
+        if self.preferences.force_space_after_inline_equation:
+            text = dbl.no_spaces_after_inline(text)
         if self.preferences.conceal_verbatims:
             text = dbl.show_verbatims(text, dict_info_hide_verb)
         # always on
@@ -754,7 +759,8 @@ class WordFile:
             assert self.output_path[-4:] == '.tex'
             if self.preferences.cleanup:
                 print('removing all unneeded files in 2 seconds')
-                time.sleep(2)
+                if self.preferences.allow_pauses:
+                    time.sleep(2)
                 output_nameless = self.output_path[:-4]
                 cleanup.move_useless_files_away(output_nameless, sty_cls)
 
