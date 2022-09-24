@@ -1,6 +1,4 @@
-"""Most of the helper functions to converter.py and any other modules.
-
-I/O functions are NOT allowed.
+"""Most of the helper functions to converter.py and any other modules. I/O functions are NOT allowed.
 """
 # import json
 import logging
@@ -178,7 +176,7 @@ def longtable_eliminator(text: str, label: str = '', caption: str = '', float_ty
             break
         # highest_index = right_index
         cur_header = text[left_index:right_index].strip()
-        headers_so_far.append(cur_header)
+        headers_so_far.append(cur_header.replace('\\[', '\\(').replace('\\]', '\\)'))
         i += 1
 
     if tab_s_index != tab_e_index:
@@ -5158,7 +5156,7 @@ def no_spaces_after_inline(text: str) -> str:
     Then add a space after \\).
     """
     # get me a list of the indices where \) occurs in text
-    indices = [m.start() for m in re.finditer(r'\\\)(?![ .,!;":' + "'" + r']|th|rd|st|\)])', text)]
+    indices = [m.start() for m in re.finditer(r'\\\)(?![ \-.?,)!;":\']|th|rd|st|s |\)])', text)]
     for ind in sorted(indices, reverse=True):
         text = text[:ind + 2] + " " + text[ind + 2:]
     return text
