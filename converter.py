@@ -236,6 +236,8 @@ class Preferences:
     allow_pauses: bool = True
     force_space_after_inline_equation: bool = True  # forces spaces to appear
     # after inline equations, with exceptions
+    mathbb_in_out = True  # move \mathbb{\in N} to \in\mathbb{N}
+
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -547,6 +549,8 @@ class WordFile:
 
         if self.preferences.dollar_sign_equations:
             text = w2l.dollar_sign_equations(text)
+        if self.preferences.mathbb_in_out:
+            text = dbl.fix_mathbb_in(text)
         if self.preferences.fix_unicode:
             # print(text)
             text = dbl.text_bound_fixer(text, REPLAC)

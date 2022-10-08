@@ -491,7 +491,7 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
                 new_table_info = longtable_eliminator(during, fig_label, figure_caption, float_type, max_page_len)
             else:
                 during = add_label_to_longtable(during, figure_caption, fig_label)
-                new_table_info = during
+                new_table_info = during.replace('\\[', '\\(').replace('\\]', '\\)')
                 skip += 1
         else:
             if split_longtables:
@@ -499,7 +499,7 @@ def eliminate_all_longtables(text: str, disallow_figures: bool = True,
             if replace_longtable:
                 new_table_info = longtable_eliminator(during, '', '', float_type, max_page_len=max_page_len)
             else:
-                new_table_info = during
+                new_table_info = during.replace('\\[', '\\(').replace('\\]', '\\)')
                 skip += 1
         text = before + new_table_info + after
     new_figures_so_far = ['\\ref{table:p' + x + '}' for x in tables_so_far]
@@ -1423,7 +1423,7 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
     keyword = env_info.start_alt[0].upper() + env_info.start_alt[1:]
     wrapper = 'textbf'
     br = '{}' if braces else '[]'
-    allowed_terms = [R'\begin{enumerate}', R'\begin{itemize}']
+    allowed_terms: list[str] = []  # placing allowed terms is a reason for this to break
 
     keyword_wrapper = '\\' + wrapper + '{' + keyword
 
@@ -1492,6 +1492,11 @@ def environment_wrapper_2(text: str, env_info: LatexEnvironment) -> str:
                     or text[next_newline + 2:next_newline + 3] in ALPHABET or any(
                 text[next_newline + 2:].startswith(tx) for tx in allowed_terms):
                 next_nl_skip += 1
+                if text[next_newline + 2:next_newline + 3] in ALPHABET and \
+                        text[next_newline + 2:next_newline + 3] != '':
+                    assert len(text[next_newline + 2:next_newline + 3]) == 1
+                    text = text[:next_newline + 2] + text[next_newline + 2].upper() + text[next_newline + 3:]
+
                 continue
             else:
                 break
@@ -2452,7 +2457,7 @@ def verbatim_to_listing(text: str, lang: str, plugin: str = '', minted_params: s
         elif plugin == 'minted':
             params = minted_params if minted_params.startswith('[') and minted_params.endswith(']') else \
                 '[' + minted_params + ']'
-            command_start = '\\begin{minted}' + params + '{' + language + '}'
+            command_start = '\\vspace{10pt}\n\\begin{minted}' + params + '{' + language + '}'
             command_end = '\\end{minted}'
         else:
             params = minted_params[1:-1] if minted_params.startswith('[') and minted_params.endswith(']') else \
@@ -3917,6 +3922,18 @@ def find_env_end(text: str, index: int, env: Optional[str] = None) -> int:
                 continue
             else:
                 return t_en
+
+
+def fix_mathbb_in(text: str) -> str:
+    """Fix all mathBB insides"""
+    text = modify_equations(text, _mathbb_solver)
+    text = modify_equations(text, _mathbb_solver, True)
+    return text
+
+
+def _mathbb_solver(text: str) -> str:
+    """Move in out of mathbb"""
+    return text.replace("\\mathbb{\\in", "\\in \\mathbb{")
 
 
 def modify_equations(text: str, func: Callable[[str], str], inline: bool = False) -> str:
