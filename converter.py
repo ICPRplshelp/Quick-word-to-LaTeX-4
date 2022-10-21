@@ -167,8 +167,8 @@ class Preferences:
     replacement_mode: bool = False  # whether replacement mode is on or off.
     environments: Optional[Union[dict, list[str]]] = None  # information relating to environments.
 
-    eqn_comment_mode: str = 'tag'  # how comments in equations should be handled.
-    label_equations: bool = True  # whether equations can be referenced
+    eqn_comment_mode: str = 'align'  # how comments in equations should be handled.
+    label_equations: bool = False  # whether equations can be referenced
     auto_numbering: bool = False  # if this is true, label equations will be set to true and
     # comment mode will be set to "hidden" - meaning equations will be automatically numbered.
 
@@ -236,7 +236,10 @@ class Preferences:
     allow_pauses: bool = True
     force_space_after_inline_equation: bool = True  # forces spaces to appear
     # after inline equations, with exceptions
-    mathbb_in_out = True  # move \mathbb{\in N} to \in\mathbb{N}
+    mathbb_in_out: bool = True  # move \mathbb{\in N} to \in\mathbb{N}
+    proof_like_environments: Optional[list[str]] = None
+    wrap_sol: bool = False
+    algo_pseudocode: bool = True
 
 
     def recalculate_invariants(self) -> None:
@@ -480,8 +483,13 @@ class WordFile:
             text = dbl.work_with_environments(text, self.preferences.environments,
                                               self.preferences.disable_legacy_environments)
 
+        if self.preferences.algo_pseudocode:
+            text = dbl.account_pseudocode(text)
+
         if self.preferences.allow_proofs:
-            text = dbl.qed(text, self.preferences.special_proofs)
+            if self.preferences.proof_like_environments is None:
+                self.preferences.proof_like_environments = []
+            text = dbl.qed(text, self.preferences.special_proofs, self.preferences.proof_like_environments)
         # if True:
         #    text = dbl.longtable_backslash_add_full(text)
 

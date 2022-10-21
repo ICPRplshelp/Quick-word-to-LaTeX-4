@@ -4,6 +4,9 @@
   "auto_numbering": false,
   "big_text": false,
   "small_margins": true,
+  "proof_like_environments": [
+    "solution"
+  ],
   "default_date": "\\today",
   "document_class": "\\documentclass[12pt]{article}",
   "header_level": 0,
@@ -34,5 +37,18 @@
   "erase_pandoc_preamble": false,
   "image_float": "H",
   "start_of_doc_text": "",
-  "environments": ["Theorem", "Lemma", "Corollary", "Proposition", "Conjecture", "Remark", "Note", "Claim", "Definition", "Condition", "Problem", "Example"]
+  "environments": [
+    "Theorem",
+    "Lemma",
+    "Corollary",
+    "Proposition",
+    "Conjecture",
+    "Remark",
+    "Note",
+    "Claim",
+    "Definition",
+    "Condition",
+    "Problem",
+    "Example"
+  ]
 }

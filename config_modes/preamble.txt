@@ -32,6 +32,7 @@ margin=0.75in % small_margins==True
 \newtheorem{condition}{Condition}
 \newtheorem{problem}{Problem}[section]
 \newtheorem{example}{Example}[section]
+\newtheorem{solution}{Solution}[section]
 % ENDIF
 
 \renewcommand\qedsymbol{$\blacksquare$}  % allow_proofs==True
@@ -87,5 +88,8 @@ margin=0.75in % small_margins==True
 % \doublespacing
 
 \usepackage{csquotes}
+
+\usepackage{enumitem} % algo_pseudocode==True
+
 
 % SPACER AT THE BOTTOM

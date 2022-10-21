@@ -188,6 +188,7 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
         processed_text = hc_text_pre + prestart + hc_text_pos + dbl.retain_author_info(
             text) + '\n\\begin{document}'
     # processed_text = dbl.date_today(processed_text)
+    processed_text = processed_text.replace('pdfcreator={LaTeX via pandoc}', 'pdfcreator={TeX}')
     return processed_text
 
 

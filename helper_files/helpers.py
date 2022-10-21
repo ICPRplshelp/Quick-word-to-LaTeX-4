@@ -582,14 +582,31 @@ def insert_before(text: str, key: str, sub: str) -> str:
         return text[:key_index] + sub + text[key_index:]
 
 
-def qed(text: str, special: bool = False) -> str:
+def qed(text: str, special: bool = False, proof_like_envs: Optional[list[str]] = None) -> str:
     """Allow QED support.
     Nesting QED statements are not allowed.
     """
+    if proof_like_envs is None:
+        proof_like_envs = []
+    text = proof_like_molder(text, 'Proof.', 'proof', '\\blacksquare', False)
+    if 'solution' in proof_like_envs:
+        text = proof_like_molder(text, 'Solution.', 'solution', '▢', False)
+    return text
+
+
+def proof_like_molder(text: str, keyword: str, env_name: str, ending_symbol: str, special: bool = False) -> str:
+    """Molds something into a proof that would use a proof-like environment.
+    Arguments:
+        - text: the entire latex text, maybe with verbatim concealed.
+        - keyword: Proof. for proofs. Solution. for solutions. Must have period.
+        - ending_str: the thing that you would find inside an equation that
+        would signify that a proof would end. Or something like a proof.
+        - special: just leave this to false.
+    """
     sp = '{}{}' if special else ''
-    proof_str = '\n\n\\emph{Proof.}'
-    proof_start = '\n\n\\ѮѱѮѱѮ{proof}' + sp
-    proof_start_serious = '\n\n\\begin{proof}' + sp
+    proof_str = '\n\n\\emph{' + keyword + '}'  # '\n\n\\emph{Proof.}'
+    proof_start = '\n\n\\ѮѱѮѱѮ{' + env_name + '}' + sp
+    proof_start_serious = '\n\n\\begin{' + env_name + '}' + sp
     assert len(proof_start) == len(proof_start_serious)
     # qed_length_difference = len(proof_start) - len(proof_str)
     # skip = 1
@@ -599,7 +616,8 @@ def qed(text: str, special: bool = False) -> str:
         if qed_start_index == -1:
             break
         text = text[:qed_start_index] + proof_start + text[qed_start_index + len(proof_str):]
-        text, cur_index = blacksquare_detector_single(text, qed_start_index)  # qed_start_index is \n\n\\...
+        text, cur_index = blacksquare_detector_single(text, qed_start_index, ending_symbol,
+                                                      env_name)  # qed_start_index is \n\n\\...
         text = text.replace(proof_start, proof_start_serious)
     return text
 
@@ -3996,9 +4014,13 @@ def blacksquare_detector(text: str) -> str:
     return text
 
 
-def blacksquare_detector_single(text: str, index: int) -> tuple[str, int]:
+def blacksquare_detector_single(text: str, index: int, ending_symbol: str, env_name: str) -> tuple[str, int]:
     """Same as blacksquare_detector(), but only searches once,
     from the index. It will never search past the next section.
+
+    Arguments:
+       - ending_symbol: blacksquare by default.
+       - env_name: proof by default.
 
     Return: new text AND the index after end proof
 
@@ -4009,14 +4031,14 @@ def blacksquare_detector_single(text: str, index: int) -> tuple[str, int]:
     """
     # the only way a blacksquare can POSSIBLY APPEAR is because it's in an
     # equation. Not even verbatim environments can mess this up.
-    nearest_blacksquare = find_in_same_environment(text, '\\blacksquare', index)
+    nearest_blacksquare = find_in_same_environment(text, ending_symbol, index)
     if nearest_blacksquare == -1:
         nearest_blacksquare = len(text) + 100
     end_of_environment = find_env_end(text, index)
     next_section = find_next_section(text, index)
 
-    end_proof_temp_2 = '\n\\end{proof}\n'
-    end_proof_temp = '\n\\end{proof}'
+    end_proof_temp_2 = '\n\\end{' + env_name + '}\n'
+    end_proof_temp = '\n\\end{' + env_name + '}'
 
     # the next section is earlier than the next blacksquare, and blacksquare not in environment
     if (nearest_blacksquare > end_of_environment != -1) or nearest_blacksquare > next_section:
@@ -4041,7 +4063,7 @@ def blacksquare_detector_single(text: str, index: int) -> tuple[str, int]:
     starter_location = text.rfind(starter_bracket, 0, nearest_blacksquare)
     assert starter_location != -1
     equation_contents = text[starter_location + 2:bracket_finisher]
-    equation_contents = equation_contents.replace('\\blacksquare', '')
+    equation_contents = equation_contents.replace(ending_symbol, '')
     if equation_contents.replace(' ', '') == '':
         text = text[:starter_location] + end_proof_temp + text[bracket_finisher + 2:]
         proof_ends = starter_location + len(end_proof_temp)
@@ -5177,3 +5199,61 @@ def no_spaces_after_inline(text: str) -> str:
     for ind in sorted(indices, reverse=True):
         text = text[:ind + 2] + " " + text[ind + 2:]
     return text
+
+
+def account_pseudocode(text: str) -> str:
+    """Make pseudocode lists not ugly.
+
+    Assumptions to be made:
+        - dollar sign equations not done
+
+    Conditions for a code block list starter:
+        - the code block list starter can't be part of an environment
+        - the line right before the code block starts with the word "Algorithm \\("
+        - the line right before ends with a ")\\):"
+        - Immediately after, \\begin{itemize} is seen
+        - then, we target the backslash of that
+
+    Firstly, we find the index of all backslashes of concerned itemize environments.
+    """
+    algo_regex = r"(\\textbf{)?Algorithm\}? \\\([a-zA-Z\{\}\\]\w*\([a-zA-Z, \\]*\)\\\):\n{1,2}\\begin{itemize}"
+    start_end_pairs = get_start_end_pairs_regex(text, algo_regex)
+    l_bi = len('\\begin{itemize}')
+    itemize_backslash_locations = [
+        x[1] - l_bi for x in start_end_pairs if x[1] - l_bi >= 0
+    ]
+    for itemize_in in sorted(itemize_backslash_locations, reverse=True):
+        text = reduce_list_spacing(text, itemize_in)
+    return text
+
+
+def get_start_end_pairs_regex(text: str, regex: str) -> list[tuple[int, int]]:
+    """Return [(index of start of match 0, end of match 0),
+    (start of match 1, end of match 1), ...]
+
+    Note that at the end of the match, the index is the index
+    RIGHT AFTER the last matching index.
+    """
+    return [(m.start(), m.end()) for m in re.finditer(regex, text)]
+
+
+def reduce_list_spacing(text: str, li_index: int) -> str:
+    """Reduce the list spacing. Note that li_index is the backslash
+    of the beginning itemize of the list that we want to reduce the spacing."""
+    li_en = find_env_end(text, li_index, 'itemize')
+    if li_en == -1:
+        return text
+    else:
+        li_en += len('\\end{itemize}')
+    before = text[:li_index]
+    during = text[li_index:li_en]
+    after = text[li_en:]
+    during = during.replace('\\item\n', '\\item').replace('\\item', '\\item[]') \
+        .replace('\\begin{itemize}', '\\begin{itemize}[itemsep=0pt]').replace('\n\n', '\n') \
+        .replace('For', 'for').replace('If', 'if').replace('While', 'while') \
+        .replace('Else', 'else').replace('Return', 'return') \
+        .replace('for ', '\\textbf{for} ') \
+        .replace('if ', '\\textbf{if} ') \
+        .replace('while ', '\\textbf{while} ') \
+        .replace('else', '\\textbf{else}').replace('return', '\\textbf{return}')
+    return before + during + after
