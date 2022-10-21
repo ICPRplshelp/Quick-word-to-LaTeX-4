@@ -5216,7 +5216,7 @@ def account_pseudocode(text: str) -> str:
 
     Firstly, we find the index of all backslashes of concerned itemize environments.
     """
-    algo_regex = r"(\\textbf{)?Algorithm\}? \\\([a-zA-Z\{\}\\]\w*\([a-zA-Z, \\]*\)\\\):\n{1,2}\\begin{itemize}"
+    algo_regex = r"(\\textbf{)?Algorithm\}? \\\([a-zA-Z\{\}\\][\w\{\}]*\([a-zA-Z, \\\{\}]*\)\\\):\n{1,2}\\begin{itemize}"
     start_end_pairs = get_start_end_pairs_regex(text, algo_regex)
     l_bi = len('\\begin{itemize}')
     itemize_backslash_locations = [
