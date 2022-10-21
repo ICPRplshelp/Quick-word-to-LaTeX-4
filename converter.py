@@ -240,6 +240,7 @@ class Preferences:
     proof_like_environments: Optional[list[str]] = None
     wrap_sol: bool = False
     algo_pseudocode: bool = True
+    save_sections: bool = True
 
 
     def recalculate_invariants(self) -> None:
@@ -464,6 +465,8 @@ class WordFile:
         if self.preferences.conceal_verbatims:
             text, dict_info_hide_verb = dbl.hide_verbatims(text, self.preferences.bibliography_keyword,
                                                            self.preferences.verbatim_plugin)
+        if self.preferences.save_sections:
+            text = dbl.save_all_sections(text)
         if self.preferences.hypertarget_remover:
             text = w2l.hypertarget_eliminator(text)
         if self.preferences.forbid_images:

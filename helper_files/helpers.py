@@ -5257,3 +5257,93 @@ def reduce_list_spacing(text: str, li_index: int) -> str:
         .replace('while ', '\\textbf{while} ') \
         .replace('else', '\\textbf{else}').replace('return', '\\textbf{return}')
     return before + during + after
+
+
+def save_all_sections(text: str) -> str:
+    """For some reason, if I have numbered sections pandoc does
+    something weird to them. This should fix it."""
+    section_names = [f'{"sub" * i}section' for i in range(3, -1, -1)]
+    for sn in section_names:
+        text = save_inner_sections(text, sn)
+    return text
+
+
+def save_inner_sections(text: str, section_name: str) -> str:
+    """This is me when sections can't behave well
+    level is how many subs are visible
+
+    Parameters
+    ----------
+    section_name
+    text
+    level
+
+    Returns
+    -------
+
+    """
+    lf_r = r'\\begin{enumerate}[\n ]*\\def\\labelenumii?{\\arabic{enumii?}\.}' \
+           r'[\n ]*(\\setcounter{enumi}{\w*?})?' \
+           r'[\n ]*\\item ~[\n ]*\\hypertarget{[a-z0-9\-\n]*}{%[\n ]*' \
+           r'\\' + section_name + r'{[\s\S]*?}[\n ]*\\label{[a-z0-9\-\n]*}[\n ]*}[\n ]*\\end{enumerate}'
+    pairs = get_start_end_pairs_regex(text, lf_r)
+    for st, en in sorted(pairs, key=lambda s: s[0], reverse=True):
+        before = text[:st]
+        during = text[st:en]
+        after = text[en:]
+
+        ht_label_text = ''
+        ht_name = "\\hypertarget{"
+        ht_location = during.find("\\hypertarget{")
+        if ht_location != -1:
+            ht_end = local_env_end(during, ht_location)
+            ht_label_text = during[ht_location + len(ht_name):ht_end]
+
+        section_name_2 = '\\' + section_name + "{"
+        section_location = during.find(section_name_2)
+        if section_location == -1:
+            continue  # just don't do it
+        section_end = local_env_end(during, section_location)
+        section_text = during[section_location + len(section_name_2):section_end]
+
+        hypertarget_label_candidate = ''
+        label_text_final = ''
+        if ht_label_text != '':
+            hypertarget_label_candidate = (R'\hypertarget{' + ht_label_text + '}').replace('\n', ' ')
+            label_text_final = (R'\label{' + ht_label_text + '}').replace('\n', '')
+        section_command_text = ('\\' + section_name + '{' + section_text + '}').replace('\n', ' ')
+
+        if hypertarget_label_candidate != '':
+            final_section_replacement = hypertarget_label_candidate + '{%\n' + \
+                                        section_command_text + label_text_final + '}'
+        else:
+            final_section_replacement = section_command_text
+
+        text = before + '\n\n' + after
+        # the before index should remain consistent. st
+        # is the index of the \n.
+        next_out_of_env = find_next_index_out_of_env(st, text)
+        if next_out_of_env == -1:
+            next_out_of_env = len(text)
+        text = text[:next_out_of_env] + '\n\n' + final_section_replacement + \
+          text[next_out_of_env:]
+    return text
+
+
+def find_next_index_out_of_env(st: int, text: str) -> int:
+    """Return the next index after start that isn't in any environment.
+    Return -1 on failure.
+    """
+    for i in range(st, len(text)):
+        dpth = environment_depth(text, i)
+        if dpth <= 0:
+            if text[i - 1] == '{':
+                k = text.find('}', i)
+                if k == -1:
+                    raise ValueError("End of environment detected, but ending wasn't closed")
+                else:
+                    k = k + 1
+                    return k
+
+            return i
+    return -1
