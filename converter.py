@@ -79,9 +79,9 @@ class InvalidFileTypeError(Exception):
     """Exception raised when selecting a file that does not end with
     a filetype the program specifies."""
 
-    def __str__(self) -> str:
-        """Return a string representation of this error."""
-        return 'invalid file type.'
+    # def __str__(self) -> str:
+    #     """Return a string representation of this error."""
+    #     return 'invalid file type.'
 
 
 class AttemptedFilePromptError(Exception):
@@ -241,7 +241,9 @@ class Preferences:
     wrap_sol: bool = False
     algo_pseudocode: bool = True
     save_sections: bool = True
-
+    allow_trees: bool = True
+    fix_2char: bool = True  # text environments 2 or less long will be removed
+    append_me_to_the_start: str = ""
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -297,7 +299,7 @@ class WordFile:
     _temp_tex_file: str
     _disallow_pdf: bool
 
-    def __init__(self, word_file_path: str, preferences: Preferences = DEFAULT_PREF,
+    def __init__(self, word_file_path: Union[str, list[str]], preferences: Preferences = DEFAULT_PREF,
                  disable_file_prompts: bool = False) -> None:
         """Initialize a new WordFile object.
 
@@ -307,19 +309,44 @@ class WordFile:
         self.disable_file_prompts = disable_file_prompts
         self.contains_longtable = False
         self.citations_enabled = False
-        if word_file_path[-5:] != '.docx' and word_file_path[-4:] != '.tex':
-            raise InvalidFileTypeError
+        was_list = False
+        word_file_list = []
+        if isinstance(word_file_path, list):
+            word_file_list = word_file_path
+            word_file_path = word_file_path[0]
+            was_list = True
+
         if ' ' in word_file_path:
             pass  # raise SpaceError
         self.word_file_path = word_file_path
-        self.word_file_nosuffix = os.path.basename(word_file_path)[:-5]
+        temp_basename = os.path.basename(word_file_path)
+        if not any(word_file_path.endswith(x) for x in ['.md', '.tex', '.docx']):
+            raise InvalidFileTypeError()
+        for x in ['.tex', '.md', '.docx']:
+            temp_basename = temp_basename.removesuffix(x)
+        # dot_index = temp_basename.rfind('.')
+        # if dot_index != -1:
+        #     temp_basename = temp_basename[:dot_index]
+        #     file_extension = temp_basename[dot_index:]
+        #     if file_extension not in ['.md', '.docx', '.tex']:
+        #         print(f"Your file extension was {file_extension}")
+        #         raise InvalidFileTypeError(f"You selected NOT a markdown/word/tex file: "
+        #                                    f"{file_extension}")
+        # else:
+        #     raise InvalidFileTypeError("You selected a suffixless file")
+        self.word_file_nosuffix = temp_basename
         self.preferences = preferences
         self.preferences.recalculate_invariants()
         self._temp_tex_file = TEMP_TEX_FILENAME
         export_suffix = self.preferences.export_file_name_suffix + '.tex'
         self.output_path = self.word_file_nosuffix + export_suffix
         if word_file_path[-5:] == '.docx':
-            self.text = self.open_word_file()
+            if was_list:
+                if not word_file_list:
+                    raise ValueError("For some reason, the word file list was empty")
+                self.text = self.open_word_files(word_file_list)
+            else:
+                self.text = self.open_word_file()
             # print(self.text)
             self.original_tex = False
             self._disallow_pdf = False
@@ -327,6 +354,7 @@ class WordFile:
             self.text = open_file(word_file_path)
             self.original_tex = True
             self._disallow_pdf = True
+
         self.raw_text = self.text
         self.citation_path = 'placeholder'
         self.bib_path = ''
@@ -383,54 +411,47 @@ class WordFile:
             self.latex_repair()
         self.export()
 
+    def open_word_files(self, wf_list: list[str]) -> str:
+        """Return combined tex code of WordFile."""
+        using_command_prompt = not USE_SUBPROCESSES
+        if using_command_prompt:
+            raise ValueError("Branch NOT to be ran at all. Command prompt"
+                             " is not to be used.")
+        else:
+            all_opened_files: list[str] = []
+            for i, f_path in enumerate(wf_list):
+                media_path = '--extract-media=' + self.preferences.media_folder_name + \
+                             self.word_file_nosuffix.replace(' ', '_') + f'{i}'
+                command_list_raw = [
+                    ('pandoc', True),
+                    (media_path, True),
+                    ('-s', True),
+                    (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level >= 1),
+                    (f_path, True),  # FILTERS END HERE
+                    ('--pdf-engine=xelatex', False),
+                    ('-o', True),
+                    (f'{i}' + self._temp_tex_file, True)
+                ]
+                command_list = process_permissive_list(command_list_raw)
+                subprocess.run(command_list)
+                all_opened_files.append(open_file(f'{i}' + self._temp_tex_file))
+            combined = dbl.combine_multiple_tex(all_opened_files)
+            return combined
+
     def open_word_file(self) -> str:
         """Return tex code of WordFile."""
         using_command_prompt = not USE_SUBPROCESSES
         if using_command_prompt:
             raise ValueError("Branch NOT to be ran at all. Command prompt"
                              " is not to be used.")
-            # media_path = '--extract-media=' + self.preferences.media_folder_name + \
-            #              self.word_file_nosuffix.replace(' ', '_')
-            # dquote = '"'
-            # # toc = '--toc'
-            # # these are writer options
-            # # tuple index 0 is the string; tuple index 1 is the condition
-            # filter_list = [
-            #     ('-s', True),
-            #     (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level != 0),
-            #     ('--toc', self.preferences.table_of_contents)
-            # ]
-            # # if self.preferences.table_of_contents:
-            # #     filter_list.append('--toc')
-            #
-            # filters_1 = ' '.join(process_permissive_list(filter_list))
-            #
-            # # command_string = 'cmd /c "pandoc ' + media_path + ' -s ' + \
-            # #                 self.word_file_path + ' -o ' + self._temp_tex_file
-            #
-            # # self.preferences.pdf_engine
-            #
-            # pdf_engine_str = '--pdf-engine=xelatex '
-            # # f'--pdf-engine={self.preferences.pdf_engine} ' if self.preferences.pdf_engine != 'pdflatex' else ''
-            # command_string = f'pandoc {dquote}{media_path}{dquote} {filters_1} {dquote}{self.word_file_path}{dquote} ' \
-            #                  f'{pdf_engine_str}-o {self._temp_tex_file}'
-            # os.system(command_string)
-            # return open_file(self._temp_tex_file)
         else:
             media_path = '--extract-media=' + self.preferences.media_folder_name + \
                          self.word_file_nosuffix.replace(' ', '_')
-            # dquote = '"'
-            # toc = '--toc'
-            # these are writer options
-            # tuple index 0 is the string; tuple index 1 is the condition
-            # pdf_engine_str = '--pdf-engine=xelatex '
             command_list_raw = [
                 ('pandoc', True),
                 (media_path, True),
                 ('-s', True),
                 (f'--shift-heading-level-by={self.preferences.header_level}', self.preferences.header_level >= 1),
-                # ('--toc', self.preferences.table_of_contents), TABLE OF CONTENTS IS HANDLED OTHERWISE
-                # ('--top-level-division=chapter', self.preferences.document_class in ['book', 'tufte-book']),
                 (self.word_file_path, True),  # FILTERS END HERE
                 ('--pdf-engine=xelatex', False),
                 ('-o', True),
@@ -469,6 +490,8 @@ class WordFile:
             text = dbl.save_all_sections(text)
         if self.preferences.hypertarget_remover:
             text = w2l.hypertarget_eliminator(text)
+        if self.preferences.append_me_to_the_start != '':
+            text = text + self.preferences.append_me_to_the_start
         if self.preferences.forbid_images:
             logging.warning('About to remove images')
             text = dbl.remove_images(text)
@@ -513,6 +536,10 @@ class WordFile:
         if self.preferences.to_replace is not None:
             for r_key, r_value in self.preferences.to_replace.items():
                 text = text.replace(r_key, r_value)
+
+        if self.preferences.mathbb_in_out:
+            text = dbl.fix_mathbb_in(text)
+        text = text.replace('≔', ':=')
 
         labels_so_far = []
         if self.preferences.allow_alignments:  # alignments must always run first
@@ -560,11 +587,10 @@ class WordFile:
 
         if self.preferences.dollar_sign_equations:
             text = w2l.dollar_sign_equations(text)
-        if self.preferences.mathbb_in_out:
-            text = dbl.fix_mathbb_in(text)
+
         if self.preferences.fix_unicode:
             # print(text)
-            text = dbl.text_bound_fixer(text, REPLAC)
+            text = dbl.text_bound_fixer(text, REPLAC, self.preferences.fix_2char)
         if self.preferences.fix_texttt:
             text = dbl.fix_all_textt(text)
         if self.preferences.combine_aligns:
@@ -572,7 +598,8 @@ class WordFile:
         # combines matrices. This is forced.
         text = dbl.aug_matrix_spacing(text)
         if self.preferences.verbatim_plugin in ('lstlisting', 'minted'):
-            text, lang_converted = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang, self.preferences.verbatim_plugin,
+            text, lang_converted = dbl.verbatim_to_listing(text, self.preferences.verbatim_lang,
+                                                           self.preferences.verbatim_plugin,
                                                            self.preferences.verbatim_options)
             # no language??
             if not lang_converted and self.preferences.verbatim_plugin == "minted":
@@ -608,9 +635,9 @@ class WordFile:
                     #     temp_text_here[bib_ind:]
                     bib_num = '[heading=bibnumbered]' if not self.preferences.no_secnum else ''
                     cite_properties = {'bibtex_def': self.preferences.bibtex_def, 'citation_kw':
-                                        self.preferences.citation_keyword}
+                        self.preferences.citation_keyword}
                     temp_text_here = temp_text_here[:bib_ind] + '\\medskip\n\\printbibliography' + bib_num + \
-                        temp_text_here[bib_ind:]
+                                     temp_text_here[bib_ind:]
                     # then replace the citations
                     text = dbl.do_citations(temp_text_here, bib_data, self.preferences.citation_mode,
                                             self.preferences.citation_brackets, cite_properties)
@@ -642,6 +669,8 @@ class WordFile:
             text = dbl.no_quotes_in_itemize_enumerate(text)
         if self.preferences.force_space_after_inline_equation:
             text = dbl.no_spaces_after_inline(text)
+        if self.preferences.allow_trees:
+            text = dbl.make_trees(text)
         if self.preferences.conceal_verbatims:
             text = dbl.show_verbatims(text, dict_info_hide_verb)
         # always on
@@ -675,7 +704,7 @@ class WordFile:
                 preamble = dbl.remove_comments_from_document(preamble)
 
             text = preamble + '\n' + self.preferences.start_of_doc_text + '\n\n' + text + '\n\n' + \
-                self.raw_text[end:]
+                   self.raw_text[end:]
         # else do nothing
         if self.preferences.document_class != '':
             text = dbl.change_document_class(text, self.preferences.document_class)
@@ -689,6 +718,7 @@ class WordFile:
         """Export everything in self.text
         """
         subprocesses = USE_SUBPROCESSES
+
         if subprocesses:
             # try:
             #     os.mkdir('export')
@@ -959,7 +989,8 @@ def check_config(json_path: str, overrides: dict[str, Any]) -> tuple[Preferences
 def main(config: str = '', overrides: Optional[dict] = None,
          path_to_wordfile: Optional[str] = None,
          replacement_mode_path: Optional[str] = None,
-         disable_file_prompts: bool = False) -> None:
+         disable_file_prompts: bool = False,
+         paths_wf: Optional[list[str]] = None) -> None:
     """The main method of this module.
 
     All paths are relative to main.py.
@@ -992,12 +1023,16 @@ def main(config: str = '', overrides: Optional[dict] = None,
 
     try:
         print('Opening the word document file open box. If nothing opens, consider re-running this program.')
+        if path_to_wordfile is None and paths_wf is not None and paths_wf:
+            path_to_wordfile = paths_wf[0]
+
         if path_to_wordfile is None:
             if disable_file_prompts:
                 raise AttemptedFilePromptError('A word file prompt would have shown here.')
             else:
                 main_file_mfn = askopenfile(mode='r', title='Open the word file you want to convert',
-                                            filetypes=[('Word Files', '*.docx'), ('Tex Files', '*.tex')])
+                                            filetypes=[('Word Files', '*.docx'), ('Tex Files', '*.tex'),
+                                                       ('Markdown Files', '*.md')])
             path_mfn = main_file_mfn.name.replace("\\", "/") if main_file_mfn is not None else None
         else:
             path_mfn = path_to_wordfile.replace("\\", "/")
@@ -1020,7 +1055,11 @@ def main(config: str = '', overrides: Optional[dict] = None,
                                           corresponding_tex_file=replacement_mode_path,
                                           disable_file_prompts=disable_file_prompts)
         else:
-            word_file_mfn = WordFile(path_mfn, prefs_mfn, disable_file_prompts=disable_file_prompts)
+
+            if paths_wf is not None:
+                word_file_mfn = WordFile(paths_wf, prefs_mfn, disable_file_prompts=disable_file_prompts)
+            else:
+                word_file_mfn = WordFile(path_mfn, prefs_mfn, disable_file_prompts=disable_file_prompts)
 
         # process and export the file.
         word_file_mfn.sequence()
@@ -1057,10 +1096,12 @@ def list_get(lst: list[Any], index: int, default: Any = None) -> Any:
 
 if __name__ == '__main__':
     import sys
+
     full_command = sys.argv[1:]
     if len(full_command) != 0:
         main_path_to_wordfile = full_command[0]
-        config_mode = list_get(full_command, 1, os.path.join('config_modes', 'config_standard.json'))  # default: config_standard.json
+        config_mode = list_get(full_command, 1,
+                               os.path.join('config_modes', 'config_standard.json'))  # default: config_standard.json
         main_replacement_mode_path = list_get(full_command, 2)  # default: None
         main_disable_file_prompts: bool = True  # always True
         print('Make sure you include the folder the config files are in!!')

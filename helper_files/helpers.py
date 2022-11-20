@@ -1,6 +1,7 @@
 """Most of the helper functions to converter.py and any other modules. I/O functions are NOT allowed.
 """
 # import json
+from __future__ import annotations
 import logging
 import math
 import re
@@ -1599,7 +1600,7 @@ def dy_fixer(text: str) -> str:
     """Fix how pandoc deals with dy and dx.
     """
     low_letters = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
-                   'p', 'q', 'R', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'}
+                   'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'}
     cap_letters = {letter.upper() for letter in low_letters}
     extra_letters = {'θ'}
     # I wonder how theta will work with this?
@@ -1618,7 +1619,8 @@ REPLAC = {'α': R'\alpha', 'β': R'\beta', 'γ': R'\gamma', 'δ': R'\delta',
           'θ': R'\theta', 'π': R'\pi', 'Ω': R'\Omega'}
 
 
-def text_bound_fixer(text: str, replacement: dict[str, str], n: int = 1) -> str:
+def text_bound_fixer(text: str, replacement: dict[str, str], n: int = 1,
+                     fix_2char: bool = False) -> str:
     """Detect and fix text environments with
     unicode characters. Also fix text environments that are two characters
     or shorter.
@@ -1657,17 +1659,17 @@ def text_bound_fixer(text: str, replacement: dict[str, str], n: int = 1) -> str:
     inner_text = text[starting_index:outer_brace]
     fix_region = check_inner_text(inner_text) or check_char_bulk(inner_text, unicode_list)
     # print(text)
-    if fix_region:
+    if fix_region and fix_2char:
 
         # logging.warning('fix region detected')
         for u1, u2 in replacement.items():
             inner_text = inner_text.replace(u1, u2 + ' ')
         text = text[:text_index] + inner_text + text[outer_brace + 1:]
-        return text_bound_fixer(text, replacement, n)
+        return text_bound_fixer(text, replacement, n, fix_2char)
     else:
         n += 1
         # logging.warning(n)
-        return text_bound_fixer(text, replacement, n)
+        return text_bound_fixer(text, replacement, n, fix_2char)
 
 
 def check_inner_text(inner_text: str) -> bool:
@@ -1682,7 +1684,7 @@ def check_inner_text(inner_text: str) -> bool:
         return False
     # AUTO FALSE:
     whitelisted_words = {
-        'is', 'be', 'do', 'go', 'hi', 'of', 'so', 'or', 'oh'
+        'is', 'be', 'do', 'go', 'hi', 'of', 'so', 'or', 'oh', 'ow', 'if'
     }
     # two letter case
     if inner_text in whitelisted_words:
@@ -3946,6 +3948,9 @@ def fix_mathbb_in(text: str) -> str:
     """Fix all mathBB insides"""
     text = modify_equations(text, _mathbb_solver)
     text = modify_equations(text, _mathbb_solver, True)
+    text = modify_equations(text, lambda s: s.replace('\\text{⋅}', '\\cdot '))
+    text = modify_equations(text, lambda s: s.replace('\\text{⋅}', '\\cdot '), True)
+    # text = modify_equations(text, lambda s: s.replace('≔', ':='))
     return text
 
 
@@ -5326,7 +5331,7 @@ def save_inner_sections(text: str, section_name: str) -> str:
         if next_out_of_env == -1:
             next_out_of_env = len(text)
         text = text[:next_out_of_env] + '\n\n' + final_section_replacement + \
-          text[next_out_of_env:]
+               text[next_out_of_env:]
     return text
 
 
@@ -5347,3 +5352,149 @@ def find_next_index_out_of_env(st: int, text: str) -> int:
 
             return i
     return -1
+
+
+def combine_multiple_tex(texts: list[str]) -> str:
+    """Combine multiple LaTeX code into one.
+    texts is a list of tex source. they are completely raw and unmodified.
+    """
+    assert len(texts) != 0
+    preamble = extract_first_preamble(texts[0])
+    if R'\usepackage{longtable,booktabs,array}' not in preamble:
+        preamble = preamble + '\n' + R'\usepackage{longtable,booktabs,array}'
+
+    doc_contents: list[str] = []
+    for tx in texts:
+        b_index = tx.index("\\begin{document}") + len('\\begin{document}')
+        e_index = tx.index("\\end{document}")
+        during = tx[b_index: e_index]
+        doc_contents.append(during)
+    to_return = preamble + '\n\n\\begin{document}\n\n' + '\n\n'.join(doc_contents) + "\n\n\\end{document}"
+    return to_return
+
+
+def extract_first_preamble(text: str) -> str:
+    """text must be a full latex file."""
+    p_index = text.index("\\begin{document}")
+    return text[:p_index]
+
+
+def split_not_in_environment(text: str, reg: str) -> list[str]:
+    """Split text but ignore everything that is in an environment."""
+    tx = [(m.start(), m.end()) for m in re.finditer(reg, text)]
+    new_list: list[tuple[int, int]] = []
+    for ts, te in tx:
+        p1 = environment_depth(text, ts)
+        p2 = environment_depth(text, te)
+        if p1 == 0 and p2 == 0:
+            new_list.append((ts, te))
+    text_list: list[str] = []
+    previous_index = 0
+    for ts2, te2 in new_list:
+        assert previous_index <= ts2 < te2
+        text_list.append(text[previous_index:ts2])
+        previous_index = te2
+    text_list.append(text[previous_index:])
+    return text_list
+
+
+@dataclass
+class TreeNode:
+    text: str
+    subnodes: list[TreeNode]
+
+
+def _construct_forest_tree(node: TreeNode) -> str:
+    """Constructs a forest, which
+    includes the \\begin{forest} and \\end{forest}
+    at the start and end.
+    """
+    return '\\begin{figure}\n\\centering' \
+           + '\\begin{forest}\n' + _construct_forest_helper(node) + \
+           '\n\\end{forest}\n\\end{figure}'
+
+
+def _construct_forest_helper(node: TreeNode) -> str:
+    """A helper to the above.
+    Construct the node, which should be wrapped with
+    [these brackets] before being returned.
+    """
+    p1 = '{' + node.text + '}'
+    p2_l = [_construct_forest_helper(x) for x in node.subnodes]
+    p2 = '\n'.join(p2_l)
+    return '[' + p1 + '\n' + p2 + ']'
+
+
+def construct_tree_wrapper(text: str, index: int) -> str:
+    """Given an itemize environment, make a tree out of it.
+    Index must be the start of the itemize environment, and that's it. It'll
+    convert the entire itemize environment.
+
+    index must be the backslash of \\begin{itemize}
+    """
+    itemize = '\\begin{itemize}'
+    itemize_end = '\\end{itemize}'
+    # print('in construct tree wrapper')
+    # print(text)
+    assert text.startswith('\\begin{itemize}', index)
+    itemize_after = index + len(itemize)
+    env_end = find_env_end(text, index)
+    env_true_end = env_end + len(itemize_end)
+
+    before = text[:index]
+    during1 = text[itemize_after:env_end]
+    after = text[env_true_end:]
+    during_tree = [_construct_forest_tree(x) for x in _construct_tree(during1)]
+    during_true = '\n\n'.join(during_tree)
+    return before.rstrip() + '\n\n' + during_true + '\n\n' + after
+
+
+def _construct_tree(text: str) -> list[TreeNode]:
+    """Construct a tree structure out of text.
+    Text must be an itemize environment without the word itemize.
+    Text must not contain any unconcealed verbatim environments as well.
+
+    Rule of thumb: multiple trees will be constructed if the list of nodes that are
+    returned exceeds the size of 1 (because how is that a tree, anyways?
+    """
+    text = text.strip().replace(R'\(\cdots\)', R'\(\vdots\)')
+    # anything before the first item is removed
+    first_item = text.find('\\item')
+    if first_item == -1:
+        return []
+    text = text[first_item:]
+    splitted_nodes = [x.strip() for x in split_not_in_environment(text, r'\\item')
+                      if x.strip() != '']
+    subnode_list: list[TreeNode] = []
+    for sp in splitted_nodes:
+        itemize_start = '\\begin{itemize}'
+        if itemize_start in sp:
+            itemize_location = sp.find(itemize_start)  # backslash location
+            assert itemize_location != -1
+            text_region = sp[:itemize_location].strip()  # no optimization moment
+
+            # print(f'TEXT REGION | {text_region} // END')
+            # end of itemize is
+            end_of_itemize = find_env_end(sp, itemize_location)
+            assert end_of_itemize != -1
+            new_list_region = sp[itemize_location + len(itemize_start):end_of_itemize]
+            new_node_list = _construct_tree(new_list_region)
+            curr_node = TreeNode(text_region, new_node_list)
+            subnode_list.append(curr_node)
+        else:
+            # print(f'NON TEXT REGION | {sp} // END')
+            curr_node = TreeNode(sp.strip(), [])
+            subnode_list.append(curr_node)
+    return subnode_list
+
+
+def make_trees(text: str) -> str:
+    """Make them all into trees"""
+    tree_detector_regex = r'\\textbf{Tree display:}[\n ]*?\\begin{itemize}'
+    tmp = get_start_end_pairs_regex(text, tree_detector_regex)
+    tmp2 = sorted(tmp, key=lambda s: s[1], reverse=True)
+    for td, tse in tmp2:
+        tree_start = tse - len('\\begin{itemize}')
+        text = construct_tree_wrapper(text, tree_start)
+    text = text.replace('\\textbf{Tree display:}', '')
+    return text

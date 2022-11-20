@@ -549,8 +549,8 @@ def process_align_region(txt: str, auto_align: bool = False, max_line_len: int =
     else:
         lines_so_far_1 = lines_so_far
     has_comments = any(dbl.valid_matrix(x) for x in lines_so_far_1) and \
-        (extra_info.get('comment_type', '') == 'hidden') and \
-        extra_info.get('label_equations', False)  # entire alignment region has at least one comment,
+                   (extra_info.get('comment_type', '') == 'hidden') and \
+                   extra_info.get('label_equations', False)  # entire alignment region has at least one comment,
     # comment type is hidden, and label equations is true
     lines_so_far_2 = [align_expression(a_line, auto_align, extra_info=extra_info, has_comments=has_comments) for
                       a_line in lines_so_far_1]
