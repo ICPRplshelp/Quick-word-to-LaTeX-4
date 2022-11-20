@@ -91,6 +91,12 @@ margin=0.75in % small_margins==True
 
 \usepackage{enumitem} % algo_pseudocode==True
 
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+% \newfloat{algorithm}{t}{lop}
+
+
 \usepackage[linguistics]{forest}  % allow_trees==True
 
 % SPACER AT THE BOTTOM

@@ -5225,10 +5225,37 @@ def account_pseudocode(text: str) -> str:
     start_end_pairs = get_start_end_pairs_regex(text, algo_regex)
     l_bi = len('\\begin{itemize}')
     itemize_backslash_locations = [
-        x[1] - l_bi for x in start_end_pairs if x[1] - l_bi >= 0
+        (x[1] - l_bi, x[0]) for x in start_end_pairs if x[1] - l_bi >= 0
     ]
-    for itemize_in in sorted(itemize_backslash_locations, reverse=True):
-        text = reduce_list_spacing(text, itemize_in)
+    for itemize_in in sorted(itemize_backslash_locations,
+                             key=lambda s: s[0],
+                             reverse=True):
+        # itemize_in[1] is the index of the start of the word Algorithm
+        itemize_in_true = itemize_in[0]  # start of the backslash
+        itemize_list_end = find_env_end(text, itemize_in_true)
+        if itemize_list_end == -1:
+            raise ValueError('Unclosed list?')
+        itemize_list_true_end = itemize_list_end + len('\\end{itemize}')
+
+        during = text[itemize_in[0] + len('\\begin{itemize}'):itemize_list_end]
+        the_tree = _construct_tree(during, False)
+        t1 = text[itemize_in[1]:itemize_in[0]]
+        assert t1 != ''
+        n8 = t1.find('\\(')
+        n9 = t1.find('\\)')
+        assert n8 != -1 and n9 != -1, "Unclosed algorithm declaration"
+        t2 = t1[n8 + 2:n9]
+        func_name, func_args = get_function_name_args(t2)
+
+        before = text[:itemize_in[1]]
+        after = text[itemize_list_true_end:]
+
+        fn_hd_bd = _construct_func(the_tree, func_name, func_args)
+        during2 = "\\begin{algorithmic}[H]\n\\begin{algorithm}\n" + \
+                  fn_hd_bd + "\\end{algorithm}\n\\end{algorithmic}\n"
+        text = before + during2 + after
+
+        # text = reduce_list_spacing(text, itemize_in)
     return text
 
 
@@ -5449,7 +5476,7 @@ def construct_tree_wrapper(text: str, index: int) -> str:
     return before.rstrip() + '\n\n' + during_true + '\n\n' + after
 
 
-def _construct_tree(text: str) -> list[TreeNode]:
+def _construct_tree(text: str, rp_cd: bool = True) -> list[TreeNode]:
     """Construct a tree structure out of text.
     Text must be an itemize environment without the word itemize.
     Text must not contain any unconcealed verbatim environments as well.
@@ -5457,7 +5484,9 @@ def _construct_tree(text: str) -> list[TreeNode]:
     Rule of thumb: multiple trees will be constructed if the list of nodes that are
     returned exceeds the size of 1 (because how is that a tree, anyways?
     """
-    text = text.strip().replace(R'\(\cdots\)', R'\(\vdots\)')
+    text = text.strip()
+    if rp_cd:
+        text = text.replace(R'\(\cdots\)', R'\(\vdots\)')
     # anything before the first item is removed
     first_item = text.find('\\item')
     if first_item == -1:
@@ -5498,3 +5527,105 @@ def make_trees(text: str) -> str:
         text = construct_tree_wrapper(text, tree_start)
     text = text.replace('\\textbf{Tree display:}', '')
     return text
+
+
+def protect_bs(text: str) -> str:
+    if text.endswith('\\'):
+        return text + ' '
+    else:
+        return text
+
+
+def _construct_func(nodes: list[TreeNode], func_name: str, arguments: str) -> str:
+    """Return the function given a list of nodes."""
+    argu_en = '\\emph{' + arguments + '}'
+    return '\\Function{' + func_name + '}{' + argu_en + '}\n' + \
+           _construct_pseudo(nodes) + '\n\\EndFunction\n'
+
+
+def _construct_pseudo(nodes: list[TreeNode]) -> str:
+    """Constructs a pseudo line
+    Freely assume that there is only one # and it is
+    NOT bolded or in italics.
+    """
+    lines: list[str] = []
+    previous_was_if = False
+    for node in nodes:
+        n_text = node.text
+        env_i = find_not_in_any_env_tolerance(n_text, '#')
+        comment = ''
+        if env_i != -1:
+            comment = '   \\Comment{' + n_text[env_i + 1:].strip() + '}'
+            n_text = n_text[:env_i]
+
+        if n_text.lower().lstrip().startswith('if'):
+            faulty = ''
+            if previous_was_if:
+                faulty = '\\EndIf\n'
+            no_if = n_text[2:].strip().removesuffix(':')
+            extra_str = _construct_pseudo(node.subnodes)
+            the_str = faulty + "\\If{" + protect_bs(no_if) + "}" + comment + "\n" + extra_str
+            lines.append(the_str)
+            previous_was_if = True
+        elif n_text.lower().lstrip().startswith('else if'):
+            # assert previous_was_if
+            no_elif = n_text[7:].strip().removesuffix(':')
+            extra_str = _construct_pseudo(node.subnodes)
+            if previous_was_if:
+                the_str = "\\ElsIf{" + protect_bs(no_elif) + '}' + comment + '\n' + extra_str
+            else:
+                the_str = "\\If{" + protect_bs(no_elif) + '}' + comment + '\n' + extra_str
+            lines.append(the_str)
+            previous_was_if = True
+        elif n_text.lower().lstrip().startswith('else'):
+            assert previous_was_if, "did you write a bare else statement?"
+            extra_str = _construct_pseudo(node.subnodes)
+            the_str = '\\Else' + comment + '\n' + extra_str
+            lines.append(the_str)
+        elif n_text.lower().lstrip().startswith('for'):
+            faulty = ''
+            if previous_was_if:
+                faulty = '\\EndIf\n'
+
+            no_for = n_text[3:].strip().removesuffix(':')
+            extra_str = _construct_pseudo(node.subnodes)
+            the_str = faulty + "\\For{" + protect_bs(no_for) + '}' + comment + '\n' + extra_str + '\n\\EndFor'
+            lines.append(the_str)
+            previous_was_if = False
+        elif n_text.lower().lstrip().startswith('while'):
+            faulty = ''
+            if previous_was_if:
+                faulty = '\\EndIf\n'
+            no_for = n_text[5:].strip().removesuffix(':')
+            extra_str = _construct_pseudo(node.subnodes)
+            the_str = faulty + "\\While{" + protect_bs(no_for) + '}' + comment + '\n' + extra_str + '\n\\EndWhile'
+            lines.append(the_str)
+            previous_was_if = False
+        else:
+            faulty = ''
+            if previous_was_if:
+                faulty = '\\EndIf\n'
+            if n_text.lstrip().lower().startswith('return'):
+                n_text = '\\Return ' + n_text.lstrip()[6:].strip()
+            the_str = faulty + '\\State ' + protect_bs(n_text) + comment
+            lines.append(the_str)
+            previous_was_if = False
+    if previous_was_if:
+        lines.append('\\EndIf\n')
+    return f'\n'.join(lines)
+
+
+def get_function_name_args(text: str) -> tuple[str, str]:
+    """function name, function args
+    Both are inside math envs but don't contain the
+    dollar signs that wrap them and is not wrapped by
+    any brackets
+    text is INSIDE the math env
+    """
+    ops = text.find('(')
+    if ops == -1:
+        raise ValueError("Function with no brackets"
+                         " for arguments")
+    fn_name = text[:ops].removesuffix('\\left')
+    fn_args = text[ops + 1:text.find(')')].removesuffix('\\right')
+    return fn_name, fn_args
