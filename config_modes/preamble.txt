@@ -89,8 +89,8 @@ margin=0.75in % small_margins==True
 
 \usepackage{csquotes}
 
-\usepackage{enumitem} % algo_pseudocode==True
-
+\usepackage{enumitem}
+\setlistdepth{10}
 
 \usepackage{algorithm}
 \usepackage{algpseudocode}

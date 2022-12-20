@@ -213,6 +213,7 @@ class Preferences:
     # 'H', then \usepackage{float} is mandatory in your preamble.
     default_date: str = ''  # the default date, if none is stated. Empty if none.
     default_author: str = ''  # the default author, if none is stated. Empty if none.
+    default_title: str = ''  # the default title, if none is stated. Empty if none.
     verbatim_options: str = ''  # options passed to minted and lstlisting used for
     # code blocks
     max_page_length: int = 35  # for use with the long table eliminator module, how long
@@ -244,6 +245,9 @@ class Preferences:
     allow_trees: bool = True
     fix_2char: bool = True  # text environments 2 or less long will be removed
     append_me_to_the_start: str = ""
+    bold_title: bool = False
+    enforce_func_apply: bool = False  # could break the program so leave this off
+    remove_sec_num_names: bool = False
 
     def recalculate_invariants(self) -> None:
         """Recalculate some of its
@@ -337,7 +341,7 @@ class WordFile:
         self.word_file_nosuffix = temp_basename
         self.preferences = preferences
         self.preferences.recalculate_invariants()
-        self._temp_tex_file = TEMP_TEX_FILENAME
+        self._temp_tex_file = f'{temp_basename}_temporary.tex'
         export_suffix = self.preferences.export_file_name_suffix + '.tex'
         self.output_path = self.word_file_nosuffix + export_suffix
         if word_file_path[-5:] == '.docx':
@@ -490,6 +494,8 @@ class WordFile:
             text = dbl.save_all_sections(text)
         if self.preferences.hypertarget_remover:
             text = w2l.hypertarget_eliminator(text)
+            if self.preferences.remove_sec_num_names:
+                text = dbl.remove_section_numbers_from_names(text)
         if self.preferences.append_me_to_the_start != '':
             text = text + self.preferences.append_me_to_the_start
         if self.preferences.forbid_images:
@@ -527,7 +533,7 @@ class WordFile:
                                                 max_page_len=self.preferences.max_page_length)
 
         eqn_comment = {'comment_type': self.preferences.eqn_comment_mode, 'label_equations':
-            self.preferences.label_equations}
+            self.preferences.label_equations, 'enforce_func_apply': self.preferences.enforce_func_apply}
         # if self.preferences.remove_spaces_from_eqns:
         #     # TODO: after text, prevent messing with commands
         #     text = dbl.bad_backslash_replacer(text)
@@ -554,6 +560,10 @@ class WordFile:
                     break
         auto_labeling = self.preferences.label_equations and self.preferences.eqn_comment_mode == 'hidden'
         # eqn_comment['second_time'] = True
+
+        if self.preferences.enforce_func_apply and self.preferences.allow_alignments:
+            text = dbl.enforce_func_apply_full(text)
+
         if self.preferences.max_line_length >= 1:
             text, labels_split_so_far = dbl.split_all_equations(text, self.preferences.max_line_length,
                                                                 label_equations=self.preferences.label_equations,
@@ -698,7 +708,7 @@ class WordFile:
                                               preamble_path=p_start,
                                               erase_existing_preamble=self.erase_pandoc_preamble,
                                               omit_section_numbering=self.preferences.no_secnum,
-                                              dataclass_dict=dataclass_dict)
+                                              dataclass_dict=dataclass_dict, bold_title=self.preferences.bold_title)
 
             if self.preferences.hide_comments:
                 preamble = dbl.remove_comments_from_document(preamble)
@@ -708,10 +718,13 @@ class WordFile:
         # else do nothing
         if self.preferences.document_class != '':
             text = dbl.change_document_class(text, self.preferences.document_class)
+
         if self.preferences.default_date != '':
             text = text.replace('\\date{}', '\\date{' + self.preferences.default_date + '}', 1)
         if self.preferences.default_author != '':
             text = text.replace('\\author{}', '\\author{' + self.preferences.default_author + '}', 1)
+        if self.preferences.default_title != '':
+            text = text.replace('\\title{}', '\\title{' + self.preferences.default_title + '}', 1)
         self.text = text
 
     def export(self) -> None:
@@ -761,9 +774,11 @@ class WordFile:
             if not self._disallow_pdf:
                 output_dir_command = "-output-directory=export" if self.preferences.export_folder else ""
                 if self.preferences.force_shell_escape or '\\usepackage{minted}' in self.text:
-                    latex_compile_command = [latex_engine, output_dir_command, '-shell-escape', self.output_path]
+                    latex_compile_command = [latex_engine, output_dir_command, '-shell-escape', '-file-line-error',
+                                             '-interaction=nonstopmode', '-synctex=1', self.output_path]
                 else:
-                    latex_compile_command = [latex_engine, output_dir_command, self.output_path]
+                    latex_compile_command = [latex_engine, output_dir_command, '-file-line-error',
+                                             '-interaction=nonstopmode', '-synctex=1', self.output_path]
                 latex_compile_command = [w for w in latex_compile_command if w != '']
                 # latex_output_path = self.output_path[:-4] + '.pdf'
                 subprocess.run(latex_compile_command)

@@ -154,7 +154,7 @@ HARDCODED_TEXT_POST = r"""
 def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
                        remove_default_font: bool = False, preamble_path: str = '',
                        erase_existing_preamble: bool = False, omit_section_numbering: bool = False,
-                       dataclass_dict: Optional[dict] = None) -> str:
+                       dataclass_dict: Optional[dict] = None, bold_title: bool = False) -> str:
     """Deal with the preamble
     text is ALL the text within the preamble.
     """
@@ -177,6 +177,15 @@ def deal_with_preamble(text: str, has_bib_file: Union[bool, str] = False,
         processed_text = insert_after(text, after_all, prestart)
         processed_text = processed_text.replace(section_num_text, '\n').replace(R'\urlstyle{same} % '
                                                                                 R'disable monospaced font for URLs', '')
+        # bolds the title, if requested
+        if bold_title:
+            title_ind = processed_text.find('\\title{')
+            if title_ind != -1:
+                ti_end = dbl.local_env_end(processed_text, title_ind)
+                title_internal = title_ind + len('\\title{')
+                processed_text = processed_text[:title_internal] + '\\textbf{' + \
+                                 processed_text[title_internal:ti_end] + '}' + processed_text[ti_end:]
+
         if remove_default_font:
             processed_text = processed_text.replace(R'\usepackage{lmodern}', '')
     # to_remove = generate_text_to_remove()
@@ -558,6 +567,9 @@ def process_align_region(txt: str, auto_align: bool = False, max_line_len: int =
     lines_so_far_3 = [lsf[0] for lsf in lines_so_far_2]
     labels_so_far: list[str] = [lsf[1] for lsf in lines_so_far_2 if lsf[1] is not None]
 
+    func_apply = extra_info.get('enforce_func_apply', False)
+    if func_apply:
+        lines_so_far_3 = [dbl.enforce_func_apply(lf) for lf in lines_so_far_3]
     output = ' \\\\\n'.join(lines_so_far_3)
     return output, has_comments, labels_so_far
 

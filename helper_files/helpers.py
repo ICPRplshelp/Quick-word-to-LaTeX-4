@@ -2660,6 +2660,8 @@ def local_env_end(text: str, index: int) -> int:
     is the start of a local environment declaration. Though the farthest
     index can be is at the position of the opening brace.
 
+    However, index must be before the opening bracket of the local env.
+
     Raise ValueError if an end cannot be found.
 
     >>> te = 'abc\\wh{fo3rce}the'
@@ -3950,6 +3952,8 @@ def fix_mathbb_in(text: str) -> str:
     text = modify_equations(text, _mathbb_solver, True)
     text = modify_equations(text, lambda s: s.replace('\\text{⋅}', '\\cdot '))
     text = modify_equations(text, lambda s: s.replace('\\text{⋅}', '\\cdot '), True)
+    text = modify_equations(text, lambda s: s.replace('≢', '\\equiv '))
+    text = modify_equations(text, lambda s: s.replace('≢', '\\equiv '), True)
     # text = modify_equations(text, lambda s: s.replace('≔', ':='))
     return text
 
@@ -5221,7 +5225,7 @@ def account_pseudocode(text: str) -> str:
 
     Firstly, we find the index of all backslashes of concerned itemize environments.
     """
-    algo_regex = r"(\\textbf{)?Algorithm\}? \\\([a-zA-Z\{\}\\][\w\{\}]*\([a-zA-Z, \\\{\}]*\)\\\):\n{1,2}\\begin{itemize}"
+    algo_regex = r"(\\textbf{)?((Algorithm)|(Function)|(Def))\}? \\\([a-zA-Z\{\}\\][\w\{\}]*\([a-zA-Z, \\\{\}]*\)\\\):\n{1,2}\\begin{itemize}"
     start_end_pairs = get_start_end_pairs_regex(text, algo_regex)
     l_bi = len('\\begin{itemize}')
     itemize_backslash_locations = [
@@ -5629,3 +5633,66 @@ def get_function_name_args(text: str) -> tuple[str, str]:
     fn_name = text[:ops].removesuffix('\\left')
     fn_args = text[ops + 1:text.find(')')].removesuffix('\\right')
     return fn_name, fn_args
+
+
+def enforce_func_apply(text: str) -> str:
+    """Enforce func_apply:
+
+    Insert \text to the left of an opening brace if:
+    - the character right behind it is an opening brace or a white space
+
+    aligns must already be accounted for
+    text must be inside math mode
+    """
+    text = ' ' + text
+    ######################################
+    # text = text.replace(' {', ' \\text{')
+    # text = text.replace('{{', '{ \\text{')
+    ######################################
+    # to be replaced: a replacement condition is only successful
+    # if the text after the env end is either '', '(', or '\\left('
+    print('in the enforce func apply while loop 1')
+    while True:
+        fi = text.find(' {')
+        if fi == -1:
+            break
+        eol = local_env_end(text, fi)  # at }
+        other_side = text[eol + 1:eol + 99]
+        if other_side.startswith('(') or other_side.startswith('\\left(') or other_side == '':
+            text = text[:fi] + '\\text' + text[fi + 1:]
+        # repeat until I can't find any more.
+    print('in the enforce func apply while loop 2')
+    while True:
+        fi = text.find('{{')
+        if fi == -1:
+            break
+        hypothetical_text = text[:fi] + '-' + text[fi + 1:]
+        eol = local_env_end(hypothetical_text, fi)  # at }
+        other_side = text[eol + 1:eol + 99]
+        if other_side.startswith('(') or other_side.startswith('\\left(') or other_side == '':
+            text = text[:fi] + '{\\text' + text[fi + 1:]
+
+    return text.lstrip()
+
+
+def enforce_func_apply_full(text: str) -> str:
+    text = modify_equations(text, enforce_func_apply, True)
+    text = modify_equations(text, enforce_func_apply, False)
+    return text
+
+
+def remove_section_numbers_from_names(text: str) -> str:
+    """Remove all section numbering from every section.
+    Assume you didn't fiddle with this."""
+    p1 = re.compile(r'section\{\d+ ')
+    replace_with = 'section{'
+    text = p1.sub(replace_with, text)
+
+    p2 = re.compile(r'subsection\{\d+\.\d+ ')
+    replace_with = 'subsection{'
+    text = p2.sub(replace_with, text)
+
+    p3 = re.compile(r'subsubsection\{\d+\.\d+\.\d+ ')
+    replace_with = 'subsubsection{'
+    text = p3.sub(replace_with, text)
+    return text
